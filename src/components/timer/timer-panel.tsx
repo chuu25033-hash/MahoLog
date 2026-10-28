@@ -67,7 +67,9 @@ export function TimerPanel({
   const checkpointRef = useRef(0);
 
   const subject = subjects.find((s) => s.id === subjectId);
-  const color = phase === "break" || phase === "breakReady" ? "#7dd3fc" : (subject?.color ?? "#a78bfa");
+  const resting = phase === "break" || phase === "breakReady";
+  const color = resting ? "#cfe9ff" : (subject?.color ?? "#a882fb");
+  const lineColor = resting ? "#a882fb" : "#71e2ef";
 
   const save = useCallback(
     (minutes: number) => {
@@ -211,8 +213,8 @@ export function TimerPanel({
   return (
     <div className="grid h-full grid-cols-12 gap-3 p-3 lg:gap-4 lg:p-5">
       {/* 左: 設定パネル */}
-      <section className="col-span-4 flex min-h-0 flex-col gap-3 overflow-y-auto rounded-xl bg-card p-3 ring-1 ring-foreground/10 lg:p-4">
-        <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-sm">
+      <section className="glass col-span-4 flex min-h-0 flex-col gap-4 overflow-y-auto rounded-2xl p-3 short:gap-3 lg:p-5">
+        <div className="grid grid-cols-2 gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm">
           {(
             [
               { key: "pomodoro", label: "ポモドーロ", icon: Hourglass },
@@ -224,18 +226,20 @@ export function TimerPanel({
               disabled={phase !== "idle"}
               onClick={() => setMode(key)}
               className={cn(
-                "flex items-center justify-center gap-1 rounded-md py-1.5 text-xs whitespace-nowrap transition-colors disabled:opacity-50 short:text-[11px]",
-                mode === key ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+                "flex items-center justify-center gap-1 rounded-full py-1.5 text-xs tracking-wider whitespace-nowrap transition-all duration-300 disabled:opacity-50 short:text-[11px]",
+                mode === key
+                  ? "bg-starlight/10 text-starlight ring-1 ring-starlight/45 shadow-[0_0_10px_-2px_rgba(226,201,116,0.4)]"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
-              <Icon className="size-3.5" />
+              <Icon className="size-3.5" strokeWidth={1.5} />
               {label}
             </button>
           ))}
         </div>
 
         <div>
-          <p className="mb-1.5 text-xs text-muted-foreground">属性（科目）</p>
+          <p className="mb-2 text-xs tracking-[0.2em] text-muted-foreground">属性（科目）</p>
           <div className="flex flex-wrap gap-1.5">
             {subjects.map((s) => (
               <button
@@ -243,12 +247,18 @@ export function TimerPanel({
                 disabled={locked}
                 onClick={() => setSubjectId(s.id)}
                 className={cn(
-                  "rounded-full border px-3 py-1 text-xs transition disabled:cursor-not-allowed",
-                  s.id === subjectId ? "font-bold text-background" : "border-border text-foreground hover:bg-accent",
-                  locked && s.id !== subjectId && "opacity-40",
+                  "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs tracking-wider transition-all duration-300 disabled:cursor-not-allowed",
+                  s.id === subjectId
+                    ? "border-white/30 bg-white/[0.07] text-foreground"
+                    : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
+                  locked && s.id !== subjectId && "opacity-30",
                 )}
-                style={s.id === subjectId ? { background: s.color, borderColor: s.color } : undefined}
+                style={s.id === subjectId ? { boxShadow: `0 0 12px -3px ${s.color}` } : undefined}
               >
+                <span
+                  className="size-1.5 rounded-full"
+                  style={{ background: s.color, boxShadow: `0 0 6px ${s.color}` }}
+                />
                 {s.name}
               </button>
             ))}
@@ -262,18 +272,25 @@ export function TimerPanel({
           </>
         )}
         {mode === "stopwatch" && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs leading-relaxed text-muted-foreground">
             カウントアップで計測します。2時間連続で計測すると集中確認が表示されます。
           </p>
         )}
 
-        <div className="mt-auto space-y-1 text-xs text-muted-foreground">
-          <p>
-            本日の獲得魔力: <span className="font-bold text-foreground">{todayMp} MP</span>
-            <span className="ml-1">（上限 {formatMinutes(DAILY_LIMIT_MINUTES)}）</span>
+        <div className="mt-auto space-y-1 border-t border-white/10 pt-3 text-xs tracking-wider text-muted-foreground">
+          <p className="flex items-baseline justify-between gap-2">
+            本日の獲得魔力
+            <span>
+              <span className="font-display text-sm text-foreground">{todayMp}</span>
+              <span className="font-display text-[10px]"> MP</span>
+              <span className="ml-1 text-[10px]">／ 上限 {formatMinutes(DAILY_LIMIT_MINUTES)}</span>
+            </span>
           </p>
-          <p>
-            累積魔力: <span className="font-bold text-primary">{totalMp.toLocaleString()} MP</span>
+          <p className="flex items-baseline justify-between gap-2">
+            累積魔力
+            <span className="font-display text-sm text-starlight text-glow-gold">
+              {totalMp.toLocaleString()} <span className="text-[10px]">MP</span>
+            </span>
           </p>
         </div>
       </section>
@@ -283,17 +300,30 @@ export function TimerPanel({
         <div className="relative flex aspect-square h-full max-h-[calc(100dvh-4rem)] max-w-full items-center justify-center">
           <MagicCircle
             color={color}
+            lineColor={lineColor}
             running={running}
             intensity={intensity}
             className="absolute inset-0 h-full w-full"
           />
           <div className="relative z-10 flex flex-col items-center gap-2 text-center">
-            <p className="text-xs tracking-widest text-muted-foreground">{statusLabel}</p>
-            <p className="font-mono text-5xl font-bold tabular-nums drop-shadow-[0_0_12px_rgba(0,0,0,0.8)] short:text-4xl lg:text-7xl">
-              {formatClock(displayMs)}
+            <p className="text-xs tracking-[0.35em] text-aqua/70">{statusLabel}</p>
+            <p
+              className="font-display text-5xl font-normal text-[#e8fbfd] text-glow-aqua short:text-4xl lg:text-7xl"
+              aria-label={formatClock(displayMs)}
+            >
+              {/* セリフ体は数字幅が揃わないので1文字ずつ固定幅で並べる */}
+              {formatClock(displayMs)
+                .split("")
+                .map((ch, i) => (
+                  <span key={i} className={cn("inline-block text-center", ch === ":" ? "w-[0.4em] -translate-y-[0.06em]" : "w-[0.72em]")}>
+                    {ch}
+                  </span>
+                ))}
             </p>
-            <p className="text-sm font-bold" style={{ color }}>
-              {phase === "break" || phase === "breakReady" ? "休憩" : subject?.name}
+            <p className="flex items-center gap-2 text-sm tracking-[0.3em]">
+              <span className="h-px w-6 bg-gradient-to-r from-transparent to-white/40" />
+              <span style={{ color, textShadow: `0 0 10px ${color}80` }}>{resting ? "休憩" : subject?.name}</span>
+              <span className="h-px w-6 bg-gradient-to-l from-transparent to-white/40" />
             </p>
 
             <div className="mt-2 flex gap-2">
@@ -352,7 +382,7 @@ export function TimerPanel({
                 </>
               )}
             </div>
-            {saving && <p className="text-xs text-muted-foreground">魔力を記録中…</p>}
+            {saving && <p className="text-xs tracking-wider text-aqua/70 glimmer">魔力を記録中…</p>}
             {message && <p className="text-xs text-destructive">{message}</p>}
           </div>
         </div>
@@ -362,7 +392,7 @@ export function TimerPanel({
       <Dialog open={confirmOpen} onOpenChange={(open) => !open && continueFocus()}>
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>まだ集中中ですか？</DialogTitle>
+            <DialogTitle className="tracking-wider">まだ集中中ですか？</DialogTitle>
             <DialogDescription>
               2時間連続で計測しています。5分以内に応答がない場合、ここまでの記録を保存して一時停止します。
             </DialogDescription>
@@ -398,7 +428,7 @@ function OptionRow({
 }) {
   return (
     <div>
-      <p className="mb-1.5 text-xs text-muted-foreground">{label}</p>
+      <p className="mb-2 text-xs tracking-[0.2em] text-muted-foreground">{label}</p>
       <div className="grid grid-cols-3 gap-1.5">
         {options.map((o) => (
           <button
@@ -406,12 +436,14 @@ function OptionRow({
             disabled={disabled}
             onClick={() => onChange(o)}
             className={cn(
-              "rounded-lg border py-1.5 text-sm transition disabled:opacity-50",
-              o === value ? "border-primary bg-primary/15 font-bold text-primary" : "border-border hover:bg-accent",
+              "rounded-xl border py-1.5 font-display text-base transition-all duration-300 disabled:opacity-50",
+              o === value
+                ? "border-starlight/55 bg-starlight/[0.08] text-starlight shadow-[0_0_12px_-3px_rgba(226,201,116,0.45)]"
+                : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
             )}
           >
             {o}
-            <span className="text-[10px]">{unit}</span>
+            <span className="ml-0.5 font-serif text-[10px]">{unit}</span>
           </button>
         ))}
       </div>

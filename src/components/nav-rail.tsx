@@ -13,31 +13,36 @@ const ITEMS = [
   { href: "/settings", label: "設定", icon: Settings, ready: false },
 ] as const;
 
+const itemBase =
+  "relative flex w-14 flex-col items-center gap-1 rounded-xl py-2 text-[10px] tracking-wider transition-all duration-300 lg:w-16 lg:text-[11px]";
+
 export function NavRail({ signOutAction }: { signOutAction?: () => Promise<void> }) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex h-full w-16 shrink-0 flex-col items-center gap-1 border-r border-border bg-card/60 py-3 backdrop-blur lg:w-20">
-      <Link href="/" className="mb-2 flex flex-col items-center text-primary" aria-label="マホログ ホーム">
-        <BookOpen className="size-7" />
-        <span className="text-[10px] font-extrabold tracking-wider">マホログ</span>
+    <nav className="glass flex h-full w-16 shrink-0 flex-col items-center gap-1 rounded-none py-3 lg:w-20">
+      <Link href="/" className="mb-3 flex flex-col items-center gap-0.5 text-starlight" aria-label="マホログ ホーム">
+        <BookOpen className="size-6" strokeWidth={1.25} />
+        <span className="text-[10px] tracking-[0.2em] text-glow-gold">マホログ</span>
       </Link>
 
       {ITEMS.map(({ href, label, icon: Icon, ready }) => {
         const active = pathname === href;
         const className = cn(
-          "flex w-14 flex-col items-center gap-0.5 rounded-xl py-2 text-[10px] transition-colors lg:w-16 lg:text-xs",
-          active ? "bg-accent text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
-          !ready && "cursor-not-allowed opacity-40 hover:bg-transparent hover:text-muted-foreground",
+          itemBase,
+          active
+            ? "bg-gradient-to-b from-starlight/12 to-aqua/5 text-starlight ring-1 ring-starlight/35 shadow-[0_0_14px_-4px_rgba(226,201,116,0.5)]"
+            : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
+          !ready && "cursor-not-allowed opacity-35 hover:bg-transparent hover:text-muted-foreground",
         );
         return ready ? (
           <Link key={href} href={href} className={className} aria-current={active ? "page" : undefined}>
-            <Icon className="size-5" />
+            <Icon className="size-5" strokeWidth={1.25} />
             {label}
           </Link>
         ) : (
           <span key={href} className={className} title="準備中">
-            <Icon className="size-5" />
+            <Icon className="size-5" strokeWidth={1.25} />
             {label}
           </span>
         );
@@ -45,11 +50,8 @@ export function NavRail({ signOutAction }: { signOutAction?: () => Promise<void>
 
       {signOutAction && (
         <form action={signOutAction} className="mt-auto">
-          <button
-            type="submit"
-            className="flex w-14 flex-col items-center gap-0.5 rounded-xl py-2 text-[10px] text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-          >
-            <LogOut className="size-5" />
+          <button type="submit" className={cn(itemBase, "text-muted-foreground hover:text-foreground")}>
+            <LogOut className="size-5" strokeWidth={1.25} />
             ログアウト
           </button>
         </form>

@@ -10,11 +10,11 @@ export const demoProfile: Profile = {
 };
 
 export const demoSubjects: Subject[] = [
-  { id: "s1", name: "国語", color: "#f472b6", is_active: true, sort_order: 1 },
-  { id: "s2", name: "数学", color: "#60a5fa", is_active: true, sort_order: 2 },
-  { id: "s3", name: "英語", color: "#34d399", is_active: true, sort_order: 3 },
-  { id: "s4", name: "理科", color: "#fbbf24", is_active: true, sort_order: 4 },
-  { id: "s5", name: "社会", color: "#c084fc", is_active: true, sort_order: 5 },
+  { id: "s1", name: "国語", color: "#e7a9c6", is_active: true, sort_order: 1 },
+  { id: "s2", name: "数学", color: "#8db7f2", is_active: true, sort_order: 2 },
+  { id: "s3", name: "英語", color: "#8fdcc4", is_active: true, sort_order: 3 },
+  { id: "s4", name: "理科", color: "#e2c974", is_active: true, sort_order: 4 },
+  { id: "s5", name: "社会", color: "#b9a2f7", is_active: true, sort_order: 5 },
 ];
 
 const plan: [string, number, number][] = [

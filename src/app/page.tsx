@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Clock, Flame, Map, Sparkles, Wand2 } from "lucide-react";
+import { Map, Moon, Sparkles, Sun, Wand2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
 import { PageLoading } from "@/components/page-loading";
 import { MpBar } from "@/components/mp-bar";
@@ -28,58 +28,61 @@ async function HomeContent() {
             <div className="flex items-center gap-3">
               <WizardAvatar avatar={profile.avatar_url} />
               <div className="min-w-0">
-                <p className="truncate font-bold">{profile.username}</p>
-                <p className="text-xs text-muted-foreground">見習い魔法使い</p>
+                <p className="truncate text-base tracking-wider">{profile.username}</p>
+                <p className="text-[11px] tracking-[0.2em] text-muted-foreground">見習い魔法使い</p>
               </div>
               <div className="ml-auto text-right">
-                <p className="text-[10px] text-muted-foreground">LEVEL</p>
-                <p className="text-2xl leading-none font-extrabold text-primary">{level.level}</p>
+                <p className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">LEVEL</p>
+                <p className="font-display text-3xl leading-none text-starlight-gradient">{level.level}</p>
               </div>
             </div>
             <div>
-              <div className="mb-1 flex flex-wrap justify-between gap-x-2 text-xs">
-                <span className="text-muted-foreground">累積魔力 {profile.total_study_time.toLocaleString()} MP</span>
-                <span>次のLvまで {level.remaining} MP</span>
+              <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-2 text-[11px] tracking-wider">
+                <span className="text-muted-foreground">
+                  累積魔力 <span className="font-display text-foreground">{profile.total_study_time.toLocaleString()}</span>
+                  <span className="font-display"> MP</span>
+                </span>
+                <span className="text-muted-foreground">
+                  次のLvまで <span className="font-display text-aqua">{level.remaining}</span>
+                  <span className="font-display"> MP</span>
+                </span>
               </div>
               <MpBar ratio={level.ratio} />
             </div>
           </Card>
 
-          <Card
-            className={cn(
-              "relative gap-2 bg-gradient-to-br px-4 ring-primary/30",
-              stage.current.gradient,
-            )}
-          >
-            <div className="flex items-center gap-2 text-xs text-primary">
-              <Map className="size-4" />
+          <Card className="gap-2 px-4">
+            {/* ステージごとの淡い色味 */}
+            <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br", stage.current.gradient)} />
+            <div className="relative flex items-center gap-2 font-display text-[11px] tracking-[0.3em] text-starlight/80">
+              <Map className="size-3.5" strokeWidth={1.25} />
               STAGE {stage.current.id}
             </div>
-            <p className="text-lg font-extrabold">{stage.current.name}</p>
-            <p className="text-xs text-muted-foreground short:hidden">{stage.current.description}</p>
+            <p className="relative text-lg tracking-[0.15em]">{stage.current.name}</p>
+            <p className="relative text-xs leading-relaxed text-muted-foreground short:hidden">{stage.current.description}</p>
             {stage.next ? (
-              <div className="mt-1">
+              <div className="relative mt-1">
                 <MpBar ratio={stage.ratio} variant="stage" />
-                <p className="mt-1 text-xs">
-                  次のステージ「{stage.next.name}」まで あと
-                  <span className="mx-1 font-bold text-primary">{formatMinutes(stage.remainingMinutes)}</span>
+                <p className="mt-1.5 text-xs tracking-wider text-muted-foreground">
+                  次のステージ「<span className="text-foreground">{stage.next.name}</span>」まで あと
+                  <span className="mx-1 text-starlight text-glow-gold">{formatMinutes(stage.remainingMinutes)}</span>
                 </p>
               </div>
             ) : (
-              <p className="text-xs text-primary">全ステージ制覇！</p>
+              <p className="relative text-xs text-starlight">全ステージ制覇</p>
             )}
           </Card>
 
           <div className="grid grid-cols-3 gap-2">
             {[
-              { label: "今日", value: totals.today, icon: Flame },
-              { label: "今週", value: totals.week, icon: Clock },
+              { label: "今日", value: totals.today, icon: Sun },
+              { label: "今週", value: totals.week, icon: Moon },
               { label: "今月", value: totals.month, icon: Sparkles },
             ].map(({ label, value, icon: Icon }) => (
               <Card key={label} size="sm" className="items-center gap-1 px-2 text-center">
-                <Icon className="size-4 text-primary" />
-                <p className="text-[10px] text-muted-foreground">{label}</p>
-                <p className="text-sm font-bold short:text-xs">{formatMinutes(value)}</p>
+                <Icon className="size-4 text-aqua/80" strokeWidth={1.25} />
+                <p className="text-[10px] tracking-[0.3em] text-muted-foreground">{label}</p>
+                <p className="text-sm tracking-wider short:text-xs">{formatMinutes(value)}</p>
               </Card>
             ))}
           </div>
@@ -96,29 +99,31 @@ async function HomeContent() {
             href="/timer"
             className={cn(
               buttonVariants({ size: "lg" }),
-              "h-auto flex-col gap-1 rounded-2xl py-4 text-base font-extrabold shadow-lg shadow-primary/30 short:py-2",
+              "group h-auto flex-col gap-1.5 rounded-2xl py-5 text-base tracking-[0.3em] short:py-2",
             )}
           >
-            <Wand2 className="size-6!" />
+            <Wand2 className="size-6! transition-transform duration-500 group-hover:-rotate-12" strokeWidth={1.25} />
             詠唱を始める
-            <span className="text-[10px] font-normal opacity-80">勉強タイマーへ</span>
+            <span className="font-display text-[10px] tracking-[0.3em] text-starlight/70">BEGIN THE CHANT</span>
           </Link>
 
           <Card size="sm" className="min-h-0 flex-1 px-3">
-            <h2 className="text-sm font-bold">最近の詠唱記録</h2>
+            <h2 className="text-sm tracking-[0.2em]">最近の詠唱記録</h2>
             {recentLogs.length === 0 ? (
               <p className="text-xs text-muted-foreground">まだ記録がありません</p>
             ) : (
-              <ul className="flex flex-col gap-2 text-xs">
+              <ul className="flex flex-col text-xs">
                 {recentLogs.map((log) => (
-                  <li key={log.id} className="flex items-center gap-2">
+                  <li key={log.id} className="flex items-center gap-2 border-b border-white/[0.06] py-1.5 last:border-0">
                     <span
-                      className="size-2 shrink-0 rounded-full"
-                      style={{ background: log.subject?.color }}
+                      className="size-1.5 shrink-0 rounded-full"
+                      style={{ background: log.subject?.color, boxShadow: `0 0 6px ${log.subject?.color}` }}
                     />
-                    <span className="min-w-0 truncate">{log.subject?.name ?? "—"}</span>
-                    <span className="hidden text-muted-foreground lg:inline">{MODE_LABEL[log.mode]}</span>
-                    <span className="ml-auto font-bold whitespace-nowrap">+{log.duration_minutes} MP</span>
+                    <span className="min-w-0 truncate tracking-wider">{log.subject?.name ?? "—"}</span>
+                    <span className="hidden text-[11px] text-muted-foreground lg:inline">{MODE_LABEL[log.mode]}</span>
+                    <span className="ml-auto font-display whitespace-nowrap text-aqua">
+                      +{log.duration_minutes} <span className="text-[10px]">MP</span>
+                    </span>
                   </li>
                 ))}
               </ul>

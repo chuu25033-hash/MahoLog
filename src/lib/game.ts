@@ -36,17 +36,17 @@ export type Stage = {
   /** 解放に必要な累計時間（時間） */
   requiredHours: number;
   description: string;
-  /** 背景グラデーション（Tailwind クラス） */
+  /** ガラスパネルに重ねる淡い色味（Tailwind クラス） */
   gradient: string;
 };
 
 export const STAGES: Stage[] = [
-  { id: 1, name: "始まりの書斎", requiredHours: 0, description: "古びた魔導書が眠る、見習いの小部屋", gradient: "from-amber-900/60 via-stone-900 to-stone-950" },
-  { id: 2, name: "樹海の図書室", requiredHours: 10, description: "苔むした書架が森に溶け込む秘密の図書室", gradient: "from-emerald-900/60 via-teal-950 to-slate-950" },
-  { id: 3, name: "星空の観測塔", requiredHours: 30, description: "星の運行から魔力の流れを読み解く塔", gradient: "from-indigo-900/70 via-violet-950 to-slate-950" },
-  { id: 4, name: "蒼氷の大回廊", requiredHours: 60, description: "凍てつく静寂が集中を研ぎ澄ます回廊", gradient: "from-sky-900/60 via-cyan-950 to-slate-950" },
-  { id: 5, name: "紅蓮の魔導炉", requiredHours: 100, description: "膨大な魔力を練り上げる灼熱の炉", gradient: "from-rose-900/60 via-orange-950 to-stone-950" },
-  { id: 6, name: "天空の大聖堂", requiredHours: 200, description: "大魔法使いだけが辿り着く雲上の聖域", gradient: "from-yellow-700/50 via-fuchsia-950 to-slate-950" },
+  { id: 1, name: "始まりの書斎", requiredHours: 0, description: "古びた魔導書が眠る、見習いの小部屋", gradient: "from-amber-200/10 via-transparent to-transparent" },
+  { id: 2, name: "樹海の図書室", requiredHours: 10, description: "苔むした書架が森に溶け込む秘密の図書室", gradient: "from-emerald-300/12 via-teal-400/[0.03] to-transparent" },
+  { id: 3, name: "星空の観測塔", requiredHours: 30, description: "星の運行から魔力の流れを読み解く塔", gradient: "from-indigo-300/14 via-violet-400/[0.04] to-transparent" },
+  { id: 4, name: "蒼氷の大回廊", requiredHours: 60, description: "凍てつく静寂が集中を研ぎ澄ます回廊", gradient: "from-sky-200/12 via-cyan-300/[0.04] to-transparent" },
+  { id: 5, name: "紅蓮の魔導炉", requiredHours: 100, description: "膨大な魔力を練り上げる灼熱の炉", gradient: "from-rose-300/10 via-orange-300/[0.03] to-transparent" },
+  { id: 6, name: "天空の大聖堂", requiredHours: 200, description: "大魔法使いだけが辿り着く雲上の聖域", gradient: "from-amber-100/14 via-violet-300/[0.05] to-transparent" },
 ];
 
 export function stageProgress(totalMp: number) {

@@ -17,8 +17,8 @@ export function AuthForm() {
   const pending = isSignUp ? signingUp : signingIn;
 
   return (
-    <Card className="mx-auto w-full max-w-sm px-6">
-      <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-sm">
+    <Card className="mx-auto w-full max-w-sm gap-5 px-6">
+      <div className="grid grid-cols-2 gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm">
         {(
           [
             { key: "signin", label: "ログイン" },
@@ -30,8 +30,10 @@ export function AuthForm() {
             type="button"
             onClick={() => setTab(t.key)}
             className={cn(
-              "rounded-md py-1.5 transition-colors",
-              tab === t.key ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+              "rounded-full py-1.5 tracking-wider transition-all duration-300",
+              tab === t.key
+                ? "bg-starlight/10 text-starlight ring-1 ring-starlight/45"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {t.label}
@@ -62,7 +64,7 @@ export function AuthForm() {
           />
         </div>
         {state.error && <p className="text-xs text-destructive">{state.error}</p>}
-        {state.message && <p className="text-xs text-primary">{state.message}</p>}
+        {state.message && <p className="text-xs text-aqua">{state.message}</p>}
         <Button type="submit" size="lg" disabled={pending}>
           {isSignUp ? "見習い魔法使いとして登録" : "ログイン"}
         </Button>

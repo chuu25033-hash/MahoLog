@@ -20,10 +20,13 @@ export function RadarPanel({ data }: { data: Record<RangeKey, SubjectTotal[]> })
   const total = current.reduce((acc, d) => acc + d.minutes, 0);
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="font-bold">魔法陣</h2>
-        <div className="flex rounded-lg bg-muted p-0.5 text-xs" role="tablist">
+        <h2 className="flex items-baseline gap-2 tracking-[0.2em] whitespace-nowrap">
+          魔法陣
+          <span className="hidden font-display text-[10px] tracking-[0.25em] text-starlight/70 lg:inline">ARCANE CIRCLE</span>
+        </h2>
+        <div className="flex rounded-full border border-white/10 bg-white/[0.03] p-0.5 text-xs" role="tablist">
           {RANGES.map((r) => (
             <button
               key={r.key}
@@ -31,8 +34,10 @@ export function RadarPanel({ data }: { data: Record<RangeKey, SubjectTotal[]> })
               aria-selected={range === r.key}
               onClick={() => setRange(r.key)}
               className={cn(
-                "rounded-md px-3 py-1 transition-colors",
-                range === r.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                "rounded-full px-3 py-1 tracking-wider whitespace-nowrap transition-all duration-300",
+                range === r.key
+                  ? "bg-starlight/10 text-starlight ring-1 ring-starlight/45 shadow-[0_0_10px_-2px_rgba(226,201,116,0.4)]"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               {r.label}
@@ -40,12 +45,14 @@ export function RadarPanel({ data }: { data: Record<RangeKey, SubjectTotal[]> })
           ))}
         </div>
       </div>
-      <div className="min-h-0 flex-1">
-        <MagicRadar data={current} />
+      <div className="relative min-h-0 flex-1">
+        <div className="absolute inset-0">
+          <MagicRadar data={current} />
+        </div>
       </div>
       {total > 0 && top && (
-        <p className="text-center text-xs text-muted-foreground">
-          合計 {formatMinutes(total)} ／ 得意属性: <span style={{ color: top.color }}>{top.name}</span>
+        <p className="text-center text-xs tracking-wider text-muted-foreground">
+          合計 {formatMinutes(total)} ／ 得意属性 <span className="text-starlight">{top.name}</span>
         </p>
       )}
     </div>

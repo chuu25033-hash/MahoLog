@@ -1,13 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Geist_Mono, M_PLUS_Rounded_1c } from "next/font/google";
+import { Cinzel, Geist_Mono, Shippori_Mincho } from "next/font/google";
 import { Smartphone } from "lucide-react";
+import { StarField } from "@/components/star-field";
 import "./globals.css";
 
-const rounded = M_PLUS_Rounded_1c({
-  variable: "--font-sans",
-  weight: ["400", "500", "700", "800"],
+const mincho = Shippori_Mincho({
+  variable: "--font-mincho",
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
   preload: false,
+});
+
+const cinzel = Cinzel({
+  variable: "--font-cinzel",
+  weight: ["400", "500", "600"],
+  subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
@@ -24,20 +31,21 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#1b1530",
+  themeColor: "#080c16",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ja"
-      className={`dark ${rounded.variable} ${geistMono.variable} h-full antialiased`}
+      className={`dark ${mincho.variable} ${cinzel.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="starry-bg h-dvh overflow-hidden">
+      <body className="h-dvh overflow-hidden bg-midnight">
+        <StarField />
         {children}
-        <div className="rotate-hint fixed inset-0 z-[100] flex-col items-center justify-center gap-4 bg-background p-8 text-center">
-          <Smartphone className="size-12 rotate-90 text-primary" />
-          <p className="text-lg font-bold">端末を横向きにしてください</p>
+        <div className="rotate-hint night-sky fixed inset-0 z-[100] flex-col items-center justify-center gap-4 p-8 text-center">
+          <Smartphone className="size-10 rotate-90 text-starlight" strokeWidth={1.25} />
+          <p className="text-lg tracking-widest">端末を横向きにしてください</p>
           <p className="text-sm text-muted-foreground">マホログは横画面に最適化されています</p>
         </div>
       </body>
