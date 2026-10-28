@@ -1,69 +1,141 @@
-import Image from "next/image";
+import { Suspense } from "react";
+import Link from "next/link";
+import { Clock, Flame, Map, Sparkles, Wand2 } from "lucide-react";
+import { AppShell } from "@/components/app-shell";
+import { PageLoading } from "@/components/page-loading";
+import { MpBar } from "@/components/mp-bar";
+import { RadarPanel } from "@/components/radar-panel";
+import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { WizardAvatar } from "@/components/wizard-avatar";
+import { getDashboardData } from "@/lib/data";
+import { formatMinutes, levelProgress, stageProgress } from "@/lib/game";
+import { cn } from "@/lib/utils";
 
-export default function Home() {
+const MODE_LABEL = { pomodoro: "ポモドーロ", stopwatch: "ストップウォッチ" } as const;
+
+async function HomeContent() {
+  const { profile, totals, radar, recentLogs } = await getDashboardData();
+  const level = levelProgress(profile.total_study_time);
+  const stage = stageProgress(profile.total_study_time);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <>
+      <div className="grid min-h-full grid-cols-12 gap-3 p-3 lg:gap-4 lg:p-5">
+        {/* 左: プロフィール・ステージ・合計 */}
+        <section className="col-span-4 flex flex-col gap-3">
+          <Card className="gap-3 px-4">
+            <div className="flex items-center gap-3">
+              <WizardAvatar avatar={profile.avatar_url} />
+              <div className="min-w-0">
+                <p className="truncate font-bold">{profile.username}</p>
+                <p className="text-xs text-muted-foreground">見習い魔法使い</p>
+              </div>
+              <div className="ml-auto text-right">
+                <p className="text-[10px] text-muted-foreground">LEVEL</p>
+                <p className="text-2xl leading-none font-extrabold text-primary">{level.level}</p>
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 flex flex-wrap justify-between gap-x-2 text-xs">
+                <span className="text-muted-foreground">累積魔力 {profile.total_study_time.toLocaleString()} MP</span>
+                <span>次のLvまで {level.remaining} MP</span>
+              </div>
+              <MpBar ratio={level.ratio} />
+            </div>
+          </Card>
+
+          <Card
+            className={cn(
+              "relative gap-2 bg-gradient-to-br px-4 ring-primary/30",
+              stage.current.gradient,
+            )}
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <div className="flex items-center gap-2 text-xs text-primary">
+              <Map className="size-4" />
+              STAGE {stage.current.id}
+            </div>
+            <p className="text-lg font-extrabold">{stage.current.name}</p>
+            <p className="text-xs text-muted-foreground short:hidden">{stage.current.description}</p>
+            {stage.next ? (
+              <div className="mt-1">
+                <MpBar ratio={stage.ratio} variant="stage" />
+                <p className="mt-1 text-xs">
+                  次のステージ「{stage.next.name}」まで あと
+                  <span className="mx-1 font-bold text-primary">{formatMinutes(stage.remainingMinutes)}</span>
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-primary">全ステージ制覇！</p>
+            )}
+          </Card>
+
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "今日", value: totals.today, icon: Flame },
+              { label: "今週", value: totals.week, icon: Clock },
+              { label: "今月", value: totals.month, icon: Sparkles },
+            ].map(({ label, value, icon: Icon }) => (
+              <Card key={label} size="sm" className="items-center gap-1 px-2 text-center">
+                <Icon className="size-4 text-primary" />
+                <p className="text-[10px] text-muted-foreground">{label}</p>
+                <p className="text-sm font-bold short:text-xs">{formatMinutes(value)}</p>
+              </Card>
+            ))}
+          </div>
+        </section>
+
+        {/* 中央: 魔法陣レーダーチャート */}
+        <Card className="col-span-5 min-h-72 px-4 short:min-h-64">
+          <RadarPanel data={radar} />
+        </Card>
+
+        {/* 右: 詠唱開始 & 直近ログ */}
+        <section className="col-span-3 flex flex-col gap-3">
+          <Link
+            href="/timer"
+            className={cn(
+              buttonVariants({ size: "lg" }),
+              "h-auto flex-col gap-1 rounded-2xl py-4 text-base font-extrabold shadow-lg shadow-primary/30 short:py-2",
+            )}
           >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+            <Wand2 className="size-6!" />
+            詠唱を始める
+            <span className="text-[10px] font-normal opacity-80">勉強タイマーへ</span>
+          </Link>
+
+          <Card size="sm" className="min-h-0 flex-1 px-3">
+            <h2 className="text-sm font-bold">最近の詠唱記録</h2>
+            {recentLogs.length === 0 ? (
+              <p className="text-xs text-muted-foreground">まだ記録がありません</p>
+            ) : (
+              <ul className="flex flex-col gap-2 text-xs">
+                {recentLogs.map((log) => (
+                  <li key={log.id} className="flex items-center gap-2">
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ background: log.subject?.color }}
+                    />
+                    <span className="min-w-0 truncate">{log.subject?.name ?? "—"}</span>
+                    <span className="hidden text-muted-foreground lg:inline">{MODE_LABEL[log.mode]}</span>
+                    <span className="ml-auto font-bold whitespace-nowrap">+{log.duration_minutes} MP</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </section>
+      </div>
+    </>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <AppShell>
+      <Suspense fallback={<PageLoading />}>
+        <HomeContent />
+      </Suspense>
+    </AppShell>
   );
 }
