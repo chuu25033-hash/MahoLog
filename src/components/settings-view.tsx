@@ -247,13 +247,14 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="glass flex min-h-0 flex-col gap-4 scroll-area scrollbar-none rounded-2xl p-4 lg:p-5">
-      <h2 className="flex items-center gap-2 border-b border-white/10 pb-3 text-sm tracking-[0.25em] whitespace-nowrap">
+    // 枠線（glass の ::before）が中身と一緒に流れないよう、スクロールは内側の領域だけで行う
+    <section className="glass flex min-h-0 flex-col overflow-hidden rounded-2xl">
+      <h2 className="mx-4 mt-4 flex shrink-0 items-center gap-2 border-b border-white/10 pb-3 text-sm tracking-[0.25em] whitespace-nowrap lg:mx-5 lg:mt-5">
         <Icon className="size-4 shrink-0 text-starlight" strokeWidth={1.25} />
         {title}
         <span className="ml-auto truncate font-display text-[10px] tracking-[0.3em] text-starlight/60">{label}</span>
       </h2>
-      {children}
+      <div className="flex min-h-0 flex-1 flex-col gap-4 scroll-area scrollbar-none p-4 lg:p-5">{children}</div>
     </section>
   );
 }
