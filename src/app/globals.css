@@ -479,10 +479,11 @@
   box-shadow: 0 0 6px 1px rgba(226, 201, 116, 0.8);
 }
 
-/* 外周から光の粒子が集まり続ける（位置も keyframes 内で持たせ、ループ中に中心へ戻らないようにする） */
+/* 外周から光の粒子が集まり続ける（位置も keyframes 内で持たせ、ループ中に中心へ戻らないようにする）
+   位置は 1 → 0.12 を等速で縮める（25% 地点 = 1 - 0.88 * 0.25）ことで、途中で止まって見えないようにする */
 @keyframes spark-gather {
   0% { opacity: 0; transform: translate(calc(-50% + var(--sx)), calc(-50% + var(--sy))) scale(0.4); }
-  25% { opacity: 0.95; transform: translate(calc(-50% + var(--sx) * 0.75), calc(-50% + var(--sy) * 0.75)) scale(1); }
+  25% { opacity: 0.95; transform: translate(calc(-50% + var(--sx) * 0.78), calc(-50% + var(--sy) * 0.78)) scale(1); }
   100% { opacity: 0; transform: translate(calc(-50% + var(--sx) * 0.12), calc(-50% + var(--sy) * 0.12)) scale(0.3); }
 }
 
@@ -493,7 +494,7 @@
 
 .start-plate:hover .start-spark,
 .start-plate:focus-visible .start-spark {
-  animation: spark-gather 2.2s cubic-bezier(0.3, 0.1, 0.4, 1) var(--spark-delay, 0s) infinite;
+  animation: spark-gather 3.2s linear var(--spark-delay, 0s) infinite;
 }
 
 /* ホバー中は枠の光もゆるやかに脈動し続ける */

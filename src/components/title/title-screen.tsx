@@ -8,7 +8,7 @@ import { CelestialSphere } from "./celestial-sphere";
 
 const DESTINATION = "/dashboard";
 /** ホバー中の集光ループ 1 周の長さ（s）。粒子ごとの開始をこの範囲に散らす */
-const GATHER_S = 2.2;
+const GATHER_S = 3.2;
 
 /** ボタン周囲の星屑: [角度, 距離(px), 大きさ, 遅延] — 決定的な配置 */
 const SPARKS = Array.from({ length: 18 }, (_, i) => {
