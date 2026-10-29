@@ -13,18 +13,26 @@ import { WizardAvatar } from "@/components/wizard-avatar";
 import { WorldlineEchoes } from "@/components/worldline-echoes";
 import { dashboardSummary, type DashboardSummary } from "@/lib/aggregate";
 import { formatMinutes, levelProgress, rankOf } from "@/lib/game";
+import { activeSubjectsOf } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
 import { localProfile, localStudyLogs, useStoredUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 const MODE_LABEL = { pomodoro: "律動の詠唱", stopwatch: "無窮の詠唱" } as const;
 
-/** 魔術書庫。デモモードでは端末に保存した観測データから集計する */
+/**
+ * 魔術書庫。デモモードでは端末に保存した観測データから集計する。
+ * 魔法陣（レーダー）は設定画面で選んだ「詠唱に使う科目」だけで描く
+ */
 export function DashboardView({ summary, subjects, isDemo }: { summary: DashboardSummary; subjects: Subject[]; isDemo: boolean }) {
   const stored = useStoredUserData();
-  if (!isDemo) return <Dashboard {...summary} />;
   if (!stored) return <PageLoading />;
-  return <Dashboard {...dashboardSummary(localProfile(stored), subjects, localStudyLogs(stored))} />;
+  const base = isDemo ? dashboardSummary(localProfile(stored), subjects, localStudyLogs(stored)) : summary;
+  const activeIds = new Set(activeSubjectsOf(subjects, stored.userProfile.activeSubjects).map((s) => s.id));
+  const radar = Object.fromEntries(
+    Object.entries(base.radar).map(([range, totals]) => [range, totals.filter((t) => activeIds.has(t.subjectId))]),
+  ) as DashboardSummary["radar"];
+  return <Dashboard {...base} radar={radar} />;
 }
 
 function Dashboard({ profile, totals, radar, recentLogs }: DashboardSummary) {
