@@ -1,7 +1,7 @@
 // 音声ファイルが無いときに Web Audio API で組み立てる環境音・効果音。
 // 音の軸は詠唱開始音（低くから昇る光と、ゆっくり開く和音）。すべて低音〜中音域に寄せ、柔らかい残響で包む。
-// 環境音はノイズを使わず、空気のゆらぎのような超低域ドローンと、ときおり響く星鳴り（サイン波の和音）で作る。
-// タイトル画面だけは、柔らかいピアノとオルゴールの静かなコード進行を流す。
+// 環境音（BGM）はノイズを使わず、柔らかいピアノとオルゴールの静かなコード進行で作る。
+// タイトルとステージごとに調と進行を変え、ステージでは空気のゆらぎ（超低域ドローン）を下に薄く敷く。
 import type { AmbienceKey, SeKey } from "./sound-files";
 
 export type Voice = {
@@ -89,60 +89,6 @@ function airDrone(ctx: AudioContext, out: AudioNode, layer: Layer, o: { root: nu
   lfo(ctx, 0.023, o.level * 0.3, gain.gain, layer);
 }
 
-/** 星鳴り: ときおり、透き通ったサイン波の和音がゆっくり灯って長く消えていく */
-function starChimes(
-  ctx: AudioContext,
-  out: AudioNode,
-  layer: Layer,
-  o: { notes: number[]; interval: number; level: number },
-) {
-  const send = reverbSend(ctx, out, { seconds: 4, wet: 0.6, cutoff: 1800 });
-  const ring = () => {
-    const t = ctx.currentTime + 0.05;
-    // 2〜3音を少しずつずらして重ねる
-    const count = 2 + Math.round(Math.random());
-    const start = Math.floor(Math.random() * (o.notes.length - count + 1));
-    o.notes.slice(start, start + count).forEach((freq, i) => {
-      const at = t + i * (0.18 + Math.random() * 0.2);
-      const osc = ctx.createOscillator();
-      osc.frequency.value = freq;
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0, at);
-      gain.gain.linearRampToValueAtTime(o.level * (0.6 + Math.random() * 0.4), at + 0.5);
-      gain.gain.exponentialRampToValueAtTime(SILENT, at + 6);
-      osc.connect(gain).connect(send);
-      osc.start(at);
-      osc.stop(at + 6.1);
-    });
-    layer.timers.push(setTimeout(ring, o.interval * (0.6 + Math.random() * 0.8)));
-  };
-  layer.timers.push(setTimeout(ring, o.interval * 0.3));
-}
-
-/** 滞在する地ごとの響き: 根音（超低域ドローン）と、星鳴りの和音・間隔 */
-const SOUNDSCAPES: Record<Exclude<AmbienceKey, "title">, { root: number; notes: number[]; interval: number }> = {
-  // 旅立ちの前（ログイン・星天の導き）: D
-  prelude: { root: midi(26), notes: [midi(62), midi(66), midi(69), midi(74)], interval: 5000 },
-  // 小屋: 温かな A
-  hearth: { root: midi(33), notes: [midi(57), midi(61), midi(64), midi(69)], interval: 7500 },
-  // 樹海・図書室: 深い G
-  forest: { root: midi(31), notes: [midi(55), midi(59), midi(62), midi(67)], interval: 8500 },
-  // 観測塔・星空: 澄んだ C。星鳴りがやや高く、多く灯る
-  stars: { root: midi(36), notes: [midi(64), midi(67), midi(71), midi(72), midi(76)], interval: 5000 },
-  // 氷の回廊: 冷たい B の空虚五度
-  frost: { root: midi(35), notes: [midi(59), midi(66), midi(71), midi(78)], interval: 7000 },
-  // 魔導炉: 最も低い E
-  forge: { root: midi(28), notes: [midi(52), midi(56), midi(59), midi(64)], interval: 9000 },
-  // 大聖堂: 荘厳な F
-  sanctum: { root: midi(29), notes: [midi(53), midi(57), midi(60), midi(65), midi(69)], interval: 6000 },
-};
-
-function soundscape(ctx: AudioContext, out: AudioNode, layer: Layer, key: Exclude<AmbienceKey, "title">) {
-  const s = SOUNDSCAPES[key];
-  airDrone(ctx, out, layer, { root: s.root, level: 0.32 });
-  starChimes(ctx, out, layer, { notes: s.notes, interval: s.interval, level: 0.045 });
-}
-
 /** 柔らかいピアノ: 弱めの打鍵でふくらみ、高い倍音から先に消えていく */
 function piano(ctx: AudioContext, out: AudioNode, freq: number, at: number, level: number) {
   const partials: [ratio: number, amp: number, decay: number][] = [
@@ -184,20 +130,35 @@ function musicBox(ctx: AudioContext, out: AudioNode, freq: number, at: number, l
   }
 }
 
-/** タイトルの和音進行（ゆっくり下りていく Fmaj7 → Em7 → Dm7 → Cmaj7）。旋律はその和音の音から選ぶ */
-const TITLE_CHORDS = [
-  { bass: 41, chord: [57, 60, 64], melody: [69, 72, 76, 77] },
-  { bass: 40, chord: [55, 59, 62], melody: [67, 71, 74, 76] },
-  { bass: 38, chord: [57, 60, 65], melody: [65, 69, 72, 74] },
-  { bass: 36, chord: [55, 59, 64], melody: [64, 67, 71, 72] },
-];
-/** 1つの和音を鳴らす長さ（秒） */
-const TITLE_BAR_SEC = 4.8;
-/** 小節内でオルゴールが鳴りうる位置（拍） */
-const TITLE_SLOTS = [0.5, 1, 1.5, 2, 2.5, 3, 3.5];
+type Chord = { bass: number; chord: number[]; melody: number[] };
 
-/** タイトルの曲: ピアノの分散和音に、オルゴールの旋律を毎回少しずつ変えて重ね、繰り返す */
-function titleMusic(ctx: AudioContext, out: AudioNode, layer: Layer) {
+/** 和音（MIDI 番号）。旋律の候補は和音の音を1オクターブ上げたものに、添えたい音を足す */
+const ch = (bass: number, chord: number[], extra: number[] = []): Chord => ({
+  bass,
+  chord,
+  melody: [...chord.map((n) => n + 12), ...extra],
+});
+
+type Piece = {
+  /** 繰り返す和音進行 */
+  chords: Chord[];
+  /** 1つの和音を鳴らす長さ（秒） */
+  barSec: number;
+  /** ピアノの強さ（タイトルを 1 とする） */
+  piano: number;
+  /** オルゴールの強さ */
+  box: number;
+  /** 1小節で鳴らすオルゴールの音数 [最少, 最多] */
+  boxNotes: [number, number];
+  /** 小節の後半にも和音をそっと置くか */
+  afterBeat: boolean;
+};
+
+/** 小節内でオルゴールが鳴りうる位置（拍） */
+const BOX_SLOTS = [0.5, 1, 1.5, 2, 2.5, 3, 3.5];
+
+/** ピアノの分散和音に、オルゴールの旋律を毎回少しずつ変えて重ね、繰り返す */
+function pianoPiece(ctx: AudioContext, out: AudioNode, layer: Layer, piece: Piece) {
   const send = reverbSend(ctx, out, { seconds: 3.5, wet: 0.55, cutoff: 2200 });
   // フェルトをかけたように、ピアノの高域を丸める
   const pianoTone = ctx.createBiquadFilter();
@@ -209,28 +170,75 @@ function titleMusic(ctx: AudioContext, out: AudioNode, layer: Layer) {
   boxTone.frequency.value = 3200;
   boxTone.connect(send);
 
-  const beat = TITLE_BAR_SEC / 4;
+  const beat = piece.barSec / 4;
   let bar = 0;
   let next = ctx.currentTime + 0.3;
   const schedule = () => {
-    const { bass, chord, melody } = TITLE_CHORDS[bar % TITLE_CHORDS.length];
+    const { bass, chord, melody } = piece.chords[bar % piece.chords.length];
     const t = next;
-    piano(ctx, pianoTone, midi(bass), t, 0.11);
-    chord.forEach((note, i) => piano(ctx, pianoTone, midi(note), t + 0.22 * (i + 1), 0.06));
-    // 小節の後半にもう一度、和音をそっと置く
-    piano(ctx, pianoTone, midi(chord[0]), t + beat * 2, 0.035);
-    piano(ctx, pianoTone, midi(chord[2]), t + beat * 2 + 0.2, 0.03);
-    // オルゴールは 1 オクターブ上で、3〜4音だけ
-    const slots = [...TITLE_SLOTS].sort(() => Math.random() - 0.5).slice(0, 3 + Math.round(Math.random()));
+    piano(ctx, pianoTone, midi(bass), t, 0.11 * piece.piano);
+    chord.forEach((note, i) => piano(ctx, pianoTone, midi(note), t + 0.22 * (i + 1), 0.06 * piece.piano));
+    if (piece.afterBeat) {
+      piano(ctx, pianoTone, midi(chord[0]), t + beat * 2, 0.035 * piece.piano);
+      piano(ctx, pianoTone, midi(chord[2]), t + beat * 2 + 0.2, 0.03 * piece.piano);
+    }
+    // オルゴールは旋律の候補の 1 オクターブ上で、数音だけ
+    const [min, max] = piece.boxNotes;
+    const count = min + Math.round(Math.random() * (max - min));
+    const slots = [...BOX_SLOTS].sort(() => Math.random() - 0.5).slice(0, count);
     slots.forEach((slot) => {
       const note = melody[Math.floor(Math.random() * melody.length)] + 12;
-      musicBox(ctx, boxTone, midi(note), t + slot * beat, 0.035);
+      musicBox(ctx, boxTone, midi(note), t + slot * beat, piece.box);
     });
     bar += 1;
-    next += TITLE_BAR_SEC;
+    next += piece.barSec;
     layer.timers.push(setTimeout(schedule, Math.max(0, (next - ctx.currentTime - 0.6) * 1000)));
   };
   schedule();
+}
+
+/** タイトルの曲: ゆっくり下りていく Fmaj7 → Em7 → Dm7 → Cmaj7 */
+const TITLE_PIECE: Piece = {
+  chords: [
+    { bass: 41, chord: [57, 60, 64], melody: [69, 72, 76, 77] },
+    { bass: 40, chord: [55, 59, 62], melody: [67, 71, 74, 76] },
+    { bass: 38, chord: [57, 60, 65], melody: [65, 69, 72, 74] },
+    { bass: 36, chord: [55, 59, 64], melody: [64, 67, 71, 72] },
+  ],
+  barSec: 4.8,
+  piano: 1,
+  box: 0.035,
+  boxNotes: [3, 4],
+  afterBeat: true,
+};
+
+/**
+ * 滞在する地ごとの曲。タイトルと同じピアノとオルゴールで、調と和音進行を変え、
+ * 少しゆっくり・控えめに奏でる。下には空気のゆらぎ（超低域ドローン）を薄く敷く
+ */
+const STAGE_PIECE = { barSec: 5.6, piano: 0.85, box: 0.028, boxNotes: [2, 3], afterBeat: false } satisfies Omit<Piece, "chords">;
+
+const SOUNDSCAPES: Record<Exclude<AmbienceKey, "title">, { root: number; chords: Chord[] }> = {
+  // 旅立ちの前（星天の導き）: C の明るい進行 Cmaj7 → Am7 → Fmaj7 → G6
+  prelude: { root: midi(24), chords: [ch(36, [55, 59, 64]), ch(33, [55, 60, 64]), ch(41, [57, 60, 64]), ch(43, [59, 62, 64])] },
+  // 小屋: G の温かな下行 Cmaj7 → Bm7 → Am7 → Gmaj7
+  hearth: { root: midi(31), chords: [ch(36, [55, 59, 64]), ch(35, [54, 57, 62]), ch(33, [55, 60, 64]), ch(31, [54, 59, 62])] },
+  // 樹海・図書室: D の深い響き Dm9 → B♭maj7 → Fmaj7 → C(add9)
+  forest: { root: midi(26), chords: [ch(38, [57, 60, 64]), ch(34, [57, 62, 65]), ch(41, [57, 60, 64]), ch(36, [55, 62, 64])] },
+  // 観測塔・星空: E の澄んだ下行 Amaj7 → G♯m7 → F♯m7 → Emaj7
+  stars: { root: midi(28), chords: [ch(45, [61, 64, 68]), ch(44, [59, 63, 66]), ch(42, [57, 61, 64]), ch(40, [59, 63, 68])] },
+  // 氷の回廊: B マイナーの静けさ Gmaj7 → F♯m7 → Em7 → Bm(add9)
+  frost: { root: midi(35), chords: [ch(43, [59, 62, 66]), ch(42, [57, 61, 64]), ch(40, [59, 62, 67]), ch(35, [59, 61, 62])] },
+  // 魔導炉: E マイナーの重み Cmaj7 → Am7 → Bm7 → Em7
+  forge: { root: midi(28), chords: [ch(36, [55, 59, 64]), ch(33, [55, 60, 64]), ch(35, [54, 57, 62]), ch(40, [55, 59, 62])] },
+  // 大聖堂: F の荘厳な進行 B♭maj7 → C6 → Am7 → Dm7
+  sanctum: { root: midi(29), chords: [ch(34, [57, 62, 65]), ch(36, [57, 60, 64]), ch(33, [55, 60, 64]), ch(38, [57, 60, 65])] },
+};
+
+function soundscape(ctx: AudioContext, out: AudioNode, layer: Layer, key: Exclude<AmbienceKey, "title">) {
+  const s = SOUNDSCAPES[key];
+  airDrone(ctx, out, layer, { root: s.root, level: 0.18 });
+  pianoPiece(ctx, out, layer, { ...STAGE_PIECE, chords: s.chords });
 }
 
 /** 生成した環境音の声部（音量 0 から始まる） */
@@ -239,7 +247,7 @@ export function synthAmbience(ctx: AudioContext, key: AmbienceKey, destination: 
   output.gain.value = 0;
   output.connect(destination);
   const layer: Layer = { sources: [], timers: [] };
-  if (key === "title") titleMusic(ctx, output, layer);
+  if (key === "title") pianoPiece(ctx, output, layer, TITLE_PIECE);
   else soundscape(ctx, output, layer, key);
   return {
     output,
