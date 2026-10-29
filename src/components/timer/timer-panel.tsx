@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { timerSummary } from "@/lib/aggregate";
 import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
 import { resolveSubSubject } from "@/lib/subjects";
@@ -26,6 +27,7 @@ import {
   armedCatalyst,
   getUserData,
   isDiscovered,
+  localStudyLogs,
   todayChantMinutes,
   userActions,
   useUserData,
@@ -99,7 +101,8 @@ export function TimerPanel({
   const skin = activeSkin(data);
   const catalyst = armedCatalyst(data);
 
-  const subject = subjects.find((s) => s.id === subjectId);
+  // 設定で選択中の科目が外されたら、詠唱に使う科目の先頭に切り替える
+  const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0];
   const subSubject = resolveSubSubject(subject, subSubjectInput);
   const resting = phase === "break" || phase === "breakReady";
   const color = resting ? "#cfe9ff" : (subject?.color ?? "#a882fb");
@@ -113,7 +116,13 @@ export function TimerPanel({
         setMessage("詠唱が短く、星に刻まれませんでした（1分未満）");
         return;
       }
-      const beforeTotals = weekTotals;
+      // 詠唱画面は画面を移っても状態が残るので、魔法陣はいま選ばれている科目で組み直す。
+      // デモモードは保存した詠唱履歴から測り直し、それ以外は手元の集計に無い科目を 0 分で補う
+      const beforeTotals = isDemo
+        ? timerSummary(subjects, localStudyLogs(getUserData())).weekTotals
+        : subjects.map(
+            (s) => weekTotals.find((t) => t.subjectId === s.id) ?? { subjectId: s.id, name: s.name, color: s.color, minutes: 0 },
+          );
       startSaving(async () => {
         const res = await saveStudyLog({ subjectId: subject.id, minutes, mode, demoTotalMp: totalMp });
         if (!res.ok) {
@@ -175,7 +184,7 @@ export function TimerPanel({
         });
       });
     },
-    [area, isDemo, mode, subject, subSubject, totalMp, weekTotals],
+    [area, isDemo, mode, subject, subSubject, subjects, totalMp, weekTotals],
   );
 
   // ポモドーロ: 勉強・休憩の終了判定
@@ -323,7 +332,7 @@ export function TimerPanel({
           <p className="mb-1.5 text-xs tracking-[0.2em] text-muted-foreground">属性（科目 ➔ 詳細）</p>
           <SubjectPicker
             subjects={subjects}
-            subjectId={subjectId}
+            subjectId={subject?.id ?? null}
             subSubject={subSubjectInput}
             onChange={(id, sub) => {
               setSubjectId(id ?? subjectId);
@@ -412,7 +421,7 @@ export function TimerPanel({
             color={color}
             lineColor={lineColor}
             particleColor={skin.particleColor}
-            nodes={subjects.map((s) => ({ color: s.color, active: s.id === subjectId }))}
+            nodes={subjects.map((s) => ({ color: s.color, active: s.id === subject?.id }))}
             running={running}
             intensity={intensity}
             className="absolute inset-0 h-full w-full"
