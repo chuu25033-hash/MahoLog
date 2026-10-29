@@ -5,7 +5,7 @@ import { TimerPanel } from "@/components/timer/timer-panel";
 import { getTimerData } from "@/lib/data";
 
 async function TimerContent() {
-  const { profile, subjects, weekTotals, todayMinutes } = await getTimerData();
+  const { profile, subjects, weekTotals, todayMinutes, isDemo } = await getTimerData();
 
   return (
     <TimerPanel
@@ -13,6 +13,7 @@ async function TimerContent() {
       initialTotalMp={profile.total_study_time}
       initialWeekTotals={weekTotals}
       todayMinutes={todayMinutes}
+      isDemo={isDemo}
     />
   );
 }

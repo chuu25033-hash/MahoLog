@@ -20,31 +20,45 @@ const TICKS = Array.from({ length: 120 }, (_, i) => i * 3);
 /** 拡大縮小しても 1px 以下を保つ光の線 */
 const hairline = { vectorEffect: "non-scaling-stroke", fill: "none" } as const;
 
+/** 天球儀のリング: [rotateX, rotateY, 不透明度] */
+const ARMILLARY_RINGS = [
+  [0, 0, 0.55],
+  [0, 60, 0.4],
+  [0, 120, 0.4],
+  [66, 20, 0.3],
+] as const;
+
 /**
- * タイマー背景の魔法陣。running=false で回転・明滅・粒子が停止する。
- * 線は繊細なアクアの光、color（科目色）は粒子と中心の淡い光に使う。
- * intensity(0〜1) は経過に応じた発光の強さ・粒子の量。
+ * タイマー背景の魔法陣。running=false で回転・明滅・粒子・発光が停止する。
+ * 線は繊細なアクアの光（スキンで変化）、color（科目色）は中央の天球儀と淡い光に使う。
+ * スターライトゴールドの粒子が中央へ集束し、intensity(0〜1) の経過に応じて量と発光が増す。
  */
 export function MagicCircle({
   color,
   running,
   intensity,
   lineColor = "#71e2ef",
+  particleColor = "#e2c974",
   className,
 }: {
   color: string;
   running: boolean;
   intensity: number;
   lineColor?: string;
+  particleColor?: string;
   className?: string;
 }) {
   const visibleParticles = Math.round(6 + intensity * (PARTICLES.length - 6));
-  const glow = running ? 0.1 + intensity * 0.25 : 0.05;
+  const glow = running ? 0.1 + intensity * 0.25 : 0.04;
 
   return (
     <div
-      className={cn("pointer-events-none relative aspect-square", !running && "paused-anim", className)}
-      style={{ "--particle-color": color, containerType: "inline-size" } as CSSProperties}
+      className={cn(
+        "pointer-events-none relative aspect-square transition-[filter] duration-700",
+        !running && "paused-anim brightness-75 saturate-50",
+        className,
+      )}
+      style={{ "--particle-color": particleColor, containerType: "inline-size" } as CSSProperties}
       aria-hidden
     >
       {/* 中心に集まる淡い光 */}
@@ -107,6 +121,29 @@ export function MagicCircle({
         <rect x="-50" y="-50" width="100" height="100" stroke={lineColor} strokeOpacity="0.3" strokeWidth="0.6" {...hairline} />
         <rect x="-50" y="-50" width="100" height="100" stroke={lineColor} strokeOpacity="0.3" strokeWidth="0.6" transform="rotate(45)" {...hairline} />
       </svg>
+
+      {/* 中央: 科目色の細線で描く天球儀（3D に傾いたリングがゆっくり回る） */}
+      <div className="armillary inset-[30%]!" style={{ "--ring-color": color } as CSSProperties}>
+        <div className="armillary-gimbal">
+          {ARMILLARY_RINGS.map(([x, y, opacity], i) => (
+            <div
+              key={i}
+              className="armillary-ring"
+              style={{ transform: `rotateY(${y}deg) rotateX(${x}deg)`, opacity: running ? opacity : opacity * 0.5 }}
+            />
+          ))}
+          <div className="armillary-ring armillary-equator inset-[-6%]!" style={{ opacity: running ? 0.6 : 0.3 }} />
+        </div>
+        {/* 天球儀の核: 集束した光が溜まっていく */}
+        <div
+          className="absolute inset-[38%] rounded-full transition-all duration-1000"
+          style={{
+            background: `radial-gradient(circle, #fff8dc, ${particleColor} 40%, transparent 70%)`,
+            opacity: running ? 0.35 + intensity * 0.65 : 0.15,
+            transform: `scale(${0.6 + intensity * 0.6})`,
+          }}
+        />
+      </div>
 
       {running &&
         PARTICLES.slice(0, visibleParticles).map((p, i) => (

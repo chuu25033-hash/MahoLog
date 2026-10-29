@@ -8,11 +8,18 @@ import type { SubjectTotal } from "@/lib/types";
 export const MIN_RADAR_SUBJECTS = 3;
 
 /** 頂点に添える小さな星の輝き */
-function SparkleDot({ cx, cy, color }: { cx?: number; cy?: number; color: string }) {
+function SparkleDot({ cx, cy, color, highlight }: { cx?: number; cy?: number; color: string; highlight?: boolean }) {
   if (cx === undefined || cy === undefined) return null;
   return (
     <g className="glimmer" style={{ animationDelay: `${(cx + cy) % 4}s` }}>
-      <circle cx={cx} cy={cy} r={6} fill={color} opacity={0.18} />
+      {/* 今回伸びた頂点: 金の細い光輪を重ねる */}
+      {highlight && (
+        <>
+          <circle cx={cx} cy={cy} r={11} fill="none" stroke="#e2c974" strokeWidth={0.8} opacity={0.7} />
+          <circle cx={cx} cy={cy} r={16} fill="none" stroke="#e2c974" strokeWidth={0.5} strokeDasharray="1 3" opacity={0.5} />
+        </>
+      )}
+      <circle cx={cx} cy={cy} r={highlight ? 8 : 6} fill={highlight ? "#e2c974" : color} opacity={highlight ? 0.3 : 0.18} />
       <path
         d={`M ${cx} ${cy - 5} L ${cx + 1} ${cy - 1} L ${cx + 5} ${cy} L ${cx + 1} ${cy + 1} L ${cx} ${cy + 5} L ${cx - 1} ${cy + 1} L ${cx - 5} ${cy} L ${cx - 1} ${cy - 1} Z`}
         fill="#f6f1dc"
@@ -147,6 +154,7 @@ export function MagicRadar({
                 cx={props.cx}
                 cy={props.cy}
                 color={chartData[props.index ?? 0]?.color ?? "#71e2ef"}
+                highlight={highlightSubjectId !== undefined && chartData[props.index ?? 0]?.subjectId === highlightSubjectId}
               />
             )}
             animationDuration={animationDuration}

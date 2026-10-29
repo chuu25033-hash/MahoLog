@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { Coffee, Hourglass, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
+import { Coffee, FastForward, Hourglass, MapPin, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
 import { saveStudyLog } from "@/app/actions/study";
+import { ItemArt } from "@/components/item-art";
 import { MagicCircle } from "@/components/magic-circle";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +14,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { areaMultiplier, resolveArea } from "@/lib/areas";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
+import { CATALYSTS, rollDrop } from "@/lib/items";
+import { activeSkin, armedCatalyst, mockActions, useMockState } from "@/lib/mock-store";
 import type { StudyMode, Subject, SubjectTotal } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ResultDialog, type StudyResult } from "./result-dialog";
@@ -41,11 +45,13 @@ export function TimerPanel({
   initialTotalMp,
   initialWeekTotals,
   todayMinutes,
+  isDemo,
 }: {
   subjects: Subject[];
   initialTotalMp: number;
   initialWeekTotals: SubjectTotal[];
   todayMinutes: number;
+  isDemo: boolean;
 }) {
   const [mode, setMode] = useState<StudyMode>("pomodoro");
   const [focusMin, setFocusMin] = useState<number>(25);
@@ -66,10 +72,16 @@ export function TimerPanel({
   const [confirmBaseMs, setConfirmBaseMs] = useState(0);
   const checkpointRef = useRef(0);
 
+  const mock = useMockState();
+  const area = resolveArea(mock.areaId, totalMp);
+  const skin = activeSkin(mock);
+  const catalyst = armedCatalyst(mock);
+
   const subject = subjects.find((s) => s.id === subjectId);
   const resting = phase === "break" || phase === "breakReady";
   const color = resting ? "#cfe9ff" : (subject?.color ?? "#a882fb");
-  const lineColor = resting ? "#a882fb" : "#71e2ef";
+  const lineColor = resting ? "#a882fb" : skin.lineColor;
+  const boost = subject ? areaMultiplier(area, subject.name) : 1;
 
   const save = useCallback(
     (minutes: number) => {
@@ -88,22 +100,35 @@ export function TimerPanel({
         const afterTotals = beforeTotals.map((t) =>
           t.subjectId === subject.id ? { ...t, minutes: t.minutes + res.savedMinutes } : t,
         );
+        // 獲得MP = 勉強時間 × エリアの属性ブースト × 触媒
+        // TODO: Supabase 接続時はボーナス分の MP も DB に保存する（現状はローカル表示のみ）
+        const areaBoost = areaMultiplier(area, subject.name);
+        const usedCatalyst = mockActions.consumeCatalyst();
+        const gainedMp = Math.round(res.savedMinutes * areaBoost * (usedCatalyst?.multiplier ?? 1));
+        const drop = rollDrop(area);
+        const isNew = drop ? mockActions.addItem(drop) : false;
+
         setWeekTotals(afterTotals);
-        setTotalMp(res.afterMp);
-        setTodayMp((v) => v + res.savedMinutes);
+        setTotalMp(res.beforeMp + gainedMp);
+        setTodayMp((v) => v + gainedMp);
         setResult({
           id: Date.now(),
           subject,
+          area,
           savedMinutes: res.savedMinutes,
           requestedMinutes: minutes,
+          gainedMp,
+          areaBoost,
+          catalyst: usedCatalyst,
           beforeMp: res.beforeMp,
-          afterMp: res.afterMp,
+          afterMp: res.beforeMp + gainedMp,
           beforeTotals,
           afterTotals,
+          drop: drop ? { item: drop, isNew } : null,
         });
       });
     },
-    [mode, subject, totalMp, weekTotals],
+    [area, mode, subject, totalMp, weekTotals],
   );
 
   // ポモドーロ: 勉強・休憩の終了判定
@@ -168,6 +193,15 @@ export function TimerPanel({
     reset();
     setConfirmBaseMs(0);
     setPhase("idle");
+    save(minutes);
+  };
+
+  /** デモ用: 計測を待たずに設定時間ぶん完了したことにする */
+  const skipToFinish = () => {
+    const minutes = mode === "pomodoro" ? focusMin : Math.max(25, Math.floor(read() / 60_000));
+    reset();
+    setConfirmBaseMs(0);
+    setPhase(mode === "pomodoro" ? "breakReady" : "idle");
     save(minutes);
   };
 
@@ -277,6 +311,48 @@ export function TimerPanel({
           </p>
         )}
 
+        <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-2.5 text-xs tracking-wider">
+          <p className="flex items-center gap-1.5 text-muted-foreground">
+            <MapPin className="size-3.5 text-aqua/80" strokeWidth={1.25} />
+            滞在中 <span className="font-display text-[10px] text-starlight/80">AREA {area.id}</span>
+            <span className="truncate text-foreground">{area.name}</span>
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            属性ブースト {area.boost.subjects.join("・")}
+            <span className="ml-1 font-display text-aqua">×{area.boost.multiplier}</span>
+            {boost > 1 && <span className="ml-1 text-starlight text-glow-gold">適用中</span>}
+          </p>
+          <div>
+            <p className="mb-1 text-[11px] text-muted-foreground">触媒（次回の詠唱に使用）</p>
+            <div className="flex flex-wrap gap-1">
+              {CATALYSTS.filter((c) => (mock.inventory[c.id] ?? 0) > 0).map((c) => {
+                const armed = catalyst?.id === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    disabled={locked}
+                    onClick={() => mockActions.armCatalyst(armed ? null : c.id)}
+                    title={c.effect}
+                    className={cn(
+                      "flex items-center gap-1 rounded-full border py-0.5 pr-2 pl-0.5 text-[11px] transition-all duration-300 disabled:opacity-50",
+                      armed
+                        ? "border-starlight/55 bg-starlight/[0.08] text-starlight shadow-[0_0_10px_-3px_rgba(226,201,116,0.5)]"
+                        : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
+                    )}
+                  >
+                    <ItemArt glyph={c.glyph} rarity={c.rarity} color={c.color} seed={c.id} className="size-5" />
+                    ×{c.multiplier}
+                    <span className="text-[10px] opacity-70">({mock.inventory[c.id]})</span>
+                  </button>
+                );
+              })}
+              {CATALYSTS.every((c) => (mock.inventory[c.id] ?? 0) === 0) && (
+                <span className="text-[11px] text-muted-foreground/70">所持していません</span>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="mt-auto space-y-1 border-t border-white/10 pt-3 text-xs tracking-wider text-muted-foreground">
           <p className="flex items-baseline justify-between gap-2">
             本日の獲得魔力
@@ -301,6 +377,7 @@ export function TimerPanel({
           <MagicCircle
             color={color}
             lineColor={lineColor}
+            particleColor={skin.particleColor}
             running={running}
             intensity={intensity}
             className="absolute inset-0 h-full w-full"
@@ -382,6 +459,15 @@ export function TimerPanel({
                 </>
               )}
             </div>
+            {isDemo && phase === "focus" && (
+              <button
+                onClick={skipToFinish}
+                disabled={saving}
+                className="flex items-center gap-1 text-[11px] tracking-wider text-muted-foreground underline-offset-4 hover:text-starlight hover:underline"
+              >
+                <FastForward className="size-3" /> デモ: 計測を省略して完了
+              </button>
+            )}
             {saving && <p className="text-xs tracking-wider text-aqua/70 glimmer">魔力を記録中…</p>}
             {message && <p className="text-xs text-destructive">{message}</p>}
           </div>

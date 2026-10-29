@@ -305,3 +305,107 @@
 @media (orientation: portrait) and (max-width: 820px) {
   .rotate-hint { display: flex; }
 }
+
+/* ---------- 滞在エリアの雰囲気（漂う粒子） ---------- */
+.mote {
+  position: absolute;
+  border-radius: 9999px;
+  opacity: 0;
+  animation-duration: var(--dur);
+  animation-delay: var(--delay);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+@keyframes mote-rise {
+  0% { transform: translate3d(0, 20vh, 0); opacity: 0; }
+  20%, 70% { opacity: 0.7; }
+  100% { transform: translate3d(var(--drift), -30vh, 0); opacity: 0; }
+}
+
+@keyframes mote-fall {
+  0% { transform: translate3d(0, -20vh, 0); opacity: 0; }
+  20%, 70% { opacity: 0.65; }
+  100% { transform: translate3d(var(--drift), 30vh, 0); opacity: 0; }
+}
+
+@keyframes mote-drift {
+  0%, 100% { transform: translate3d(0, 0, 0); opacity: 0; }
+  30% { opacity: 0.75; }
+  50% { transform: translate3d(var(--drift), calc(var(--drift) * -0.4), 0); opacity: 0.25; }
+  75% { opacity: 0.7; }
+}
+
+/* ---------- 天球儀（3D に傾いたリングがゆっくり回る） ---------- */
+@keyframes armillary-spin {
+  from { transform: rotateX(90deg) rotateZ(0deg); }
+  to { transform: rotateX(90deg) rotateZ(360deg); }
+}
+
+@keyframes armillary-yaw {
+  from { transform: rotateX(-16deg) rotateY(0deg); }
+  to { transform: rotateX(-16deg) rotateY(360deg); }
+}
+
+.armillary {
+  position: absolute;
+  inset: 0;
+  perspective: 900px;
+}
+
+.armillary-gimbal {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  animation: armillary-yaw 60s linear infinite;
+}
+
+.armillary-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1px solid var(--ring-color);
+  box-shadow: 0 0 6px -1px var(--ring-color), inset 0 0 6px -1px var(--ring-color);
+  transition: opacity 0.8s ease, box-shadow 0.8s ease;
+}
+
+.armillary-equator {
+  border-style: dashed;
+  animation: armillary-spin 36s linear infinite;
+}
+
+/* ---------- リザルト演出 ---------- */
+@keyframes mp-glow {
+  0%, 100% { filter: drop-shadow(0 0 10px rgba(226, 201, 116, 0.35)); }
+  50% { filter: drop-shadow(0 0 22px rgba(226, 201, 116, 0.8)) drop-shadow(0 0 4px rgba(255, 248, 220, 0.9)); }
+}
+
+@keyframes burst-ring {
+  0% { transform: scale(0.3); opacity: 0.9; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+.mp-glow {
+  animation: float-up 1.6s ease-out both, mp-glow 2.4s ease-in-out 1.2s infinite;
+}
+
+.burst-ring {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  border-radius: 9999px;
+  border: 1px solid rgba(226, 201, 116, 0.7);
+  animation: burst-ring 1.6s ease-out both;
+}
+
+@keyframes chest-shake {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-4deg); }
+  40% { transform: rotate(4deg); }
+  60% { transform: rotate(-2deg); }
+  80% { transform: rotate(2deg); }
+}
+
+.chest-shake {
+  animation: chest-shake 0.6s ease-in-out 2;
+}

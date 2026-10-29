@@ -1,15 +1,17 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { Map, Moon, Sparkles, Sun, Wand2 } from "lucide-react";
+import { BookMarked, Moon, Sparkles, Sun, Wand2 } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
+import { AreaAmbience } from "@/components/area-ambience";
 import { PageLoading } from "@/components/page-loading";
 import { MpBar } from "@/components/mp-bar";
 import { RadarPanel } from "@/components/radar-panel";
+import { StageCard } from "@/components/stage-card";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { WizardAvatar } from "@/components/wizard-avatar";
 import { getDashboardData } from "@/lib/data";
-import { formatMinutes, levelProgress, stageProgress } from "@/lib/game";
+import { formatMinutes, levelProgress } from "@/lib/game";
 import { cn } from "@/lib/utils";
 
 const MODE_LABEL = { pomodoro: "ポモドーロ", stopwatch: "ストップウォッチ" } as const;
@@ -17,10 +19,10 @@ const MODE_LABEL = { pomodoro: "ポモドーロ", stopwatch: "ストップウォ
 async function HomeContent() {
   const { profile, totals, radar, recentLogs } = await getDashboardData();
   const level = levelProgress(profile.total_study_time);
-  const stage = stageProgress(profile.total_study_time);
 
   return (
     <>
+      <AreaAmbience totalMp={profile.total_study_time} />
       <div className="grid min-h-full grid-cols-12 gap-3 p-3 lg:gap-4 lg:p-5">
         {/* 左: プロフィール・ステージ・合計 */}
         <section className="col-span-4 flex flex-col gap-3">
@@ -51,27 +53,7 @@ async function HomeContent() {
             </div>
           </Card>
 
-          <Card className="gap-2 px-4">
-            {/* ステージごとの淡い色味 */}
-            <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br", stage.current.gradient)} />
-            <div className="relative flex items-center gap-2 font-display text-[11px] tracking-[0.3em] text-starlight/80">
-              <Map className="size-3.5" strokeWidth={1.25} />
-              STAGE {stage.current.id}
-            </div>
-            <p className="relative text-lg tracking-[0.15em]">{stage.current.name}</p>
-            <p className="relative text-xs leading-relaxed text-muted-foreground short:hidden">{stage.current.description}</p>
-            {stage.next ? (
-              <div className="relative mt-1">
-                <MpBar ratio={stage.ratio} variant="stage" />
-                <p className="mt-1.5 text-xs tracking-wider text-muted-foreground">
-                  次のステージ「<span className="text-foreground">{stage.next.name}</span>」まで あと
-                  <span className="mx-1 text-starlight text-glow-gold">{formatMinutes(stage.remainingMinutes)}</span>
-                </p>
-              </div>
-            ) : (
-              <p className="relative text-xs text-starlight">全ステージ制覇</p>
-            )}
-          </Card>
+          <StageCard totalMp={profile.total_study_time} />
 
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -105,6 +87,15 @@ async function HomeContent() {
             <Wand2 className="size-6! transition-transform duration-500 group-hover:-rotate-12" strokeWidth={1.25} />
             詠唱を始める
             <span className="font-display text-[10px] tracking-[0.3em] text-starlight/70">BEGIN THE CHANT</span>
+          </Link>
+
+          <Link
+            href="/collection"
+            className={cn(buttonVariants({ variant: "outline" }), "h-auto justify-start gap-2 rounded-2xl px-3 py-2 text-sm tracking-[0.2em]")}
+          >
+            <BookMarked className="size-4 text-starlight" strokeWidth={1.25} />
+            魔導図鑑
+            <span className="ml-auto font-display text-[10px] tracking-[0.25em] text-starlight/70">CODEX</span>
           </Link>
 
           <Card size="sm" className="min-h-0 flex-1 px-3">

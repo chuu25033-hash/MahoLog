@@ -1,0 +1,108 @@
+// 大ステージ内の小ステージ（滞在エリア）。
+// 滞在エリアごとに属性魔力ブースト・ドロップ確率テーブル・背景の雰囲気が切り替わる。
+import { STAGES, type Stage } from "./game";
+
+export type Rarity = "C" | "B" | "A";
+
+/** レア度ごとの抽選確率（%）。残りは「何も見つからない」 */
+export type DropRates = Record<Rarity, number>;
+
+/** 背景に漂う粒子の雰囲気 */
+export type AmbienceKind = "dust" | "firefly" | "stardust" | "snow" | "ember" | "halo";
+
+export type Area = {
+  /** "1-1" 形式 */
+  id: string;
+  stageId: number;
+  name: string;
+  description: string;
+  /** 解放に必要な累計時間（時間） */
+  requiredHours: number;
+  /** 属性魔力ブースト（科目名で指定） */
+  boost: { subjects: string[]; multiplier: number };
+  drops: DropRates;
+  ambience: {
+    kind: AmbienceKind;
+    /** 粒子と背景グラデーションの色 */
+    colors: [string, string];
+  };
+};
+
+export const BASE_DROP_RATES: DropRates = { C: 40, B: 20, A: 5 };
+
+const a = (
+  id: string,
+  name: string,
+  description: string,
+  requiredHours: number,
+  boostSubjects: string[],
+  multiplier: number,
+  ambience: Area["ambience"],
+  drops: Partial<DropRates> = {},
+): Area => ({
+  id,
+  stageId: Number(id.split("-")[0]),
+  name,
+  description,
+  requiredHours,
+  boost: { subjects: boostSubjects, multiplier },
+  drops: { ...BASE_DROP_RATES, ...drops },
+  ambience,
+});
+
+export const AREAS: Area[] = [
+  a("1-1", "灯火の机", "蝋燭の明かりだけが頼りの小さな机", 0, ["国語"], 1.1, { kind: "dust", colors: ["#e2c974", "#f4d9a0"] }),
+  a("1-2", "埃かぶりの書架", "誰も読まなくなった語学書が並ぶ棚", 3, ["国語", "英語"], 1.2, { kind: "dust", colors: ["#e7c48f", "#cfa877"] }),
+  a("1-3", "秘密の地下書庫", "封じられた古文書が眠る地下の一室", 6, ["社会"], 1.2, { kind: "dust", colors: ["#b9a2f7", "#e2c974"] }, { B: 25 }),
+
+  a("2-1", "苔むした入口", "木漏れ日が書架を照らす森の入口", 10, ["理科"], 1.2, { kind: "firefly", colors: ["#8fdcc4", "#d7f5a8"] }),
+  a("2-2", "囁く大樹の閲覧席", "大樹の洞に設えられた静かな席", 15, ["国語", "英語"], 1.2, { kind: "firefly", colors: ["#a8e6b8", "#71e2ef"] }),
+  a("2-3", "妖精の写本室", "妖精たちが夜通し写本を綴る部屋", 20, ["英語"], 1.3, { kind: "firefly", colors: ["#d7f5a8", "#e7a9c6"] }, { B: 25 }),
+  a("2-4", "根の迷宮書庫", "絡み合う根が書架を成す迷宮", 25, ["数学"], 1.3, { kind: "firefly", colors: ["#8fdcc4", "#b9a2f7"] }, { A: 7 }),
+
+  a("3-1", "螺旋階段", "星へと続く果てしない階段", 30, ["数学"], 1.2, { kind: "stardust", colors: ["#8db7f2", "#e2c974"] }),
+  a("3-2", "天文盤の間", "巨大な天文盤が時を刻む大広間", 38, ["数学", "理科"], 1.25, { kind: "stardust", colors: ["#a882fb", "#8db7f2"] }),
+  a("3-3", "星読みの露台", "夜空に最も近い吹きさらしの露台", 46, ["理科"], 1.3, { kind: "stardust", colors: ["#71e2ef", "#a882fb"] }, { B: 25 }),
+  a("3-4", "望遠鏡の頂", "塔の頂に据えられた水晶の望遠鏡", 54, ["数学", "理科"], 1.35, { kind: "stardust", colors: ["#e2c974", "#a882fb"] }, { A: 8 }),
+
+  a("4-1", "霜の回廊", "足音さえ凍りつく静かな回廊", 60, ["英語"], 1.25, { kind: "snow", colors: ["#cfe9ff", "#71e2ef"] }),
+  a("4-2", "氷晶の書見台", "氷の中に文字が浮かぶ書見台", 73, ["国語", "社会"], 1.3, { kind: "snow", colors: ["#e6f4ff", "#8db7f2"] }, { B: 25 }),
+  a("4-3", "凍れる時計塔", "針の止まった時計が並ぶ静寂の塔", 86, ["数学"], 1.4, { kind: "snow", colors: ["#cfe9ff", "#b9a2f7"] }, { A: 8 }),
+
+  a("5-1", "熾火の工房", "絶えず熾火が燃える錬成工房", 100, ["理科"], 1.3, { kind: "ember", colors: ["#f2a38d", "#e2c974"] }),
+  a("5-2", "溶岩の錬成槽", "魔力を溶かし込む溶岩の槽", 125, ["数学", "理科"], 1.35, { kind: "ember", colors: ["#f19a9a", "#f2c27a"] }),
+  a("5-3", "火竜の封印殿", "眠れる火竜が封じられた神殿", 150, ["社会"], 1.4, { kind: "ember", colors: ["#e7a9c6", "#f2a38d"] }, { B: 25 }),
+  a("5-4", "紅蓮の心臓部", "炉の核、魔力の奔流が渦巻く場所", 175, ["数学", "英語"], 1.45, { kind: "ember", colors: ["#f2c27a", "#f19a9a"] }, { A: 10 }),
+
+  a("6-1", "雲海の参道", "雲の上に続く白亜の参道", 200, ["国語", "社会"], 1.4, { kind: "halo", colors: ["#f4f1e6", "#e2c974"] }),
+  a("6-2", "聖歌の身廊", "天上の聖歌が響き渡る身廊", 250, ["英語", "国語"], 1.45, { kind: "halo", colors: ["#fbf3d4", "#b9a2f7"] }, { B: 25 }),
+  a("6-3", "星冠の祭壇", "大魔法使いの証が授けられる祭壇", 300, ["数学", "理科", "社会"], 1.5, { kind: "halo", colors: ["#e2c974", "#71e2ef"] }, { A: 12 }),
+];
+
+export function areasOfStage(stageId: number) {
+  return AREAS.filter((area) => area.stageId === stageId);
+}
+
+export function findArea(id: string | null | undefined) {
+  return AREAS.find((area) => area.id === id);
+}
+
+export function stageOfArea(area: Area): Stage {
+  return STAGES.find((s) => s.id === area.stageId)!;
+}
+
+export function isAreaUnlocked(area: Area, totalMp: number) {
+  return totalMp / 60 >= area.requiredHours;
+}
+
+/** 選択中のエリア。未選択・未解放なら最も奥の解放済みエリア */
+export function resolveArea(selectedId: string | null | undefined, totalMp: number): Area {
+  const selected = findArea(selectedId);
+  if (selected && isAreaUnlocked(selected, totalMp)) return selected;
+  return [...AREAS].reverse().find((area) => isAreaUnlocked(area, totalMp)) ?? AREAS[0];
+}
+
+/** 科目に対するエリアの属性ブースト倍率 */
+export function areaMultiplier(area: Area, subjectName: string) {
+  return area.boost.subjects.includes(subjectName) ? area.boost.multiplier : 1;
+}

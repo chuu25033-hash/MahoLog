@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, CalendarDays, Home, LogOut, Settings, Sparkles, Trophy } from "lucide-react";
+import { BookMarked, BookOpen, CalendarDays, Home, LogOut, Settings, Sparkles, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
   { href: "/", label: "ホーム", icon: Home, ready: true },
   { href: "/timer", label: "詠唱", icon: Sparkles, ready: true },
+  { href: "/collection", label: "図鑑", icon: BookMarked, ready: true },
   { href: "/history", label: "履歴", icon: CalendarDays, ready: false },
   { href: "/ranking", label: "ランキング", icon: Trophy, ready: false },
   { href: "/settings", label: "設定", icon: Settings, ready: false },
