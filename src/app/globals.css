@@ -160,6 +160,13 @@
   overscroll-behavior: contain;
   touch-action: pan-y;
 }
+/* スクロールは維持したままスクロールバーだけを隠す */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
 /* ---------- マホログ演出 ---------- */
 @theme inline {
   --animate-spin-slow: spin 40s linear infinite;

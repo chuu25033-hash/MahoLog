@@ -171,7 +171,7 @@ export function StageMap({ totalMp, currentArea }: { totalMp: number; currentAre
         ))}
       </div>
 
-      <div ref={scrollRef} className="scroll-area absolute inset-y-0 left-0 right-[15.5rem]">
+      <div ref={scrollRef} className="scroll-area scrollbar-none absolute inset-y-0 left-0 right-[15.5rem]">
         <div className="relative" style={{ height: LAYOUT.height }}>
           <TrailLines totalMp={totalMp} />
           {LAYOUT.points.map((p) =>
@@ -353,7 +353,7 @@ function AreaPanel({ area, totalMp, current }: { area: Area; totalMp: number; cu
       key={area.id}
       className="absolute inset-y-2 right-2 flex w-60 animate-in flex-col gap-2 rounded-xl border border-white/15 bg-white/[0.05] p-3 text-xs tracking-wider shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-xl duration-300 fade-in slide-in-from-right-2"
     >
-      <div className="scroll-area -mr-1 flex min-h-0 flex-1 flex-col gap-2 pr-1">
+      <div className="scroll-area scrollbar-none -mr-1 flex min-h-0 flex-1 flex-col gap-2 pr-1">
         <p className="font-display text-[10px] tracking-[0.25em] whitespace-nowrap text-starlight/80">
           STAGE {area.id} · {stage.name}
         </p>
