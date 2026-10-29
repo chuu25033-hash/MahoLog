@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { ItemArt } from "@/components/item-art";
 import { VEIL_COVER_MS, coverScreen } from "@/components/transition-veil";
 import { GUIDANCE_CYCLE, claimGuidance, pendingGuidance, type Guidance } from "@/lib/celestial-guidance";
-import { RARITY_LABEL } from "@/lib/items";
 import { StarChart } from "./star-chart";
 
 const DESTINATION = "/dashboard";
@@ -123,7 +122,7 @@ export function GuidanceScreen() {
             ))}
           </div>
           <div className={`guidance-item size-full ${claiming ? "guidance-item-claim" : ""}`}>
-            <ItemArt glyph={reward.glyph} rarity={reward.rarity} color={reward.color} seed={reward.id} className="size-full" />
+            <ItemArt icon={reward.svgIcon} rarity={reward.rarity} color={reward.color} seed={reward.id} className="size-full" />
           </div>
           {claiming && (
             <span className="pointer-events-none absolute inset-0" aria-hidden>
@@ -174,7 +173,7 @@ export function GuidanceScreen() {
           className="title-rise mt-5 w-full rounded-xl border border-starlight/20 bg-white/[0.03] px-4 py-3 short:mt-3 short:py-2"
           style={{ "--rise-delay": "1.9s" } as CSSProperties}
         >
-          <p className="text-[10px] tracking-[0.3em] text-muted-foreground">授かりし品 · {RARITY_LABEL[reward.rarity]}</p>
+          <p className="text-[10px] tracking-[0.3em] text-muted-foreground">授かりし品 · {reward.type}</p>
           <p className="mt-1 text-lg tracking-[0.3em] short:text-base" style={{ color: reward.color, textShadow: `0 0 12px ${reward.color}80` }}>
             {reward.name}
           </p>

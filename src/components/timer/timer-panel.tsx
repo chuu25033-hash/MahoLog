@@ -16,8 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
-import { CATALYSTS, rollDrop } from "@/lib/items";
-import { activeSkin, armedCatalyst, getUserData, todayChantMinutes, userActions, useUserData } from "@/lib/user-store";
+import { CATALYSTS, blessingMultiplier, dropMultiplier, rollDrop } from "@/lib/items";
+import { activeSkin, armedCatalyst, getUserData, isDiscovered, todayChantMinutes, userActions, useUserData } from "@/lib/user-store";
 import type { StudyMode, Subject, SubjectTotal } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ResultDialog, type StudyResult } from "./result-dialog";
@@ -108,12 +108,14 @@ export function TimerPanel({
         const afterTotals = beforeTotals.map((t) =>
           t.subjectId === subject.id ? { ...t, minutes: t.minutes + res.savedMinutes } : t,
         );
-        // 獲得MP = 勉強時間 × エリアの属性ブースト × 触媒
+        // 獲得MP = 勉強時間 × エリアの属性ブースト × 秘宝の加護 × 触媒
         // TODO: Supabase 接続時はボーナス分の MP も DB に保存する（現状はローカル表示のみ）
+        const owned = (id: string) => isDiscovered(getUserData(), id);
         const areaBoost = areaMultiplier(area, subject.name);
+        const blessing = blessingMultiplier(owned, subject.name);
         const usedCatalyst = userActions.consumeCatalyst();
-        const gainedMp = Math.round(res.savedMinutes * areaBoost * (usedCatalyst?.multiplier ?? 1));
-        const drop = rollDrop(area);
+        const gainedMp = Math.round(res.savedMinutes * areaBoost * blessing * (usedCatalyst?.multiplier ?? 1));
+        const drop = rollDrop(area, Math.random, dropMultiplier(owned));
         const isNew = drop ? userActions.addItem(drop) : false;
         if (isDemo) {
           userActions.recordChant({
@@ -138,6 +140,7 @@ export function TimerPanel({
           requestedMinutes: minutes,
           gainedMp,
           areaBoost,
+          blessing,
           catalyst: usedCatalyst,
           beforeMp: res.beforeMp,
           afterMp: res.beforeMp + gainedMp,
@@ -359,7 +362,7 @@ export function TimerPanel({
                         : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
                     )}
                   >
-                    <ItemArt glyph={c.glyph} rarity={c.rarity} color={c.color} seed={c.id} className="size-5" />
+                    <ItemArt icon={c.svgIcon} rarity={c.rarity} color={c.color} seed={c.id} className="size-5" />
                     ×{c.multiplier}
                     <span className="text-[10px] opacity-70">({data.inventory[c.id]})</span>
                   </button>

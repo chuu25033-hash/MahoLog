@@ -5,7 +5,7 @@ import { Check, Flame, Lock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AREAS, boostLabel, isAreaUnlocked, ORIGIN_AREA, type Area } from "@/lib/areas";
 import { formatMinutes, STAGES, type Stage } from "@/lib/game";
-import { RARITY_LABEL } from "@/lib/items";
+import { RARITIES, RARITY_LABEL } from "@/lib/items";
 import { userActions } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
@@ -347,7 +347,7 @@ function AreaNode({
 function AreaPanel({ area, totalMp, current }: { area: Area; totalMp: number; current: boolean }) {
   const unlocked = isAreaUnlocked(area, totalMp);
   const stage = STAGES.find((s) => s.id === area.stageId)!;
-  const none = 100 - area.drops.A - area.drops.B - area.drops.C;
+  const none = 100 - RARITIES.reduce((acc, r) => acc + area.drops[r], 0);
   return (
     <div
       key={area.id}
@@ -372,7 +372,7 @@ function AreaPanel({ area, totalMp, current }: { area: Area; totalMp: number; cu
             <div className="border-t border-white/10 pt-2">
               <p className="mb-1 text-muted-foreground">宝箱のドロップ率</p>
               <ul className="space-y-0.5">
-                {(["A", "B", "C"] as const).map((r) => (
+                {RARITIES.map((r) => (
                   <li key={r} className="flex justify-between">
                     <span>
                       <span className="font-display">RARE {r}</span>

@@ -2,7 +2,7 @@
 // 滞在エリアごとに属性魔力ブースト・ドロップ確率テーブル・背景の雰囲気が切り替わる。
 import { STAGES, type Stage } from "./game";
 
-export type Rarity = "C" | "B" | "A";
+export type Rarity = "C" | "B" | "A" | "S";
 
 /** レア度ごとの抽選確率（%）。残りは「何も見つからない」 */
 export type DropRates = Record<Rarity, number>;
@@ -34,7 +34,7 @@ export type Area = {
   };
 };
 
-export const BASE_DROP_RATES: DropRates = { C: 40, B: 20, A: 5 };
+export const BASE_DROP_RATES: DropRates = { C: 40, B: 20, A: 5, S: 1 };
 
 const a = (
   id: string,

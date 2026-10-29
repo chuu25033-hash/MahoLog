@@ -6,7 +6,6 @@ import { ItemArt } from "@/components/item-art";
 import { PageLoading } from "@/components/page-loading";
 import { demoSubjects } from "@/lib/demo";
 import { formatMinutes } from "@/lib/game";
-import { RARITY_LABEL } from "@/lib/items";
 import { MEMORY_WEEKS, observedNightsFrom, type ObservedNight } from "@/lib/star-memory";
 import { useStoredUserData, type ChantRecord } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
@@ -608,11 +607,11 @@ function NightDetail({ night }: { night: ObservedNight }) {
               <ul className="flex flex-col gap-1.5">
                 {night.drops.map((item, i) => (
                   <li key={`${item.id}-${i}`} className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-2 py-1">
-                    <ItemArt glyph={item.glyph} rarity={item.rarity} color={item.color} seed={item.id} className="size-9 shrink-0" />
+                    <ItemArt icon={item.svgIcon} rarity={item.rarity} color={item.color} seed={item.id} className="size-9 shrink-0" />
                     <div className="min-w-0">
                       <p className="truncate text-xs tracking-wider">{item.name}</p>
                       <p className="truncate text-[10px] tracking-wider text-muted-foreground">
-                        <span className="font-display text-starlight/80">RARE {item.rarity}</span> {RARITY_LABEL[item.rarity]}
+                        <span className="font-display text-starlight/80">RARE {item.rarity}</span> {item.type}
                       </p>
                     </div>
                   </li>

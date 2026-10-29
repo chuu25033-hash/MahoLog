@@ -790,3 +790,32 @@
   .origin-epigraph { animation: none; }
   .worldline { display: none; }
 }
+
+/* 古代の秘術図鑑: 解読ダイアログの遺物はゆっくり浮遊し、背後の魔法陣が静かに回転・発光する */
+@keyframes codex-float {
+  0%, 100% { transform: translateY(2%); }
+  50% { transform: translateY(-4%); }
+}
+
+@keyframes codex-sigil-glow {
+  0%, 100% { filter: drop-shadow(0 0 1px var(--sigil-color)) drop-shadow(0 0 4px color-mix(in srgb, var(--sigil-color) 30%, transparent)); }
+  50% { filter: drop-shadow(0 0 2px var(--sigil-color)) drop-shadow(0 0 12px color-mix(in srgb, var(--sigil-color) 55%, transparent)); }
+}
+
+.codex-float { animation: codex-float 6s ease-in-out infinite; }
+.codex-sigil { animation: codex-sigil-glow 5s ease-in-out infinite; }
+.codex-sigil-outer,
+.codex-sigil-inner { transform-box: view-box; transform-origin: 0 0; } /* viewBox の原点（中心）で回す */
+.codex-sigil-outer { animation: codex-spin 60s linear infinite; }
+.codex-sigil-inner { animation: codex-spin 90s linear infinite reverse; }
+
+@keyframes codex-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .codex-float,
+  .codex-sigil,
+  .codex-sigil-outer,
+  .codex-sigil-inner { animation: none; }
+}

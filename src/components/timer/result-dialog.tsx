@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { Area } from "@/lib/areas";
 import { calcLevel, rankOf, stageProgress } from "@/lib/game";
-import { RARITY_LABEL, type CatalystItem, type Item } from "@/lib/items";
+import { type CatalystItem, type Item } from "@/lib/items";
 import type { Subject, SubjectTotal } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,8 @@ export type StudyResult = {
   /** ブースト込みの獲得MP */
   gainedMp: number;
   areaBoost: number;
+  /** 所持している秘宝の加護 */
+  blessing: number;
   catalyst: CatalystItem | null;
   beforeMp: number;
   afterMp: number;
@@ -36,6 +38,7 @@ const RARITY_TONE = {
   C: "border-aqua/40 text-aqua",
   B: "border-starlight/45 text-starlight",
   A: "border-amethyst/55 text-amethyst",
+  S: "border-starlight/70 text-starlight text-glow-gold",
 } as const;
 
 /** リザルト（魔力獲得）: MP獲得 → 魔法陣が伸びる → レベルアップ/ステージ解放 → 宝箱 */
@@ -75,10 +78,11 @@ export function ResultDialog({ result, onClose }: { result: StudyResult; onClose
             <p className="mp-glow font-display text-5xl text-starlight-gradient">+{result.gainedMp} MP</p>
             <p className="animate-float-up text-lg tracking-[0.4em] text-glow-gold [animation-delay:200ms]">獲得！</p>
           </div>
-          {(result.areaBoost > 1 || result.catalyst) && (
+          {(result.areaBoost > 1 || result.blessing > 1 || result.catalyst) && (
             <p className="animate-in text-[11px] tracking-wider text-muted-foreground fade-in duration-700">
               基礎 {result.savedMinutes}
               {result.areaBoost > 1 && <span className="text-aqua"> × エリア {result.areaBoost}</span>}
+              {result.blessing > 1 && <span className="text-amethyst"> × 秘宝の加護 {Number(result.blessing.toFixed(2))}</span>}
               {result.catalyst && <span className="text-starlight"> × {result.catalyst.name} {result.catalyst.multiplier}</span>}
             </p>
           )}
@@ -154,7 +158,7 @@ function DropReveal({
         <TreasureChest open={opened} className={cn("absolute inset-0 transition-opacity duration-500", opened && drop && "opacity-25")} />
         {opened && drop && (
           <ItemArt
-            glyph={drop.item.glyph}
+            icon={drop.item.svgIcon}
             rarity={drop.item.rarity}
             color={drop.item.color}
             seed={drop.item.id}
@@ -167,7 +171,7 @@ function DropReveal({
         (drop ? (
           <div className="flex animate-in flex-col items-center gap-0.5 fade-in duration-1000">
             <span className={cn("rounded-full border px-2 text-[10px] tracking-[0.2em]", RARITY_TONE[drop.item.rarity])}>
-              RARE {drop.item.rarity} · {RARITY_LABEL[drop.item.rarity]}
+              RARE {drop.item.rarity} · {drop.item.type}
             </span>
             <span className="text-sm tracking-[0.15em] text-foreground">『{drop.item.name}』</span>
             <span className="text-[11px] text-muted-foreground">
@@ -179,7 +183,11 @@ function DropReveal({
                   ? drop.isNew
                     ? `${drop.item.effect}（図鑑から適用できます）`
                     : "既に所持しているスキンだ"
-                  : drop.item.effect}
+                  : drop.item.kind === "relic"
+                    ? drop.isNew
+                      ? `${drop.item.effect}の加護を得た`
+                      : "既に所持している秘宝だ"
+                    : drop.item.effect}
             </span>
           </div>
         ) : (

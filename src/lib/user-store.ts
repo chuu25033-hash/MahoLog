@@ -83,6 +83,8 @@ function withProgress(data: UserData, totalMp: number): UserData {
   };
 }
 
+const SAMPLE_RELICS = ["r-observer", "r-starstone", "r-compass", "r-armillary"];
+
 /** 動作確認用: 直近4週間の詠唱を重ねたサンプルデータ */
 export function sampleUserData(now = new Date()): UserData {
   const history: ChantRecord[] = [];
@@ -109,6 +111,8 @@ export function sampleUserData(now = new Date()): UserData {
       totalMp += mp;
     });
   }
+  // 所持・未所持の秘宝が図鑑で見比べられるよう、いくつかを授けておく
+  for (const id of SAMPLE_RELICS) inventory[id] = 1;
   const base = initialUserData();
   return withProgress(
     { ...base, chantHistory: history, inventory, userProfile: { ...base.userProfile, currentStageId: resolveArea(null, totalMp).id } },
