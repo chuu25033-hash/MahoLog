@@ -1,8 +1,10 @@
 "use client";
 
 import type { CSSProperties } from "react";
+import { ZenithSky } from "@/components/zenith/zenith-sky";
 import { resolveArea, type AmbienceKind } from "@/lib/areas";
-import { activeSkin, useUserData } from "@/lib/user-store";
+import { zenithFloor } from "@/lib/cycles";
+import { activeSkin, cycleMp, isZenithOpen, useUserData } from "@/lib/user-store";
 
 // 決定的な疑似乱数（SSR とクライアントで同じ配置にする）
 function rand(seed: number) {
@@ -27,12 +29,13 @@ const KIND_STYLE: Record<AmbienceKind, { animation: string; size: number; blur: 
   snow: { animation: "mote-fall", size: 2, blur: 0.5 },
   ember: { animation: "mote-rise", size: 2, blur: 0.5 },
   halo: { animation: "mote-rise", size: 3, blur: 1.5 },
+  zenith: { animation: "mote-rise", size: 1.5, blur: 1 },
 };
 
-/** 滞在エリアに応じた背景の淡いグラデーションと漂う粒子 */
+/** 滞在エリアに応じた背景の淡いグラデーションと漂う粒子（totalMp は累積MP。エリアはこの周天の MP で測る） */
 export function AreaAmbience({ totalMp }: { totalMp: number }) {
   const data = useUserData();
-  const area = resolveArea(data.userProfile.currentStageId, totalMp);
+  const area = resolveArea(data.userProfile.currentStageId, cycleMp(data, totalMp), isZenithOpen(data, totalMp));
   const skin = activeSkin(data);
   const [c1, c2] = area.ambience.colors;
   const kind = KIND_STYLE[area.ambience.kind];
@@ -46,6 +49,10 @@ export function AreaAmbience({ totalMp }: { totalMp: number }) {
           background: `radial-gradient(70% 55% at 15% 0%, ${c1}1a, transparent 70%), radial-gradient(60% 50% at 90% 100%, ${c2}14, transparent 70%), radial-gradient(50% 40% at 50% 50%, ${skin.aura}, transparent 75%)`,
         }}
       />
+      {area.zenith && (
+        // 星天の塔: 昇った階層の分だけ、星と幾何学天体が濃くなる
+        <ZenithSky key="zenith" floor={zenithFloor(data.zenith.minutes)} className="absolute inset-0 animate-in fade-in duration-[2000ms]" />
+      )}
       {area.origin && (
         // 原点回帰: 外の夜を沈め、机の上の蝋燭ひとつ分の灯だけを残す
         <div key="origin" className="absolute inset-0 animate-in fade-in duration-[2000ms]">

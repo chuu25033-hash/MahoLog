@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { timerSummary } from "@/lib/aggregate";
 import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
+import { cycleMarkMultiplier } from "@/lib/cycles";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
 import { resolveSubSubject } from "@/lib/subjects";
 import { soundManager } from "@/lib/sound/sound-manager";
@@ -29,8 +30,10 @@ import {
   FOCUS_MINUTE_OPTIONS,
   activeSkin,
   armedCatalyst,
+  cycleMp,
   getUserData,
   hasItem,
+  isZenithOpen,
   localStudyLogs,
   todayChantMinutes,
   userActions,
@@ -101,7 +104,7 @@ export function TimerPanel({
   const checkpointRef = useRef(0);
 
   const data = useUserData();
-  const area = resolveArea(data.userProfile.currentStageId, totalMp);
+  const area = resolveArea(data.userProfile.currentStageId, cycleMp(data, totalMp), isZenithOpen(data, totalMp));
   const skin = activeSkin(data);
   const catalyst = armedCatalyst(data);
 
@@ -144,16 +147,20 @@ export function TimerPanel({
         const afterTotals = beforeTotals.map((t) =>
           t.subjectId === subject.id ? { ...t, minutes: t.minutes + res.savedMinutes } : t,
         );
-        // 獲得MP = 勉強時間 × エリアの属性ブースト × 秘宝の加護 × 触媒
+        // 獲得MP = 勉強時間 × エリアの属性ブースト × 秘宝の加護 × 触媒 × 周天の刻印
         // TODO: Supabase 接続時はボーナス分の MP も DB に保存する（現状はローカル表示のみ）
         // 加護は手元にある秘宝・神話遺物・復元した文書だけが授ける（錬成に捧げた秘宝は外れる）
         const owned = (id: string) => hasItem(getUserData(), id);
         const areaBoost = areaMultiplier(area, subject.name);
         const blessing = blessingMultiplier(owned, subject.name);
         const usedCatalyst = userActions.consumeCatalyst();
-        const gainedMp = Math.round(res.savedMinutes * areaBoost * blessing * (usedCatalyst?.multiplier ?? 1));
-        const drop = rollDrop(area, Math.random, dropMultiplier(owned));
+        const { cycle } = getUserData();
+        const cycleMark = cycleMarkMultiplier(cycle.count);
+        const gainedMp = Math.round(res.savedMinutes * areaBoost * blessing * (usedCatalyst?.multiplier ?? 1) * cycleMark);
+        const drop = rollDrop(area, Math.random, dropMultiplier(owned), cycle.count);
         const isNew = drop ? userActions.addItem(drop) : false;
+        // 星天の塔では、詠唱した時間で階層を昇る
+        const climb = area.zenith ? userActions.climbZenith(res.savedMinutes) : null;
         if (isDemo) {
           userActions.recordChant({
             minutes: res.savedMinutes,
@@ -182,12 +189,15 @@ export function TimerPanel({
           gainedMp,
           areaBoost,
           blessing,
+          cycleMark,
           catalyst: usedCatalyst,
           beforeMp: res.beforeMp,
           afterMp: res.beforeMp + gainedMp,
           beforeTotals,
           afterTotals,
           drop: drop ? { item: drop, isNew } : null,
+          climb,
+          cycleStartMp: cycle.startMp,
         });
       });
     },
@@ -382,7 +392,7 @@ export function TimerPanel({
           <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-2.5 text-xs tracking-wider">
             <p className="flex items-center gap-1.5 text-muted-foreground">
               <MapPin className="size-3.5 text-aqua/80" strokeWidth={1.25} />
-              滞在中 <span className="font-display text-[10px] text-starlight/80">AREA {area.id}</span>
+              滞在中 <span className="font-display text-[10px] text-starlight/80">{area.zenith ? "ASTRA ZENITH" : `AREA ${area.id}`}</span>
               <span className="truncate text-foreground">{area.name}</span>
             </p>
             <p className="text-[11px] text-muted-foreground">

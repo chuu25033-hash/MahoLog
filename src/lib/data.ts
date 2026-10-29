@@ -69,6 +69,14 @@ export async function getSettingsData() {
   return { subjects: subjects.filter((s) => s.is_active), isDemo: !isSupabaseConfigured };
 }
 
+/** 星天の塔: 累積MP（周天の制覇・儀式の判定に使う）だけを読む */
+export async function getZenithData() {
+  await connection();
+  const { profile } = await loadUserData(new Date());
+
+  return { totalMp: profile.total_study_time, isDemo: !isSupabaseConfigured };
+}
+
 export async function getTimerData() {
   await connection();
   const now = new Date();

@@ -65,6 +65,7 @@ export function stageLabel(presence: Presence | null) {
   const area = findArea(presence?.stageId);
   if (!area) return "所在は霧の向こう";
   const stage = stageOfArea(area);
+  if (!stage) return area.name;
   return `STAGE ${stage.id}: ${stage.name}`;
 }
 

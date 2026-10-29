@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { Check, Paintbrush, Sparkles } from "lucide-react";
+import { Check, Crown, Paintbrush, Sparkles } from "lucide-react";
 import { BackToLibrary } from "@/components/back-to-library";
 import { CraftPanel } from "@/components/codex/craft-panel";
 import { MemoriesPanel } from "@/components/codex/memories-panel";
@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { findArea } from "@/lib/areas";
 import { oreCount, recipeRelics, restoredCount } from "@/lib/crafting";
+import { chapterOf } from "@/lib/cycles";
 import { STAGES } from "@/lib/game";
 import {
   ALL_ITEMS,
@@ -32,8 +33,8 @@ const hairline = { vectorEffect: "non-scaling-stroke", fill: "none", strokeWidth
 const RUNES = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ";
 
 const RARITY_CAPTION: Record<ItemRarity, string> = {
-  SS: "錬成陣でのみ生まれる、神話に謳われる遺物",
-  S: "世界の理そのものに触れる、伝説の遺物",
+  SS: "錬成陣と星天の塔でのみ得られる、神話に謳われる遺物と称号",
+  S: "世界の理そのものに触れる、伝説の遺物と称号",
   A: "所持するだけで加護を授ける秘宝と、魔法陣の装い",
   B: "各エリアに眠る伝承の品",
   C: "次回の詠唱で獲得MPを高める消耗品",
@@ -177,7 +178,10 @@ export function CollectionView() {
 function ItemCard({ item, data, onSelect }: { item: Item; data: UserData; onSelect: () => void }) {
   const owned = isDiscovered(data, item.id);
   const count = data.inventory[item.id] ?? 0;
-  const equipped = (item.kind === "skin" && data.equipment.skinId === item.id) || (item.kind === "catalyst" && armedCatalyst(data)?.id === item.id);
+  const equipped =
+    (item.kind === "skin" && data.equipment.skinId === item.id) ||
+    (item.kind === "catalyst" && armedCatalyst(data)?.id === item.id) ||
+    (item.kind === "title" && data.equipment.titleId === item.id);
 
   return (
     <button
@@ -205,7 +209,13 @@ function ItemCard({ item, data, onSelect }: { item: Item; data: UserData; onSele
         {owned ? item.name : "？？？"}
       </span>
       <span className="font-display text-[9px] tracking-[0.15em] text-muted-foreground/70">
-        {item.kind === "lore" ? `AREA ${item.areaId}` : owned ? item.type : "UNKNOWN"}
+        {item.kind === "lore"
+          ? `AREA ${item.areaId}${item.variant ? (item.variant === "shadow" ? " · 影" : " · 蒼炎") : ""}`
+          : item.kind === "title"
+            ? `${item.zenithFloor}F · 称号`
+            : owned
+              ? item.type
+              : "UNKNOWN"}
       </span>
       {item.kind === "catalyst" && owned && (
         <span className="absolute top-1 right-1.5 font-display text-[10px] text-aqua">×{count}</span>
@@ -219,8 +229,11 @@ function ItemCard({ item, data, onSelect }: { item: Item; data: UserData; onSele
 function originHint(item: Item) {
   if (item.kind === "lore") {
     const area = findArea(item.areaId);
-    return `AREA ${item.areaId} ${area?.name ?? ""}の宝箱`;
+    const chapter = item.variant === "shadow" ? "（2周目・影の章）" : item.variant === "azure" ? "（3周目以降・蒼炎の章）" : "";
+    return `AREA ${item.areaId} ${area?.name ?? ""}の宝箱${chapter}`;
   }
+  if (item.kind === "title" || (item.kind === "relic" && item.zenithFloor)) return `星天の塔 ${item.zenithFloor}層への到達`;
+  if (item.kind === "skin" && item.cycle) return `${chapterOf(item.cycle).name}の幕開け（${item.cycle}周目へ進む）`;
   if (item.kind === "catalyst") return GUIDANCE_CATALYSTS.includes(item) ? "星天の導き" : "各エリアの宝箱";
   if (item.kind === "material") return "遺物の還元";
   if (item.kind === "relic" && item.recipe) return `錬成陣（星屑の原石 ${item.recipe.ore}・${recipeRelics(item).map((r) => `『${r.name}』`).join("")}）`;
@@ -254,7 +267,7 @@ function DecipherDialog({ item, data, onClose }: { item: Item; data: UserData; o
 
         <div className="flex flex-col items-center gap-1 text-center">
           <DialogTitle className="max-w-full truncate text-base tracking-[0.2em] whitespace-nowrap">
-            {owned ? `『${item.name}』` : "未解読の遺物"}
+            {owned ? (item.kind === "title" ? `【${item.name}】` : `『${item.name}』`) : "未解読の遺物"}
           </DialogTitle>
           <p className="font-display text-[10px] tracking-[0.25em] text-starlight/60">{owned ? item.id.toUpperCase() : "UNDECIPHERED"}</p>
         </div>
@@ -292,6 +305,15 @@ function DecipherDialog({ item, data, onClose }: { item: Item; data: UserData; o
             onClick={() => userActions.armCatalyst(armed ? null : item.id)}
           >
             <Sparkles /> {count === 0 ? "所持していません" : armed ? "装備を外す" : `次回の詠唱に使う（残り${count}）`}
+          </Button>
+        )}
+        {owned && item.kind === "title" && (
+          <Button
+            size="sm"
+            variant={data.equipment.titleId === item.id ? "outline" : "default"}
+            onClick={() => userActions.setTitle(data.equipment.titleId === item.id ? null : item.id)}
+          >
+            <Crown /> {data.equipment.titleId === item.id ? "称号を下ろす" : "この称号を掲げる"}
           </Button>
         )}
         {owned && item.kind === "relic" && (

@@ -17,9 +17,10 @@
   --font-display: var(--font-cinzel), var(--font-mincho), serif;
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-mincho), serif;
-  --color-starlight: #e2c974;
-  --color-aqua: #71e2ef;
-  --color-amethyst: #a882fb;
+  /* 光の線の色は周天の章（<html data-chapter>）で切り替わる */
+  --color-starlight: var(--starlight);
+  --color-aqua: var(--aqua);
+  --color-amethyst: var(--amethyst);
   --color-midnight: #080c16;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -96,13 +97,18 @@
 
 /* マホログ: 深遠な夜空・星雲・水晶をイメージしたダークテーマ（アプリは常にダーク） */
 .dark {
+  --starlight: #e2c974;
+  --starlight-hi: #fbf3d4;
+  --starlight-lo: #b89645;
+  --aqua: #71e2ef;
+  --amethyst: #a882fb;
   --background: #080c16;
   --foreground: #e6eaf2;
   --card: rgba(15, 23, 42, 0.65);
   --card-foreground: #e6eaf2;
   --popover: rgba(11, 17, 32, 0.92);
   --popover-foreground: #e6eaf2;
-  --primary: #e2c974;
+  --primary: var(--starlight);
   --primary-foreground: #0b1020;
   --secondary: rgba(113, 226, 239, 0.08);
   --secondary-foreground: #d6f6f9;
@@ -113,7 +119,7 @@
   --destructive: #f19a9a;
   --border: rgba(255, 255, 255, 0.12);
   --input: rgba(255, 255, 255, 0.14);
-  --ring: #e2c974;
+  --ring: var(--starlight);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -127,6 +133,32 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* 影の章: 光を呑む漆黒の夜に、黒曜の縁だけが銀に残る */
+html[data-chapter="shadow"] {
+  --starlight: #c4bedd;
+  --starlight-hi: #f4f2fb;
+  --starlight-lo: #6f6890;
+  --aqua: #9a8fc4;
+  --amethyst: #8c78c8;
+  --sky-1: #0d0b16;
+  --sky-2: #09080f;
+  --sky-top: #0a0910;
+  --sky-mid: #050409;
+}
+
+/* 蒼炎の章: 熱を超えて青白く燃える炎の線 */
+html[data-chapter="azure"] {
+  --starlight: #7fbcff;
+  --starlight-hi: #e6f3ff;
+  --starlight-lo: #3c78c8;
+  --aqua: #56d8ff;
+  --amethyst: #7a8cff;
+  --sky-1: #0c1d3f;
+  --sky-2: #0a1830;
+  --sky-top: #081022;
+  --sky-mid: #060b18;
 }
 
 @layer base {
@@ -211,9 +243,9 @@
 /* ---------- 星空の背景 ---------- */
 .night-sky {
   background:
-    radial-gradient(120% 80% at 50% -10%, #16213d 0%, transparent 60%),
-    radial-gradient(80% 60% at 100% 100%, #0f1a33 0%, transparent 70%),
-    linear-gradient(180deg, #0b1120 0%, #080c16 55%, #070a13 100%);
+    radial-gradient(120% 80% at 50% -10%, var(--sky-1, #16213d) 0%, transparent 60%),
+    radial-gradient(80% 60% at 100% 100%, var(--sky-2, #0f1a33) 0%, transparent 70%),
+    linear-gradient(180deg, var(--sky-top, #0b1120) 0%, var(--sky-mid, #080c16) 55%, #070a13 100%);
 }
 
 @keyframes twinkle {
@@ -302,7 +334,7 @@
 
 /* 金のグラデーション文字 */
 @utility text-starlight-gradient {
-  background: linear-gradient(180deg, #fbf3d4 0%, #e2c974 55%, #b89645 100%);
+  background: linear-gradient(180deg, var(--starlight-hi) 0%, var(--starlight) 55%, var(--starlight-lo) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -310,11 +342,11 @@
 
 /* タイマー数値など、控えめに発光する文字 */
 @utility text-glow-aqua {
-  text-shadow: 0 0 12px rgba(113, 226, 239, 0.5), 0 0 2px rgba(113, 226, 239, 0.4);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--aqua) 50%, transparent), 0 0 2px color-mix(in srgb, var(--aqua) 40%, transparent);
 }
 
 @utility text-glow-gold {
-  text-shadow: 0 0 10px rgba(226, 201, 116, 0.45);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--starlight) 45%, transparent);
 }
 
 /* ルーン・天体軌道の明滅 */
@@ -910,6 +942,32 @@
   .codex-sigil-inner { animation: none; }
 }
 
+/* 周回リング: 巡り終えた周天の環が、ゆっくりと回り続ける */
+@keyframes cycle-ring-spin {
+  to { transform: rotate(360deg); }
+}
+
+.cycle-ring {
+  transform-origin: 0 0;
+  animation: cycle-ring-spin 60s linear infinite;
+}
+
+/* 星天の塔: 階層とともに濃くなる幾何学天体が、それぞれの周期で巡る */
+@keyframes zenith-orbit {
+  to { transform: rotate(360deg); }
+}
+
+.zenith-body {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: zenith-orbit var(--dur, 120s) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cycle-ring,
+  .zenith-body { animation: none; }
+}
+
 /* 設定「演出の軽量化」: 星屑・粒子を間引き、背景の常時アニメーションと重いぼかしを止める */
 [data-lite] .star:nth-child(3n),
 [data-lite] .star:nth-child(3n + 1),
@@ -921,6 +979,8 @@
 
 [data-lite] .star,
 [data-lite] .mote,
+[data-lite] .cycle-ring,
+[data-lite] .zenith-body,
 [data-lite] .glimmer,
 [data-lite] .glimmer-slow,
 [data-lite] .candle-glow,

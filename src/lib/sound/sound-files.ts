@@ -16,7 +16,7 @@ export const SOUND_FILES: {
   se: {},
 };
 
-/** 大ステージ → 環境音（1: 小屋、2: 樹海・図書室、3: 観測塔・星空、4: 氷の回廊、5: 魔導炉、6: 大聖堂） */
+/** 大ステージ → 環境音（1: 小屋、2: 樹海・図書室、3: 観測塔・星空、4: 氷の回廊、5: 魔導炉、6: 大聖堂、7: 星天の塔） */
 export const AMBIENCE_BY_STAGE: Record<number, AmbienceKey> = {
   1: "hearth",
   2: "forest",
@@ -24,4 +24,5 @@ export const AMBIENCE_BY_STAGE: Record<number, AmbienceKey> = {
   4: "frost",
   5: "forge",
   6: "sanctum",
+  7: "stars",
 };

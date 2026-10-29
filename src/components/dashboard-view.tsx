@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BookMarked, CalendarDays, Moon, Orbit, Settings, Sparkles, Sun, Swords, Wand2 } from "lucide-react";
 import { AreaAmbience } from "@/components/area-ambience";
 import { BoundWorldlinesDialog } from "@/components/bound-worldlines-dialog";
+import { CycleRings } from "@/components/cycle/cycle-rings";
 import { MpBar } from "@/components/mp-bar";
 import { PageLoading } from "@/components/page-loading";
 import { RadarPanel } from "@/components/radar-panel";
@@ -15,10 +16,11 @@ import { Card } from "@/components/ui/card";
 import { WizardAvatar } from "@/components/wizard-avatar";
 import { RankSigil } from "@/components/arcane-icons";
 import { dashboardSummary, type DashboardSummary } from "@/lib/aggregate";
+import { cycleLabel } from "@/lib/cycles";
 import { formatMinutes, levelProgress, rankOf } from "@/lib/game";
 import { activeSubjectsOf } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
-import { localProfile, localStudyLogs, useStoredUserData, userActions, useUserData } from "@/lib/user-store";
+import { equippedTitle, localProfile, localStudyLogs, useStoredUserData, userActions, useUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 const MODE_LABEL = { pomodoro: "律動の詠唱", stopwatch: "無窮の詠唱" } as const;
@@ -39,8 +41,11 @@ export function DashboardView({ summary, subjects, isDemo }: { summary: Dashboar
 }
 
 function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSummary & { subjects: Subject[] }) {
+  const data = useUserData();
   const level = levelProgress(profile.total_study_time);
   const rank = rankOf(level.level);
+  const title = equippedTitle(data);
+  const laps = data.cycle.count - 1;
 
   return (
     <>
@@ -50,10 +55,18 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
         <section className="col-span-4 flex min-h-0 flex-col gap-3 short:gap-2">
           <Card className="shrink-0 gap-3 px-4 compact:gap-2 compact:py-3 short:py-2">
             <div className="flex items-center gap-3">
-              <WizardAvatar avatar={profile.avatar_url} className="short:size-9" />
+              {/* 巡り終えた周天の数だけ、周回リングが外周を回る */}
+              <div className="relative shrink-0" title={laps > 0 ? `${cycleLabel(data.cycle.count)}（${laps}周を巡り終えた）` : undefined}>
+                <WizardAvatar avatar={profile.avatar_url} className="short:size-9" />
+                <CycleRings laps={laps} className="absolute -inset-2" />
+              </div>
               <div className="min-w-0">
                 <p className="truncate text-base tracking-wider whitespace-nowrap">
-                  <span className="text-[11px] tracking-[0.2em] text-muted-foreground">秘術探究者・</span>
+                  {title ? (
+                    <span className="mr-1 text-[11px] tracking-[0.15em] text-starlight text-glow-gold">【{title.name}】</span>
+                  ) : (
+                    <span className="text-[11px] tracking-[0.2em] text-muted-foreground">秘術探究者・</span>
+                  )}
                   {profile.username}
                 </p>
                 <p className="flex items-center truncate text-[11px] tracking-[0.2em] whitespace-nowrap text-starlight/85">

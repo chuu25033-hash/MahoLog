@@ -9,13 +9,15 @@ import { MpBar } from "@/components/mp-bar";
 import { RewardLabel, claimable } from "@/components/trials-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { EndingPanel, ZenithPanel } from "@/components/cycle/ascension-panels";
 import { AREAS, boostLabel, isAreaUnlocked, stageOfArea, type Area } from "@/lib/areas";
+import { CLEAR_MP } from "@/lib/cycles";
 import { calcLevel, formatMinutes, levelProgress, rankOf } from "@/lib/game";
 import { type CatalystItem, type Item } from "@/lib/items";
 import { soundManager } from "@/lib/sound/sound-manager";
 import { TASKS } from "@/lib/tasks";
 import type { Subject, SubjectTotal } from "@/lib/types";
-import { getUserData, userActions, useUserData } from "@/lib/user-store";
+import { getUserData, userActions, useUserData, type ZenithClimb } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 export type StudyResult = {
@@ -30,12 +32,18 @@ export type StudyResult = {
   areaBoost: number;
   /** 所持している秘宝の加護 */
   blessing: number;
+  /** 周天の刻印 */
+  cycleMark: number;
   catalyst: CatalystItem | null;
   beforeMp: number;
   afterMp: number;
   beforeTotals: SubjectTotal[];
   afterTotals: SubjectTotal[];
   drop: { item: Item; isNew: boolean } | null;
+  /** 星天の塔での登頂（塔で詠唱したときだけ） */
+  climb: ZenithClimb | null;
+  /** この周天を始めた時点の累積MP（エリアの解放はここからの MP で測る） */
+  cycleStartMp: number;
 };
 
 /** 宝箱演出の段階 */
@@ -49,8 +57,8 @@ const RARITY_TONE = {
   SS: "border-starlight/80 text-starlight text-glow-gold",
 } as const;
 
-/** 詠唱完了後のパネル。成長の物語に沿って 成果 → 探求度 → 魔術階級 → 新たな領域 の順に進む */
-type Step = "result" | "level" | "rank" | "unlock";
+/** 詠唱完了後のパネル。成長の物語に沿って 成果 → 探求度 → 魔術階級 → 新たな領域 → 塔の階層 → 周天の終幕 の順に進む */
+type Step = "result" | "level" | "rank" | "unlock" | "zenith" | "ending";
 
 /**
  * リザルト: 「次へ」で1枚ずつ切り替える。成果と試練報酬は必ず、探求度の上昇・魔術階級の昇格・
@@ -65,13 +73,20 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
   const beforeLevel = calcLevel(beforeMp);
   const afterLevel = calcLevel(afterMp);
   const rankUp = rankOf(afterLevel).numeral !== rankOf(beforeLevel).numeral;
-  const unlocked = AREAS.filter((a) => isAreaUnlocked(a, afterMp) && !isAreaUnlocked(a, beforeMp));
+  // エリアの解放と周天の制覇は、この周天での MP で測る
+  const beforeCycleMp = beforeMp - result.cycleStartMp;
+  const afterCycleMp = afterMp - result.cycleStartMp;
+  const unlocked = AREAS.filter((a) => isAreaUnlocked(a, afterCycleMp) && !isAreaUnlocked(a, beforeCycleMp));
+  const cleared = beforeCycleMp < CLEAR_MP && afterCycleMp >= CLEAR_MP;
+  const ascended = result.climb !== null && result.climb.afterFloor > result.climb.beforeFloor;
 
   const steps: Step[] = [
     "result",
     ...(afterLevel > beforeLevel ? (["level"] as const) : []),
     ...(rankUp ? (["rank"] as const) : []),
     ...(unlocked.length > 0 ? (["unlock"] as const) : []),
+    ...(ascended ? (["zenith"] as const) : []),
+    ...(cleared ? (["ending"] as const) : []),
   ];
   const step = steps[Math.min(index, steps.length - 1)];
   const last = index >= steps.length - 1;
@@ -81,6 +96,8 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
     if (step === "level") soundManager.playSe("levelUp");
     if (step === "rank") soundManager.playSe("rankUp");
     if (step === "unlock") soundManager.playSe("begin");
+    if (step === "zenith") soundManager.playSe("rankUp");
+    if (step === "ending") soundManager.playSe("levelUp");
   }, [step]);
 
   return (
@@ -96,6 +113,8 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
           {step === "level" && <LevelPanel beforeLevel={beforeLevel} afterMp={afterMp} />}
           {step === "rank" && <RankPanel level={afterLevel} />}
           {step === "unlock" && <UnlockPanel areas={unlocked} />}
+          {step === "zenith" && result.climb && <ZenithPanel climb={result.climb} />}
+          {step === "ending" && <EndingPanel totalMp={afterMp} onStay={onClose} />}
         </div>
 
         <div className="flex items-center justify-between gap-3">
@@ -158,12 +177,13 @@ function ResultPanel({ result, subjects, onClaimed }: { result: StudyResult; sub
           <p className="mp-glow font-display text-5xl text-starlight-gradient short:text-4xl">+{result.gainedMp} MP</p>
           <p className="animate-float-up text-lg tracking-[0.4em] text-glow-gold [animation-delay:200ms]">獲得！</p>
         </div>
-        {(result.areaBoost > 1 || result.blessing > 1 || result.catalyst) && (
+        {(result.areaBoost > 1 || result.blessing > 1 || result.catalyst || result.cycleMark > 1) && (
           <p className="animate-in text-[11px] tracking-wider text-muted-foreground fade-in duration-700">
             基礎 {result.savedMinutes}
             {result.areaBoost > 1 && <span className="text-aqua"> × エリア {result.areaBoost}</span>}
             {result.blessing > 1 && <span className="text-amethyst"> × 秘宝の加護 {Number(result.blessing.toFixed(2))}</span>}
             {result.catalyst && <span className="text-starlight"> × {result.catalyst.name} {result.catalyst.multiplier}</span>}
+            {result.cycleMark > 1 && <span className="text-amethyst"> × 周天の刻印 {Number(result.cycleMark.toFixed(2))}</span>}
           </p>
         )}
         <DialogDescription>
@@ -319,7 +339,7 @@ function UnlockPanel({ areas }: { areas: Area[] }) {
       </DialogDescription>
       <div className="flex w-full flex-col gap-2">
         {areas.map((area) => {
-          const stage = stageOfArea(area);
+          const stage = stageOfArea(area)!;
           return (
             <div
               key={area.id}

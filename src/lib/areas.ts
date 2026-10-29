@@ -8,7 +8,7 @@ export type Rarity = "C" | "B" | "A" | "S";
 export type DropRates = Record<Rarity, number>;
 
 /** 背景に漂う粒子の雰囲気 */
-export type AmbienceKind = "dust" | "firefly" | "stardust" | "snow" | "ember" | "halo";
+export type AmbienceKind = "dust" | "firefly" | "stardust" | "snow" | "ember" | "halo" | "zenith";
 
 export type Area = {
   /** "1-1" 形式 */
@@ -23,6 +23,8 @@ export type Area = {
   drops: DropRates;
   /** 原点のエリア。全属性にブースト（原点回帰）がかかり、蝋燭の灯の背景になる */
   origin?: boolean;
+  /** 星天の塔。全属性にブーストがかかり、詠唱した時間で階層を昇る */
+  zenith?: boolean;
   /** 通り名（例: はじまりの小屋） */
   alias?: string;
   /** 滞在時に添える一節 */
@@ -90,6 +92,18 @@ export const AREAS: Area[] = [
   a("6-3", "星冠の祭壇", "世界の奥地に眠る秘術の深奥が明かされる祭壇", 300, ["数学", "理科", "社会"], 1.5, { kind: "halo", colors: ["#e2c974", "#71e2ef"] }, { A: 12 }),
 ];
 
+/**
+ * STAGE 6 を制覇した先に続く無限の階層「星天の塔（Astra Zenith）」。
+ * ステージの一本道（AREAS）には含めず、制覇した探究者だけが滞在先に選べる
+ */
+export const ZENITH_AREA: Area = {
+  ...a("zenith", "星天の塔", "天空の大聖堂の先、雲を貫いて星々の間へ続く無限の塔", 300, [], 1.5, { kind: "zenith", colors: ["#a882fb", "#71e2ef"] }, { B: 0, A: 10, S: 3 }),
+  stageId: 7,
+  zenith: true,
+  alias: "ASTRA ZENITH",
+  epigraph: "十時間の詠唱ごとに、一層ずつ天へ近づく",
+};
+
 /** どれだけ先へ進んでも帰還できる原点「灯火の机（はじまりの小屋）」 */
 export const ORIGIN_AREA = AREAS.find((area) => area.origin)!;
 
@@ -98,30 +112,36 @@ export function areasOfStage(stageId: number) {
 }
 
 export function findArea(id: string | null | undefined) {
-  return AREAS.find((area) => area.id === id);
+  return id === ZENITH_AREA.id ? ZENITH_AREA : AREAS.find((area) => area.id === id);
 }
 
-export function stageOfArea(area: Area): Stage {
-  return STAGES.find((s) => s.id === area.stageId)!;
+/** エリアの属するステージ（星天の塔はどのステージにも属さない） */
+export function stageOfArea(area: Area): Stage | undefined {
+  return STAGES.find((s) => s.id === area.stageId);
 }
 
 export function isAreaUnlocked(area: Area, totalMp: number) {
   return totalMp / 60 >= area.requiredHours;
 }
 
-/** 選択中のエリア。未選択・未解放なら最も奥の解放済みエリア */
-export function resolveArea(selectedId: string | null | undefined, totalMp: number): Area {
-  const selected = findArea(selectedId);
+/**
+ * 選択中のエリア。未選択・未解放なら最も奥の解放済みエリア。
+ * totalMp はこの周天での累積MP。星天の塔は zenithOpen（STAGE 6 を一度でも制覇した）なら選べる
+ */
+export function resolveArea(selectedId: string | null | undefined, totalMp: number, zenithOpen = false): Area {
+  if (selectedId === ZENITH_AREA.id && zenithOpen) return ZENITH_AREA;
+  const selected = AREAS.find((area) => area.id === selectedId);
   if (selected && isAreaUnlocked(selected, totalMp)) return selected;
   return [...AREAS].reverse().find((area) => isAreaUnlocked(area, totalMp)) ?? AREAS[0];
 }
 
 /** 科目に対するエリアの属性ブースト倍率 */
 export function areaMultiplier(area: Area, subjectName: string) {
-  return area.origin || area.boost.subjects.includes(subjectName) ? area.boost.multiplier : 1;
+  return area.origin || area.zenith || area.boost.subjects.includes(subjectName) ? area.boost.multiplier : 1;
 }
 
 /** ブースト対象の表示名 */
 export function boostLabel(area: Area) {
+  if (area.zenith) return "天頂・全属性";
   return area.origin ? "原点回帰・全属性" : area.boost.subjects.join("・");
 }

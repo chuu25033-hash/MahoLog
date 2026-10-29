@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cinzel, Geist_Mono, Shippori_Mincho } from "next/font/google";
 import { Smartphone } from "lucide-react";
+import { ChapterThemeSync } from "@/components/chapter-theme-sync";
 import { LiteModeSync } from "@/components/lite-mode-sync";
 import { SoundSync } from "@/components/sound-sync";
 import { StarField } from "@/components/star-field";
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="h-dvh overflow-hidden bg-midnight">
         <StarField />
         <LiteModeSync />
+        <ChapterThemeSync />
         <SoundSync />
         {children}
         <TransitionVeil />

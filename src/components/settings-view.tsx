@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { THEME_LABEL, unlockedThemes } from "@/lib/cycles";
 import { jstDateKey } from "@/lib/date";
 import { soundManager } from "@/lib/sound/sound-manager";
 import { MIN_ACTIVE_SUBJECTS, activeSubjectsOf, resolveSubSubject } from "@/lib/subjects";
@@ -97,6 +98,33 @@ export function SettingsView({
               ))}
             </div>
           </Field>
+
+          {data.cycle.count > 1 && (
+            <Field label="光の線の色調" hint="周天の章で開かれる">
+              <div className="grid grid-cols-3 gap-1.5">
+                {unlockedThemes(data.cycle.count).map((theme) => (
+                  <button
+                    key={theme}
+                    onClick={() => userActions.updateSettings({ chapterTheme: theme })}
+                    aria-pressed={theme === settings.chapterTheme}
+                    title={THEME_LABEL[theme].description}
+                    className={cn(
+                      "flex items-center justify-center gap-1.5 rounded-xl border py-1.5 text-xs tracking-[0.2em] transition-all duration-300",
+                      theme === settings.chapterTheme
+                        ? "border-starlight/55 bg-starlight/[0.08] text-starlight"
+                        : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
+                    )}
+                  >
+                    <span
+                      className="size-2 rounded-full"
+                      style={{ background: THEME_LABEL[theme].swatch, boxShadow: `0 0 6px ${THEME_LABEL[theme].swatch}` }}
+                    />
+                    {THEME_LABEL[theme].name}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          )}
 
           <Field label="環境と演出">
             <div className="flex flex-col gap-2">

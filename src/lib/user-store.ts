@@ -7,6 +7,7 @@ import { AREAS, isAreaUnlocked, resolveArea } from "./areas";
 import { jstDateKey, startOfJstDay } from "./date";
 import { demoProfile } from "./demo";
 import { calcLevel, rankOf } from "./game";
+import { CLEAR_MP, chapterOf, milestonesBetween, zenithFloor, type Chapter, type ChapterTheme } from "./cycles";
 import { canCraft, canRestore, dissolveValue, fragmentsOf, memoryOf, surplusCount } from "./crafting";
 import {
   ALL_ITEMS,
@@ -89,6 +90,8 @@ export type UserSettings = {
   bgmVolume: number;
   /** 効果音の音量（0〜1） */
   seVolume: number;
+  /** UI の 1px ライン描画色（周天の章で開く） */
+  chapterTheme: ChapterTheme;
 };
 
 export type UserData = {
@@ -98,13 +101,17 @@ export type UserData = {
   /** 獲得したアイテムの個数。キーがあれば図鑑登録済み（触媒は使うと減り、0 になっても登録は残る） */
   inventory: Record<string, number>;
   unlockedStages: string[];
-  /** 装備中の触媒・テーマスキン */
-  equipment: { catalystId: string | null; skinId: string | null };
+  /** 装備中の触媒・テーマスキン・掲げる称号 */
+  equipment: { catalystId: string | null; skinId: string | null; titleId: string | null };
   settings: UserSettings;
   /** 試練（日課の儀式・週間の大誓約）の進捗と受取状況 */
   tasks: Record<TaskScope, TaskBoard>;
   /** 結びし世界線（デモモード用。Supabase 接続時は DB に持つ）: 自分の世界線IDと、結んだ相手の世界線ID */
   worldlines: { code: string; bonds: { code: string; boundAt: string }[] };
+  /** 周天: 何周目か と、その周を始めた時点の累積MP（エリアの解放はここからの MP で測る） */
+  cycle: { count: number; startMp: number };
+  /** 星天の塔: 塔で詠唱した累積時間（分） */
+  zenith: { minutes: number };
 };
 
 const unlockedAt = (totalMp: number) => AREAS.filter((a) => isAreaUnlocked(a, totalMp)).map((a) => a.id);
@@ -117,10 +124,12 @@ export function initialUserData(): UserData {
     dailyReward: { lastClaimedDate: null, streak: 0 },
     inventory: {},
     unlockedStages: unlockedAt(0),
-    equipment: { catalystId: null, skinId: null },
-    settings: { defaultFocusMinutes: 25, liteMode: false, chime: true, sound: true, bgmVolume: 0.4, seVolume: 0.7 },
+    equipment: { catalystId: null, skinId: null, titleId: null },
+    settings: { defaultFocusMinutes: 25, liteMode: false, chime: true, sound: true, bgmVolume: 0.4, seVolume: 0.7, chapterTheme: "default" },
     tasks: { daily: { periodKey: "", items: {} }, weekly: { periodKey: "", items: {} } },
     worldlines: { code: generateWorldlineCode(), bonds: [] },
+    cycle: { count: 1, startMp: 0 },
+    zenith: { minutes: 0 },
   };
 }
 
@@ -140,6 +149,8 @@ function normalize(saved: Partial<UserData>): UserData {
     settings: { ...base.settings, ...settings },
     tasks: { ...base.tasks, ...saved.tasks },
     worldlines: { ...base.worldlines, ...saved.worldlines },
+    cycle: { ...base.cycle, ...saved.cycle },
+    zenith: { ...base.zenith, ...saved.zenith },
   };
 }
 
@@ -168,14 +179,37 @@ function syncedTasks(data: UserData, subjects: Pick<Subject, "id">[], now: Date)
 
 export type TaskClaim = { mp: number; item: CatalystItem | null };
 
-/** 累積MPから階級・解放済みステージを導き直す */
+/** 累積MPから階級・解放済みステージを導き直す（ステージはこの周天での MP で測る） */
 function withProgress(data: UserData, totalMp: number): UserData {
   return {
     ...data,
     userProfile: { ...data.userProfile, totalMp, rank: rankOf(calcLevel(totalMp)).numeral },
-    unlockedStages: unlockedAt(totalMp),
+    unlockedStages: unlockedAt(Math.max(0, totalMp - data.cycle.startMp)),
   };
 }
+
+/** この周天での累積MP（エリア・ステージの解放に使う） */
+export function cycleMp(data: UserData, totalMp: number) {
+  return Math.max(0, totalMp - data.cycle.startMp);
+}
+
+/** 星天の塔へ入れるか: STAGE 6 を一度でも制覇した（2周目以降、またはこの周で 300 時間に届いた） */
+export function isZenithOpen(data: UserData, totalMp: number) {
+  return data.cycle.count > 1 || cycleMp(data, totalMp) >= CLEAR_MP;
+}
+
+/** この周天を制覇したか（次なる周天へ進める） */
+export function isCycleCleared(data: UserData, totalMp: number) {
+  return cycleMp(data, totalMp) >= CLEAR_MP;
+}
+
+export function equippedTitle(data: UserData) {
+  const item = findItem(data.equipment.titleId);
+  return item?.kind === "title" && isDiscovered(data, item.id) ? item : null;
+}
+
+/** 星天の塔での登頂: 昇る前後の階層と、越えた節目で授かったもの */
+export type ZenithClimb = { beforeFloor: number; afterFloor: number; rewards: { item: Item; isNew: boolean }[] };
 
 const SAMPLE_RELICS = ["r-observer", "r-starstone", "r-compass", "r-armillary"];
 
@@ -225,7 +259,7 @@ function migrateLegacy(): UserData {
     if (mock) {
       for (const id of mock.discovered ?? []) data.inventory[id] = 1;
       Object.assign(data.inventory, mock.inventory ?? {});
-      data.equipment = { catalystId: mock.armedCatalystId ?? null, skinId: mock.skinId ?? null };
+      data.equipment = { catalystId: mock.armedCatalystId ?? null, skinId: mock.skinId ?? null, titleId: null };
     }
     const guidance = JSON.parse(window.localStorage.getItem(LEGACY_GUIDANCE_KEY) ?? "null");
     if (guidance?.claimedDay) {
@@ -378,6 +412,49 @@ export const userActions = {
 
   setSkin(id: string | null) {
     update((s) => ({ ...s, equipment: { ...s.equipment, skinId: id } }));
+  },
+
+  /** プロフィールに掲げる称号 */
+  setTitle(id: string | null) {
+    update((s) => ({ ...s, equipment: { ...s.equipment, titleId: id } }));
+  },
+
+  /** 星天の塔で詠唱した時間を刻み、階層を昇る。節目を越えたら天界遺物・称号を授ける */
+  climbZenith(minutes: number): ZenithClimb {
+    const before = load().zenith.minutes;
+    const beforeFloor = zenithFloor(before);
+    const afterFloor = zenithFloor(before + minutes);
+    const rewards = milestonesBetween(beforeFloor, afterFloor)
+      .flatMap((m) => m.rewards)
+      .map((id) => findItem(id))
+      .filter((item): item is Item => !!item)
+      .map((item) => ({ item, isNew: !isDiscovered(load(), item.id) }));
+    update((s) => {
+      const inventory = { ...s.inventory };
+      for (const { item } of rewards) inventory[item.id] = Math.max(1, inventory[item.id] ?? 0);
+      return { ...s, inventory, zenith: { minutes: s.zenith.minutes + minutes } };
+    });
+    return { beforeFloor, afterFloor, rewards };
+  },
+
+  /**
+   * 次なる周天へ進む: いまの累積MPを新しい周の始まりにし、はじまりの小屋へ還る。
+   * 階級・図鑑・所持品・塔の階層は引き継ぎ、章の魔法陣スキンを授けて UI の色調を章のものにする
+   */
+  advanceCycle(totalMp: number): Chapter | null {
+    const current = load();
+    if (!isCycleCleared(current, totalMp)) return null;
+    const chapter = chapterOf(current.cycle.count + 1);
+    update((s) => ({
+      ...s,
+      cycle: { count: s.cycle.count + 1, startMp: totalMp },
+      userProfile: { ...s.userProfile, currentStageId: "1-1" },
+      unlockedStages: unlockedAt(0),
+      inventory: chapter.skinId ? { ...s.inventory, [chapter.skinId]: Math.max(1, s.inventory[chapter.skinId] ?? 0) } : s.inventory,
+      equipment: { ...s.equipment, skinId: chapter.skinId ?? s.equipment.skinId },
+      settings: { ...s.settings, chapterTheme: chapter.theme },
+    }));
+    return chapter;
   },
 
   /** 詠唱完了: 履歴に刻み、累積MP・階級・解放済みステージを更新する */
@@ -599,9 +676,11 @@ function fullyUnlockedData(base: UserData): UserData {
   return withProgress(
     {
       ...base,
+      // 2周目以降でもすべてのエリアが開くよう、周天の始まりは 0 に戻す
+      cycle: { ...base.cycle, startMp: 0 },
       chantHistory: sample.chantHistory,
       inventory,
-      equipment: { catalystId: null, skinId: base.equipment.skinId },
+      equipment: { ...base.equipment, catalystId: null },
     },
     UNLOCK_ALL_MP,
   );

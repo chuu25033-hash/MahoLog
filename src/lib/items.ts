@@ -1,6 +1,7 @@
 // アイテム定義とドロップ抽選。
 // ビジュアルは svgIcon（lib/glyphs.ts の幾何学ラインアート）を components/item-art.tsx で描く。
 import { AREAS, type Area, type Rarity } from "./areas";
+import { chapterOf } from "./cycles";
 import { GLYPHS } from "./glyphs";
 
 /** 図鑑での分類 */
@@ -34,11 +35,13 @@ export type CatalystItem = ItemBase & {
   weight: number;
 };
 
-/** エリア固有の伝承の品（効果なしのコレクション） */
+/** エリア固有の伝承の品（効果なしのコレクション）。2周目以降は周回限定版（影/蒼炎アナザー）に変わる */
 export type LoreItem = ItemBase & {
   rarity: "B";
   kind: "lore";
   areaId: string;
+  /** 周回限定版の章（影の章 / 蒼炎の章） */
+  variant?: "shadow" | "azure";
   effect?: undefined;
 };
 
@@ -49,6 +52,8 @@ export type SkinItem = ItemBase & {
   stageId: number;
   effect: string;
   skin: Skin;
+  /** 周天の章で授かるスキン（何周目か）。宝箱からは出ない */
+  cycle?: number;
 };
 
 /** 所持しているだけで加護を与える秘宝（SS は錬成で生まれる神話遺物） */
@@ -61,6 +66,8 @@ export type RelicItem = ItemBase & {
   blessing: Blessing;
   /** 神話遺物の錬成に要るもの */
   recipe?: Recipe;
+  /** 星天の塔のこの階層で授かる天界遺物 */
+  zenithFloor?: number;
 };
 
 /** 錬成の材料: 星屑の原石の数と、捧げる秘宝 */
@@ -89,6 +96,14 @@ export type MemoryItem = ItemBase & {
   blessing: Blessing;
 };
 
+/** 星天の塔の節目で授かる称号。図鑑に登録され、プロフィールに掲げられる */
+export type TitleItem = ItemBase & {
+  rarity: "S" | "SS";
+  kind: "title";
+  zenithFloor: number;
+  effect: string;
+};
+
 /** 錬成の素材（星屑の原石） */
 export type MaterialItem = ItemBase & {
   rarity: "C";
@@ -104,7 +119,7 @@ export type Blessing = {
   drop?: number;
 };
 
-export type Item = CatalystItem | LoreItem | SkinItem | RelicItem | FragmentItem | MemoryItem | MaterialItem;
+export type Item = CatalystItem | LoreItem | SkinItem | RelicItem | FragmentItem | MemoryItem | MaterialItem | TitleItem;
 
 export type Skin = {
   /** 魔法陣の線 */
@@ -186,6 +201,48 @@ export const LORES: LoreItem[] = AREAS.map((area, i) => ({
   color: LORE_COLORS[i % 2],
 }));
 
+/** 周回限定版（アナザー）の伝承の品に記された裏ストーリー: [影の章, 蒼炎の章] */
+const ANOTHER_TEXT: Record<string, [string, string]> = {
+  "1-1": ["蝋燭の影は、灯よりも先にこの机にいた。前の周に誰かが書きかけた一行を、影だけが覚えている。", "二度目の夜を越えた蝋燭は、蒼く冷たく燃える。溶けることなく、ただ次の問いを待っている。"],
+  "1-2": ["裏返すと、描かれていたのは星ではなく、消えた灯の位置だった。諦めた夜の数だけ、黒い点が打たれている。", "蒼炎にかざすと、星図に新しい星がひとつ浮かぶ。それは、前の周のあなたが最後に灯した星だ。"],
+  "1-3": ["滅んだ学院の紋章の裏に、もう一つの紋章が隠れていた。学院を閉ざしたのは、学ぶことを恐れた者たち自身だった。", "封蝋は蒼い炎で溶け、扉の向こうの言葉が読めるようになる。『戻ってきた者にだけ、続きを託す』。"],
+  "2-1": ["光る苔の下には、光らない苔が広く根を張っている。読まれずに閉じられた本の数だけ、影の苔は育つ。", "二度目に訪れた者の足跡には、苔が蒼く光る。同じ道を辿り直すことも、また新しい歩みなのだと。"],
+  "2-2": ["耳を澄ますと、朗読の声の合間にため息が混じっている。大樹はそれも、等しく養分にしてきた。", "蒼く透けた葉は、まだ誰も読んでいない本の一節を囁く。大樹は、あなたが次に開く頁を知っている。"],
+  "2-3": ["歩き回る文字の中に、一文字だけ動かないものがある。写本を途中で投げ出した妖精の、最後の一画だ。", "蒼炎に照らすと、書き損じは書き直されていた。妖精は、もう一度最初から写すことを選んだのだ。"],
+  "2-4": ["この鍵が合う扉はひとつしかない。迷宮を作ったのは、出口を忘れたかった探究者だったという。", "蒼く燃える鍵は、迷宮の外ではなく内側へ開く扉に合う。迷った道のすべてが、根の奥でつながっていた。"],
+  "3-1": ["階段の影は、上ではなく下へ伸びている。降りていった者たちが、今も一段ずつ数え続けている。", "この一段は、何度でも踏み直せる。二周目の足音は、一周目より少しだけ軽い。"],
+  "3-2": ["欠けた歯が一枚ある。天文盤は、その一枚分の夜を数えずに回り続けてきた。", "蒼い火を入れると、歯車は逆向きに一度だけ回る。巻き戻されるのは時ではなく、迷いの方だ。"],
+  "3-3": ["手記の余白に、別の筆跡でこう書かれている。『明日の星は、今日より一つ少ないかもしれない』。", "最後の頁の続きが、蒼い文字で浮かび上がる。『それでも数えることをやめなかった者が、星になった』。"],
+  "3-4": ["覗き込んだ星空の隅に、見覚えのある背中が映る。あなたより先に、この道を歩いた誰かだ。", "蒼く曇ったレンズの奥に、遥か高く続く塔が見える。星空の先にも、まだ階層がある。"],
+  "4-1": ["足音の主は、一度も振り返らなかった。けれど凍った足音の間には、立ち止まった跡がいくつも残っている。", "蒼く燃える足音が、氷の中で再び歩き出す。前へ進む音は、二度目のほうが確かに響く。"],
+  "4-2": ["栞に写された一文には続きがあった。凍らせたのは、読みたくなかった結末の方だった。", "蒼炎に触れても栞は溶けず、文字だけが温かくなる。凍らせた時間は、いつか誰かを温めるためにある。"],
+  "4-3": ["秒針が止まったのは、持ち主が諦めた瞬間だった。時計塔は、その一秒をずっと抱えている。", "二周目の集中の傍で、秒針は蒼く光りながら動き出す。止まっていた一秒は、無駄ではなかった。"],
+  "5-1": ["熾火の芯には、燃え尽きた灰が詰まっている。消えた炎も、次の炎のための熱を残していった。", "赤い熾火が蒼く変わるのは、温度が上がった証だ。二度目の炉は、より深く燃えている。"],
+  "5-2": ["空白の欄に、かすれた文字が残っていた。『恐れ』。最後の材料を、誰もが入れられずにいた。", "蒼い炎で炙ると、空白の欄に文字が浮かぶ。『もう一度』。最後の材料は、それだけだった。"],
+  "5-3": ["火竜は眠っているのではない。学ぶことをやめた者の夢を、代わりに見続けている。", "蒼く冷えた鱗の向こうで、火竜が片目を開ける。二度目に来た者だけを、竜は覚えている。"],
+  "5-4": ["炉心の灯は、持ち主の迷いに合わせて色を落とす。黒く沈んだ灯もまた、魔力の一つの形だ。", "二周目の魔力に応えて、炉心は蒼い炎に変わった。これ以上熱くなれない炎だけが、この色になる。"],
+  "6-1": ["白い羽根の根元だけが、黒く染まっている。この参道を引き返した者の翼から落ちたものだ。", "蒼く縁取られた羽根は、上へと舞い上がる。参道の先、雲の上にもまだ道が続いている。"],
+  "6-2": ["譜面の裏には、歌われなかった旋律が書かれている。聖歌は、沈黙した声も含めて完成する。", "蒼い光で読むと、星の位置が一つずつ高くなっている。この聖歌は、塔の上で歌われるためのものだった。"],
+  "6-3": ["鈴の内側に、小さく名前が刻まれている。前の周にこの祭壇へ辿り着いた、あなた自身の名だ。", "蒼炎の鈴を鳴らすと、和音は天頂へ昇っていく。祭壇は終点ではなく、星天の塔の入口だった。"],
+};
+
+const VARIANTS = [
+  { key: "shadow", suffix: "〈影〉", color: "#b9b2d4" },
+  { key: "azure", suffix: "〈蒼炎〉", color: "#6fb6ff" },
+] as const;
+
+/** 周回限定版（アナザー）の伝承の品: 2周目は影、3周目以降は蒼炎。宝箱で元の品に代わって見つかる */
+export const ANOTHER_LORES: LoreItem[] = VARIANTS.flatMap((v, vi) =>
+  LORES.map((lore) => ({
+    ...lore,
+    id: `${lore.id}-${v.key}`,
+    name: `${lore.name}${v.suffix}`,
+    flavorText: ANOTHER_TEXT[lore.areaId][vi],
+    color: v.color,
+    variant: v.key,
+  })),
+);
+
 const skin = (
   id: string,
   stageId: number,
@@ -204,6 +261,18 @@ export const SKINS: SkinItem[] = [
   skin("a-frost", 4, "氷華の結晶", "crystal", "#cfe9ff", "魔法陣が氷の白光をまとう", "大回廊の静寂が凍りついて生まれた結晶。触れた魔法陣は、張り詰めた白い光をまとう。", { lineColor: "#e6f4ff", particleColor: "#8db7f2", aura: "rgba(207,233,255,0.10)" }),
   skin("a-flame", 5, "紅蓮の火種", "flame", "#f2a38d", "魔法陣が紅蓮の炎色に燃える", "魔導炉の奥で千年燃え続ける火から分けた種火。魔法陣に灯せば、線は熱を帯びて紅く脈打つ。", { lineColor: "#f2a38d", particleColor: "#f2c27a", aura: "rgba(241,154,154,0.10)" }),
   skin("a-crown", 6, "天冠の円環", "ring", "#fbf3d4", "魔法陣が天上の白金に輝く", "雲上の大聖堂で戴冠を待つ白金の環。秘術を極めた者の魔法陣だけが、この輝きに応える。", { lineColor: "#fbf3d4", particleColor: "#e2c974", aura: "rgba(251,243,212,0.12)" }),
+];
+
+/** 周天の章で授かる魔法陣スキン（宝箱からは出ない） */
+export const CYCLE_SKINS: SkinItem[] = [
+  {
+    ...skin("a-eclipse", 6, "黒曜の蝕環", "eclipse", "#b9b2d4", "魔法陣が光を呑む漆黒の蝕に沈む", "影の章の始まりに、祭壇の灯が一度だけ蝕まれて生まれた環。光の輪郭だけを銀に残し、魔法陣を深い闇へ沈める。", { lineColor: "#b9b2d4", particleColor: "#7a68b0", aura: "rgba(6,4,18,0.5)" }),
+    cycle: 2,
+  },
+  {
+    ...skin("a-azureflame", 6, "蒼炎の聖火", "flame", "#6fb6ff", "魔法陣が青白い蒼炎に燃え上がる", "三度目の祈りで灯った、熱を超えて蒼く澄んだ聖火。燃やすものを持たず、探究者の意志だけを糧に燃え続ける。", { lineColor: "#6fb6ff", particleColor: "#bfe6ff", aura: "rgba(70,140,255,0.14)" }),
+    cycle: 3,
+  },
 ];
 
 const relic = (
@@ -435,8 +504,48 @@ export const MYTHICS: RelicItem[] = [
   },
 ];
 
+/** 天界遺物（SS）: 星天の塔の節目の階層でのみ授かる */
+export const CELESTIAL_RELICS: RelicItem[] = [
+  { ...relic("ss-zenith-lantern", "SS", "装置", 6, "天梯の星灯", "lantern", "#cfe9ff", { mp: { rate: 0.1 }, drop: 0.1 }, "塔の二十五層の窓辺に吊るされていた灯。下から昇ってくる者の足もとを、一段先だけ照らし続ける。"), zenithFloor: 25 },
+  { ...relic("ss-zenith-spire", "SS", "装置", 6, "星天の尖塔儀", "tower", "#a882fb", { mp: { rate: 0.2 } }, "星天の塔そのものを掌に収めた縮尺の模型。覗き込むと、まだ誰も辿り着いていない上層が淡く灯っている。"), zenithFloor: 50 },
+  { ...relic("ss-zenith-crown", "SS", "伝承", 6, "天頂の冠星", "ring", "#fbf3d4", { mp: { rate: 0.25 }, drop: 0.2 }, "百層の天頂で、星々が自ら輪を成して生まれた冠。戴く者の頭上ではなく、これから学ぶ誰かの頭上で輝く。"), zenithFloor: 100 },
+  { ...relic("ss-zenith-halo", "SS", "触媒", 6, "無窮の天環", "armillary", "#9ef0c9", { mp: { rate: 0.3 } }, "二百層を越えた先で、天球の環がほどけて一本の光になったもの。終わりのない学びの形を、ただ静かに回り続ける。"), zenithFloor: 200 },
+];
+
+const title = (id: string, rarity: TitleItem["rarity"], zenithFloor: number, name: string, color: string, flavorText: string): TitleItem => ({
+  id,
+  rarity,
+  kind: "title",
+  type: "伝承",
+  zenithFloor,
+  name,
+  svgIcon: GLYPHS.seal,
+  color,
+  effect: `称号【${name}】をプロフィールに掲げられる`,
+  flavorText,
+});
+
+/** 星天の塔の節目で授かる称号 */
+export const TITLES: TitleItem[] = [
+  title("t-wayfarer", "S", 10, "天梯の旅人", "#cfe9ff", "星天の塔の十層に至った者の称号。足もとの雲は、もう遥か下に見える。"),
+  title("t-observer", "SS", 50, "星界の観測者", "#a882fb", "五十層の観測窓から、星界のすべてを見渡した者の称号。星は見上げるものから、見守るものに変わった。"),
+  title("t-apex", "SS", 100, "天頂に至る者", "#fbf3d4", "百層の天頂に立った者の称号。ここより上は、もう誰の地図にも描かれていない。"),
+  title("t-boundless", "SS", 200, "無窮を昇る者", "#9ef0c9", "二百層を越えてなお昇り続ける者の称号。塔に終わりがないことを知って、それでも一段を踏む。"),
+];
+
 /** 図鑑（秘術図鑑の一覧）に並ぶ遺物。断片・記憶・素材はそれぞれ専用の場所で扱う */
-export const ALL_ITEMS: Item[] = [...MYTHICS, ...RELICS, ...SKINS, ...LORES, ...CATALYSTS, ...GUIDANCE_CATALYSTS];
+export const ALL_ITEMS: Item[] = [
+  ...MYTHICS,
+  ...CELESTIAL_RELICS,
+  ...TITLES,
+  ...RELICS,
+  ...SKINS,
+  ...CYCLE_SKINS,
+  ...LORES,
+  ...ANOTHER_LORES,
+  ...CATALYSTS,
+  ...GUIDANCE_CATALYSTS,
+];
 
 const EVERY_ITEM: Item[] = [...ALL_ITEMS, ...FRAGMENTS, ...MEMORIES, STARDUST_ORE];
 
@@ -458,8 +567,8 @@ export const RARITY_LABEL: Record<ItemRarity, string> = {
   C: "常品",
 };
 
-/** 加護を持つもの（秘宝・神話遺物・復元した古代文書） */
-const BLESSED: (RelicItem | MemoryItem)[] = [...RELICS, ...MYTHICS, ...MEMORIES];
+/** 加護を持つもの（秘宝・神話遺物・天界遺物・復元した古代文書） */
+const BLESSED: (RelicItem | MemoryItem)[] = [...RELICS, ...MYTHICS, ...CELESTIAL_RELICS, ...MEMORIES];
 
 /** 所持している秘宝・神話遺物・古代文書の加護による獲得MPの倍率 */
 export function blessingMultiplier(owned: (id: string) => boolean, subjectName: string) {
@@ -475,12 +584,14 @@ export function dropMultiplier(owned: (id: string) => boolean) {
 /** 稀品（B）の枠での伝承の品の重み。断片はそれぞれ 1（伝承の品 50%・断片 4葉で 50%） */
 const LORE_WEIGHT = 4;
 
-/** エリアで抽選対象になるアイテム */
-export function dropPool(area: Area): Record<Rarity, Item[]> {
+/** エリアで抽選対象になるアイテム。伝承の品は周天の章に応じて周回限定版（アナザー）に変わる */
+export function dropPool(area: Area, cycle = 1): Record<Rarity, Item[]> {
   const relics = RELICS.filter((r) => r.stageId <= area.stageId);
+  const variant = chapterOf(cycle).loreVariant;
+  const lores = variant ? ANOTHER_LORES.filter((l) => l.variant === variant) : LORES;
   return {
     C: CATALYSTS,
-    B: [...LORES.filter((l) => l.areaId === area.id), ...FRAGMENTS.filter((f) => f.stageId === area.stageId)],
+    B: [...lores.filter((l) => l.areaId === area.id), ...FRAGMENTS.filter((f) => f.stageId === area.stageId)],
     A: [...SKINS.filter((s) => s.stageId <= area.stageId), ...relics.filter((r) => r.rarity === "A")],
     S: relics.filter((r) => r.rarity === "S"),
   };
@@ -508,8 +619,8 @@ function pickWeighted<T>(list: T[], weight: (t: T) => number, random: () => numb
  * 1. エリアの確率テーブル（S → A → B → C の順に区間を割り当て）でレア度を決める。秘宝の加護で各確率が上がる
  * 2. そのレア度のプールから1つ選ぶ（dropWeight の重み付き。触媒は weight、稀品は伝承の品 4・断片 各1）
  */
-export function rollDrop(area: Area, random: () => number = Math.random, boost = 1): Item | null {
-  const pool = dropPool(area);
+export function rollDrop(area: Area, random: () => number = Math.random, boost = 1, cycle = 1): Item | null {
+  const pool = dropPool(area, cycle);
   const r = random() * 100;
   let edge = 0;
   for (const rarity of RARITIES) {
