@@ -140,6 +140,25 @@
   html {
     @apply font-sans;
   }
+  /* 画面全体を固定し、オーバースクロールや数pxの縦揺れを起こさない */
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+  body {
+    position: fixed;
+    inset: 0;
+  }
+}
+
+/* 明示的にスクロールさせる領域だけに使う（スクロール連鎖で画面全体を動かさない） */
+@utility scroll-area {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 /* ---------- マホログ演出 ---------- */
 @theme inline {

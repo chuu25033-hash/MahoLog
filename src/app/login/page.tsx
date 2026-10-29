@@ -8,7 +8,7 @@ export default function LoginPage() {
   if (!isSupabaseConfigured) redirect("/dashboard");
 
   return (
-    <div className="grid h-dvh grid-cols-2 items-center gap-6 overflow-y-auto p-6">
+    <div className="grid h-dvh grid-cols-2 items-center gap-6 scroll-area overflow-x-hidden p-6">
       <div className="relative flex h-full items-center justify-center">
         <MagicCircle color="#a882fb" running intensity={0.4} className="absolute h-[90%] max-h-full opacity-80" />
         <div className="relative text-center">

@@ -27,7 +27,7 @@ async function HomeContent() {
       <AreaAmbience totalMp={profile.total_study_time} />
       <WorldlineEchoes />
       {/* 隙間は背景の世界線の残光へホバーを通す */}
-      <div data-open-sky className="grid min-h-full grid-cols-12 gap-3 p-3 animate-in fade-in duration-700 lg:gap-4 lg:p-5">
+      <div data-open-sky className="scroll-area grid h-full grid-cols-12 gap-3 p-3 animate-in fade-in duration-700 lg:gap-4 lg:p-5">
         {/* 左: プロフィール・ステージ・合計 */}
         <section className="col-span-4 flex flex-col gap-3">
           <Card className="gap-3 px-4">

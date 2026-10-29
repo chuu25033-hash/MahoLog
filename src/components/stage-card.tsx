@@ -57,7 +57,7 @@ export function StageCard({ totalMp }: { totalMp: number }) {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-3xl! gap-3 overflow-y-auto rounded-2xl p-5 ring-starlight/25 backdrop-blur-xl sm:max-w-3xl!">
+        <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-3xl! gap-3 scroll-area rounded-2xl p-5 ring-starlight/25 backdrop-blur-xl sm:max-w-3xl!">
           <DialogHeader>
             <DialogTitle className="tracking-[0.3em]">滞在エリアの選択</DialogTitle>
             <DialogDescription>

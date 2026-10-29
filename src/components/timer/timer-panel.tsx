@@ -247,7 +247,7 @@ export function TimerPanel({
   return (
     <div className="grid h-full grid-cols-12 gap-3 p-3 lg:gap-4 lg:p-5">
       {/* 左: 設定パネル */}
-      <section className="glass col-span-4 flex min-h-0 flex-col gap-4 overflow-y-auto rounded-2xl p-3 short:gap-3 lg:p-5">
+      <section className="glass col-span-4 flex min-h-0 flex-col gap-4 scroll-area rounded-2xl p-3 short:gap-3 lg:p-5">
         <div className="grid grid-cols-2 gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm">
           {(
             [

@@ -162,11 +162,11 @@ function StarMemory({ nights }: { nights: ObservedNight[] }) {
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-3 lg:gap-4">
-        <section className="glass relative col-span-8 flex min-h-80 items-center justify-center overflow-hidden rounded-2xl [container-type:size]">
+        <section className="glass relative col-span-8 flex min-h-80 short:min-h-0 items-center justify-center overflow-hidden rounded-2xl [container-type:size]">
           <CelestialChart nights={nights} completed={completed} selected={selected} onSelect={setSelected} />
         </section>
 
-        <aside className="col-span-4 flex min-h-0 flex-col gap-3 overflow-y-auto">
+        <aside className="col-span-4 flex min-h-0 scroll-area flex-col gap-3">
           <NightDetail night={selected} />
           <ConstellationList nights={nights} completed={completed} />
         </aside>

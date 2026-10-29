@@ -65,7 +65,7 @@ export function ResultDialog({ result, onClose }: { result: StudyResult; onClose
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-2xl! grid-cols-2 items-center gap-4 overflow-y-auto rounded-2xl p-6 ring-starlight/25 backdrop-blur-xl short:p-4 sm:max-w-2xl!">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-2xl! grid-cols-2 items-center gap-4 scroll-area rounded-2xl p-6 ring-starlight/25 backdrop-blur-xl short:p-4 sm:max-w-2xl!">
         <div className="flex flex-col items-center gap-2 text-center">
           <DialogTitle className="text-sm font-normal tracking-[0.4em] text-aqua/80">詠唱完了</DialogTitle>
           <div className="relative flex flex-col items-center px-6 py-1">

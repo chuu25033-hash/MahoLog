@@ -23,7 +23,7 @@ export function CollectionView() {
   const found = ALL_ITEMS.filter((i) => mock.discovered.includes(i.id)).length;
 
   return (
-    <div className="flex flex-col gap-4 p-3 lg:p-5">
+    <div className="scroll-area flex h-full flex-col gap-4 p-3 lg:p-5">
       <header className="flex items-end justify-between gap-4">
         <div>
           <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap">
