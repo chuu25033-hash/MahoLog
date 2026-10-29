@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 export type StudyResult = {
   id: number;
   subject: Subject;
+  subSubject: string | null;
   area: Area;
   savedMinutes: number;
   requestedMinutes: number;
@@ -87,7 +88,7 @@ export function ResultDialog({ result, onClose }: { result: StudyResult; onClose
             </p>
           )}
           <DialogDescription>
-            <span className="text-foreground">{result.subject.name}</span> の魔力が高まった
+            <span className="text-foreground">{result.subject.name}{result.subSubject && ` ➔ ${result.subSubject}`}</span> の魔力が高まった
           </DialogDescription>
           {capped && (
             <p className="text-xs text-destructive">一夜に刻める詠唱は12時間まで。超えた分は星に届きません</p>

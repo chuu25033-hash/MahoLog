@@ -22,6 +22,10 @@ export type UserProfile = {
   totalMp: number;
   /** 滞在中のステージ（エリア）ID */
   currentStageId: string;
+  /** 主軸カテゴリ（主科目 ID）。詠唱画面で最初に選ばれる */
+  subject: string | null;
+  /** 詳細科目（カスタムは自由記述） */
+  subSubject: string | null;
 };
 
 export type ChantRecord = {
@@ -31,6 +35,8 @@ export type ChantRecord = {
   /** 集中時間（分） */
   minutes: number;
   subjectId: string;
+  /** 詳細科目（この項目より前の記録には無い） */
+  subSubject?: string | null;
   /** 獲得MP */
   mp: number;
   /** 実施ステージ（エリア）ID */
@@ -52,8 +58,6 @@ export type DailyReward = {
 export const FOCUS_MINUTE_OPTIONS = [15, 25, 45, 60] as const;
 
 export type UserSettings = {
-  /** 主軸科目。詠唱画面で最初に選ばれる */
-  mainSubjectId: string | null;
   /** 律動の詠唱の初期集中時間（分） */
   defaultFocusMinutes: number;
   /** 背景の粒子・重いアニメーションを抑える */
@@ -79,26 +83,30 @@ const unlockedAt = (totalMp: number) => AREAS.filter((a) => isAreaUnlocked(a, to
 /** 初回起動時の状態: Rank I「門前の解読者」、はじまりの小屋から */
 export function initialUserData(): UserData {
   return {
-    userProfile: { username: demoProfile.username, rank: rankOf(calcLevel(0)).numeral, totalMp: 0, currentStageId: "1-1" },
+    userProfile: { username: demoProfile.username, rank: rankOf(calcLevel(0)).numeral, totalMp: 0, currentStageId: "1-1", subject: null, subSubject: null },
     chantHistory: [],
     dailyReward: { lastClaimedDate: null, streak: 0 },
     inventory: {},
     unlockedStages: unlockedAt(0),
     equipment: { catalystId: null, skinId: null },
-    settings: { mainSubjectId: null, defaultFocusMinutes: 25, liteMode: false, chime: true },
+    settings: { defaultFocusMinutes: 25, liteMode: false, chime: true },
   };
 }
 
 /** 保存データ（古い形式を含む）に初期値を補って読み込める形にする */
 function normalize(saved: Partial<UserData>): UserData {
   const base = initialUserData();
+  // 旧形式: 主軸科目は settings.mainSubjectId に持っていた
+  const { mainSubjectId, ...settings } = (saved.settings ?? {}) as Partial<UserSettings> & { mainSubjectId?: string | null };
+  const userProfile = { ...base.userProfile, ...saved.userProfile };
+  userProfile.subject ??= mainSubjectId ?? null;
   return {
     ...base,
     ...saved,
-    userProfile: { ...base.userProfile, ...saved.userProfile },
+    userProfile,
     dailyReward: { ...base.dailyReward, ...saved.dailyReward },
     equipment: { ...base.equipment, ...saved.equipment },
-    settings: { ...base.settings, ...saved.settings },
+    settings: { ...base.settings, ...settings },
   };
 }
 
@@ -327,6 +335,11 @@ export const userActions = {
 
   setUsername(username: string) {
     update((s) => ({ ...s, userProfile: { ...s.userProfile, username } }));
+  },
+
+  /** 主軸カテゴリと詳細科目 */
+  setSubject(subject: string | null, subSubject: string | null) {
+    update((s) => ({ ...s, userProfile: { ...s.userProfile, subject, subSubject } }));
   },
 
   updateSettings(patch: Partial<UserSettings>) {

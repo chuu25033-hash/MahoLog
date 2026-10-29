@@ -10,8 +10,11 @@ import { TimerPanel } from "./timer-panel";
 export function TimerView(props: ComponentProps<typeof TimerPanel>) {
   const stored = useStoredUserData();
   if (!stored) return <PageLoading />;
-  const { defaultFocusMinutes, mainSubjectId } = stored.settings;
-  const settings = { initialFocusMin: defaultFocusMinutes, initialSubjectId: mainSubjectId };
+  const settings = {
+    initialFocusMin: stored.settings.defaultFocusMinutes,
+    initialSubjectId: stored.userProfile.subject,
+    initialSubSubject: stored.userProfile.subSubject,
+  };
   if (!props.isDemo) return <TimerPanel {...props} {...settings} />;
   // TimerPanel は初期値だけを使い、以降の更新は自身の状態で持つ
   const { weekTotals, todayMinutes } = timerSummary(props.subjects, localStudyLogs(stored));

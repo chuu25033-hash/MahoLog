@@ -3,6 +3,8 @@
 import { useRef, useState, type ReactNode } from "react";
 import { Bell, Download, Feather, RotateCcw, ScrollText, Upload, UserRound } from "lucide-react";
 import { PageLoading } from "@/components/page-loading";
+import { SubjectPicker } from "@/components/subject-picker";
+import { SubjectRuneChip } from "@/components/subject-rune-chip";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -13,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { jstDateKey } from "@/lib/date";
+import { resolveSubSubject } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
 import { FOCUS_MINUTE_OPTIONS, initialUserData, userActions, useStoredUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
@@ -24,7 +27,7 @@ export function SettingsView({ subjects, isDemo }: { subjects: Subject[]; isDemo
   const data = useStoredUserData();
   if (!data) return <PageLoading />;
   const { userProfile, settings } = data;
-  const mainSubjectId = subjects.some((s) => s.id === settings.mainSubjectId) ? settings.mainSubjectId : null;
+  const mainSubject = subjects.find((s) => s.id === userProfile.subject);
 
   return (
     <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 p-3 animate-in fade-in duration-700 lg:p-5">
@@ -52,30 +55,22 @@ export function SettingsView({ subjects, isDemo }: { subjects: Subject[]; isDemo
             />
           </Field>
 
-          <Field label="主軸科目" hint="詠唱画面で最初に選ばれます">
-            <div className="flex flex-wrap gap-1.5">
-              {subjects.map((s) => {
-                const active = s.id === mainSubjectId;
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => userActions.updateSettings({ mainSubjectId: active ? null : s.id })}
-                    aria-pressed={active}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs tracking-wider transition-all duration-300",
-                      active
-                        ? "border-white/30 bg-white/[0.07] text-foreground"
-                        : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
-                    )}
-                    style={active ? { boxShadow: `0 0 12px -3px ${s.color}` } : undefined}
-                  >
-                    <span className="size-1.5 rounded-full" style={{ background: s.color, boxShadow: `0 0 6px ${s.color}` }} />
-                    {s.name}
-                  </button>
-                );
-              })}
-              {subjects.length === 0 && <span className="text-xs text-muted-foreground/70">有効な科目がありません</span>}
-            </div>
+          <Field label="主軸カテゴリ ➔ 詳細科目" hint="詠唱画面で最初に選ばれます">
+            <SubjectPicker
+              subjects={subjects}
+              subjectId={mainSubject?.id ?? null}
+              subSubject={mainSubject ? userProfile.subSubject : null}
+              onChange={(subject, subSubject) => userActions.setSubject(subject, subSubject)}
+              allowNone
+            />
+            {mainSubject && (
+              <SubjectRuneChip
+                name={mainSubject.name}
+                subSubject={resolveSubSubject(mainSubject, userProfile.subSubject)}
+                color={mainSubject.color}
+                className="mt-3"
+              />
+            )}
           </Field>
 
           <Field label="デフォルト詠唱時間" hint="律動の詠唱の初期集中時間">
@@ -137,7 +132,7 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="glass flex min-h-0 flex-col gap-5 scroll-area scrollbar-none rounded-2xl p-4 lg:p-5">
+    <section className="glass flex min-h-0 flex-col gap-4 scroll-area scrollbar-none rounded-2xl p-4 lg:p-5">
       <h2 className="flex items-center gap-2 border-b border-white/10 pb-3 text-sm tracking-[0.25em] whitespace-nowrap">
         <Icon className="size-4 shrink-0 text-starlight" strokeWidth={1.25} />
         {title}
@@ -245,24 +240,22 @@ function DataControls() {
 
   return (
     <>
-      <DataAction
-        icon={Download}
-        title="記録の書き出し"
-        description="この端末に刻まれた魔力・詠唱履歴・所持品を JSON ファイルとして保存します"
-      >
-        <Button variant="secondary" onClick={exportBackup}>
-          <Download /> 書き出す
-        </Button>
-      </DataAction>
-
-      <DataAction
-        icon={Upload}
-        title="記録の復元"
-        description="書き出したバックアップを読み込み、現在の記録を上書きします"
-      >
-        <Button variant="outline" onClick={() => fileRef.current?.click()}>
-          <Upload /> ファイルを選ぶ
-        </Button>
+      <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
+        <p className="flex items-center gap-1.5 text-sm tracking-wider whitespace-nowrap">
+          <ScrollText className="size-4 shrink-0 text-aqua/80" strokeWidth={1.25} />
+          記録の保管
+        </p>
+        <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
+          魔力・詠唱履歴・所持品を JSON に書き出し、復元時はそのファイルで現在の記録を上書きします
+        </p>
+        <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+          <Button variant="secondary" size="sm" onClick={exportBackup}>
+            <Download /> 書き出す
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+            <Upload /> 復元する
+          </Button>
+        </div>
         <input
           ref={fileRef}
           type="file"
@@ -270,26 +263,25 @@ function DataControls() {
           className="hidden"
           onChange={(e) => pickFile(e.target.files?.[0])}
         />
-      </DataAction>
+        {message && (
+          <p className={cn("mt-2 text-center text-[11px] tracking-wider", message.error ? "text-destructive" : "text-aqua/80")}>
+            {message.text}
+          </p>
+        )}
+      </div>
 
-      <div className="mt-auto rounded-xl border border-destructive/25 bg-destructive/[0.04] p-3">
+      <div className="rounded-xl border border-destructive/25 bg-destructive/[0.04] p-3">
         <p className="flex items-center gap-1.5 text-sm tracking-wider whitespace-nowrap text-destructive">
           <RotateCcw className="size-4 shrink-0" strokeWidth={1.25} />
           原点へ戻る
         </p>
         <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
-          すべての魔力・詠唱履歴・所持品・設定を消し、はじまりの小屋から旅をやり直します
+          すべての魔力と記憶を消し、はじまりの小屋から旅をやり直します
         </p>
-        <Button variant="destructive" className="mt-3 w-full" onClick={() => setResetOpen(true)}>
+        <Button variant="destructive" size="sm" className="mt-2.5 w-full" onClick={() => setResetOpen(true)}>
           <RotateCcw /> データを初期化する
         </Button>
       </div>
-
-      {message && (
-        <p className={cn("text-center text-xs tracking-wider", message.error ? "text-destructive" : "text-aqua/80")}>
-          {message.text}
-        </p>
-      )}
 
       <Dialog open={pendingImport !== null} onOpenChange={(open) => !open && setPendingImport(null)}>
         <DialogContent>
@@ -329,28 +321,5 @@ function DataControls() {
         </DialogContent>
       </Dialog>
     </>
-  );
-}
-
-function DataAction({
-  icon: Icon,
-  title,
-  description,
-  children,
-}: {
-  icon: typeof UserRound;
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-      <p className="flex items-center gap-1.5 text-sm tracking-wider whitespace-nowrap">
-        <Icon className="size-4 shrink-0 text-aqua/80" strokeWidth={1.25} />
-        {title}
-      </p>
-      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">{description}</p>
-      <div className="mt-3 flex justify-end">{children}</div>
-    </div>
   );
 }

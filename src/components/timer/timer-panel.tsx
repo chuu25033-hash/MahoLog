@@ -5,6 +5,8 @@ import { FastForward, Hourglass, MapPin, Moon, Pause, Play, Square, Timer as Tim
 import { saveStudyLog } from "@/app/actions/study";
 import { ItemArt } from "@/components/item-art";
 import { MagicCircle } from "@/components/magic-circle";
+import { SubjectPicker } from "@/components/subject-picker";
+import { SubjectRuneChip } from "@/components/subject-rune-chip";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
+import { resolveSubSubject } from "@/lib/subjects";
 import { CATALYSTS, blessingMultiplier, dropMultiplier, rollDrop } from "@/lib/items";
 import {
   FOCUS_MINUTE_OPTIONS,
@@ -56,6 +59,7 @@ export function TimerPanel({
   isDemo,
   initialFocusMin = 25,
   initialSubjectId,
+  initialSubSubject = null,
 }: {
   subjects: Subject[];
   initialTotalMp: number;
@@ -66,13 +70,15 @@ export function TimerPanel({
   initialFocusMin?: number;
   /** 設定画面の主軸科目 */
   initialSubjectId?: string | null;
+  /** 設定画面の詳細科目 */
+  initialSubSubject?: string | null;
 }) {
   const [mode, setMode] = useState<StudyMode>("pomodoro");
   const [focusMin, setFocusMin] = useState<number>(initialFocusMin);
   const [breakMin, setBreakMin] = useState<number>(5);
-  const [subjectId, setSubjectId] = useState(
-    subjects.find((s) => s.id === initialSubjectId)?.id ?? subjects[0]?.id ?? "",
-  );
+  const initialSubject = subjects.find((s) => s.id === initialSubjectId);
+  const [subjectId, setSubjectId] = useState(initialSubject?.id ?? subjects[0]?.id ?? "");
+  const [subSubjectInput, setSubSubjectInput] = useState(initialSubject ? initialSubSubject : null);
   const [phase, setPhase] = useState<Phase>("idle");
   const { elapsedMs, running, start: resume, pause, reset, read } = useClock();
 
@@ -94,6 +100,7 @@ export function TimerPanel({
   const catalyst = armedCatalyst(data);
 
   const subject = subjects.find((s) => s.id === subjectId);
+  const subSubject = resolveSubSubject(subject, subSubjectInput);
   const resting = phase === "break" || phase === "breakReady";
   const color = resting ? "#cfe9ff" : (subject?.color ?? "#a882fb");
   const lineColor = resting ? "#a882fb" : skin.lineColor;
@@ -137,6 +144,7 @@ export function TimerPanel({
           userActions.recordChant({
             minutes: res.savedMinutes,
             subjectId: subject.id,
+            subSubject,
             mp: gainedMp,
             stageId: area.id,
             mode,
@@ -151,6 +159,7 @@ export function TimerPanel({
         setResult({
           id: Date.now(),
           subject,
+          subSubject,
           area,
           savedMinutes: res.savedMinutes,
           requestedMinutes: minutes,
@@ -166,7 +175,7 @@ export function TimerPanel({
         });
       });
     },
-    [area, isDemo, mode, subject, totalMp, weekTotals],
+    [area, isDemo, mode, subject, subSubject, totalMp, weekTotals],
   );
 
   // ポモドーロ: 勉強・休憩の終了判定
@@ -311,30 +320,17 @@ export function TimerPanel({
         </div>
 
         <div>
-          <p className="mb-2 text-xs tracking-[0.2em] text-muted-foreground">属性（科目）</p>
-          <div className="flex flex-wrap gap-1.5">
-            {subjects.map((s) => (
-              <button
-                key={s.id}
-                disabled={locked}
-                onClick={() => setSubjectId(s.id)}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs tracking-wider transition-all duration-300 disabled:cursor-not-allowed",
-                  s.id === subjectId
-                    ? "border-white/30 bg-white/[0.07] text-foreground"
-                    : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
-                  locked && s.id !== subjectId && "opacity-30",
-                )}
-                style={s.id === subjectId ? { boxShadow: `0 0 12px -3px ${s.color}` } : undefined}
-              >
-                <span
-                  className="size-1.5 rounded-full"
-                  style={{ background: s.color, boxShadow: `0 0 6px ${s.color}` }}
-                />
-                {s.name}
-              </button>
-            ))}
-          </div>
+          <p className="mb-2 text-xs tracking-[0.2em] text-muted-foreground">属性（科目 ➔ 詳細）</p>
+          <SubjectPicker
+            subjects={subjects}
+            subjectId={subjectId}
+            subSubject={subSubjectInput}
+            onChange={(id, sub) => {
+              setSubjectId(id ?? subjectId);
+              setSubSubjectInput(sub);
+            }}
+            disabled={locked}
+          />
         </div>
 
         {mode === "pomodoro" && (
@@ -435,11 +431,15 @@ export function TimerPanel({
                   </span>
                 ))}
             </p>
-            <p className="flex items-center gap-2 text-sm tracking-[0.3em]">
-              <span className="h-px w-6 bg-gradient-to-r from-transparent to-white/40" />
-              <span style={{ color, textShadow: `0 0 10px ${color}80` }}>{resting ? "静息" : subject?.name}</span>
-              <span className="h-px w-6 bg-gradient-to-l from-transparent to-white/40" />
-            </p>
+            {resting || !subject ? (
+              <p className="flex items-center gap-2 text-sm tracking-[0.3em]">
+                <span className="h-px w-6 bg-gradient-to-r from-transparent to-white/40" />
+                <span style={{ color, textShadow: `0 0 10px ${color}80` }}>静息</span>
+                <span className="h-px w-6 bg-gradient-to-l from-transparent to-white/40" />
+              </p>
+            ) : (
+              <SubjectRuneChip name={subject.name} subSubject={subSubject} color={subject.color} />
+            )}
 
             <div className="mt-2 flex gap-2">
               {phase === "idle" && (
