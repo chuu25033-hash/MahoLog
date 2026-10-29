@@ -6,7 +6,7 @@ import { BookMarked, BookOpen, CalendarDays, Home, LogOut, Settings, Sparkles, T
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
-  { href: "/", label: "ホーム", icon: Home, ready: true },
+  { href: "/dashboard", label: "ホーム", icon: Home, ready: true },
   { href: "/timer", label: "詠唱", icon: Sparkles, ready: true },
   { href: "/collection", label: "図鑑", icon: BookMarked, ready: true },
   { href: "/history", label: "履歴", icon: CalendarDays, ready: false },
@@ -22,7 +22,7 @@ export function NavRail({ signOutAction }: { signOutAction?: () => Promise<void>
 
   return (
     <nav className="glass flex h-full w-16 shrink-0 flex-col items-center gap-1 rounded-none py-3 lg:w-20">
-      <Link href="/" className="mb-3 flex flex-col items-center gap-0.5 text-starlight" aria-label="マホログ ホーム">
+      <Link href="/dashboard" className="mb-3 flex flex-col items-center gap-0.5 text-starlight" aria-label="マホログ ホーム">
         <BookOpen className="size-6" strokeWidth={1.25} />
         <span className="text-[10px] tracking-[0.2em] text-glow-gold">マホログ</span>
       </Link>

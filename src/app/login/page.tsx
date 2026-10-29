@@ -5,7 +5,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { AuthForm } from "./auth-form";
 
 export default function LoginPage() {
-  if (!isSupabaseConfigured) redirect("/");
+  if (!isSupabaseConfigured) redirect("/dashboard");
 
   return (
     <div className="grid h-dvh grid-cols-2 items-center gap-6 overflow-y-auto p-6">

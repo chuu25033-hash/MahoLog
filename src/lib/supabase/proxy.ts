@@ -2,7 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured, supabaseKey, supabaseUrl } from "./config";
 
-const PUBLIC_PATHS = ["/login"];
+// "/" はタイトル画面（誰でも閲覧可）
+const LANDING_PATH = "/";
+const AUTH_PATHS = ["/login"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -25,16 +27,17 @@ export async function updateSession(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getClaims();
-  const isPublic = PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p));
+  const { pathname } = request.nextUrl;
+  const isAuthPage = AUTH_PATHS.some((p) => pathname.startsWith(p));
 
-  if (!data?.claims && !isPublic) {
+  if (!data?.claims && !isAuthPage && pathname !== LANDING_PATH) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
   }
-  if (data?.claims && isPublic) {
+  if (data?.claims && isAuthPage) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 

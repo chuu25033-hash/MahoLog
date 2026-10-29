@@ -12,7 +12,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
     password: String(formData.get("password") ?? ""),
   });
   if (error) return { error: "メールアドレスまたはパスワードが正しくありません" };
-  redirect("/");
+  redirect("/dashboard");
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -28,7 +28,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   if (error) return { error: error.message };
   // メール確認が有効な場合はセッションが発行されない
   if (!data.session) return { message: "確認メールを送信しました。メール内のリンクから登録を完了してください。" };
-  redirect("/");
+  redirect("/dashboard");
 }
 
 export async function signOut() {
