@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import { Bell, Check, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Sparkle, Upload, UserRound, Volume2, Wind } from "lucide-react";
+import { Bell, Check, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { BackToLibrary } from "@/components/back-to-library";
 import { PageLoading } from "@/components/page-loading";
@@ -20,7 +20,7 @@ import { jstDateKey } from "@/lib/date";
 import { soundManager } from "@/lib/sound/sound-manager";
 import { MIN_ACTIVE_SUBJECTS, activeSubjectsOf, resolveSubSubject } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
-import { FOCUS_MINUTE_OPTIONS, initialUserData, userActions, useStoredUserData } from "@/lib/user-store";
+import { FOCUS_MINUTE_OPTIONS, hasDevBackup, initialUserData, userActions, useStoredUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 const USERNAME_MAX = 16;
@@ -366,6 +366,44 @@ function VolumeRow({
   );
 }
 
+/** 開発者ツール: いまのデータを退避して全解放し、いつでも元に戻せる（開発サーバーでのみ表示） */
+function DevTools() {
+  const [backedUp] = useState(hasDevBackup);
+
+  // 各画面が保存データを読み直すよう、切り替えたら再読み込みする
+  function unlockAll() {
+    userActions.unlockAll();
+    window.location.reload();
+  }
+
+  function restore() {
+    if (userActions.restoreDevBackup()) window.location.reload();
+  }
+
+  return (
+    <div className="rounded-xl border border-dashed border-amethyst/40 bg-amethyst/[0.04] p-3">
+      <p className="flex items-center gap-1.5 text-sm tracking-wider whitespace-nowrap text-amethyst">
+        <Wrench className="size-4 shrink-0" strokeWidth={1.25} />
+        開発者ツール
+        <span className="ml-auto font-display text-[9px] tracking-[0.25em] text-amethyst/70">DEV ONLY</span>
+      </p>
+      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
+        {backedUp
+          ? "全解放中です。退避しておいた元のデータにいつでも戻せます"
+          : "いまのデータをこの端末に退避してから、全ステージ・最高階級・図鑑の全遺物・全文書の復元・錬成素材を解放します"}
+      </p>
+      <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+        <Button variant="secondary" size="sm" onClick={unlockAll}>
+          <Unlock /> 全解放する
+        </Button>
+        <Button variant="outline" size="sm" disabled={!backedUp} onClick={restore}>
+          <Undo2 /> 元のデータに戻す
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /** バックアップの書き出し・復元と、探求記録の初期化 */
 function DataControls() {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -450,6 +488,9 @@ function DataControls() {
           <RotateCcw /> データを初期化する
         </Button>
       </div>
+
+      {/* 開発サーバー（npm run dev）でだけ出す。本番ビルドでは条件ごと取り除かれる */}
+      {process.env.NODE_ENV === "development" && <DevTools />}
 
       <Dialog open={pendingImport !== null} onOpenChange={(open) => !open && setPendingImport(null)}>
         <DialogContent>

@@ -9,7 +9,10 @@ import { demoProfile } from "./demo";
 import { calcLevel, rankOf } from "./game";
 import { canCraft, canRestore, dissolveValue, fragmentsOf, memoryOf, surplusCount } from "./crafting";
 import {
+  ALL_ITEMS,
   DEFAULT_SKIN,
+  FRAGMENTS,
+  MEMORIES,
   MYTHICS,
   STARDUST_ORE,
   findItem,
@@ -540,4 +543,66 @@ export const userActions = {
   loadSample() {
     update(() => sampleUserData());
   },
+
+  /**
+   * 開発者ツール: いまのデータを退避してから、すべてを解放したデータに切り替える。
+   * 既に退避があれば（全解放中に押し直した場合）、元のデータの退避は上書きしない
+   */
+  unlockAll() {
+    const current = load();
+    try {
+      if (!window.localStorage.getItem(DEV_BACKUP_KEY)) window.localStorage.setItem(DEV_BACKUP_KEY, JSON.stringify(current));
+    } catch {}
+    update(() => fullyUnlockedData(current));
+  },
+
+  /** 開発者ツール: 全解放の前に退避したデータへ戻す。退避が無ければ false */
+  restoreDevBackup(): boolean {
+    try {
+      const raw = window.localStorage.getItem(DEV_BACKUP_KEY);
+      if (!raw) return false;
+      update(() => normalize(JSON.parse(raw)));
+      window.localStorage.removeItem(DEV_BACKUP_KEY);
+      return true;
+    } catch {
+      return false;
+    }
+  },
 };
+
+/** 開発者ツールで全解放する前のデータの退避先 */
+const DEV_BACKUP_KEY = "maholog_user_data_dev_backup";
+
+/** 全解放の前に退避したデータがあるか */
+export function hasDevBackup() {
+  try {
+    return window.localStorage.getItem(DEV_BACKUP_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/** 最奥の祭壇（6-3: 300時間）まで届く累積MP。魔術階級も最高位 X になる */
+const UNLOCK_ALL_MP = 300 * 60;
+
+/**
+ * すべてを解放したデータ: 全ステージ・最高階級、図鑑の全遺物（神話遺物を含む）、全文書の復元、
+ * 断片と星屑の原石も試せるだけ持たせる。名前・設定・世界線と、滞在中のエリアは引き継ぐ。
+ * 魔導の軌跡や魔法陣が描けるよう、詠唱履歴はサンプルを使う
+ */
+function fullyUnlockedData(base: UserData): UserData {
+  const sample = sampleUserData();
+  const inventory: Record<string, number> = { [STARDUST_ORE.id]: 500 };
+  for (const item of ALL_ITEMS) inventory[item.id] = item.kind === "catalyst" ? 5 : 1;
+  for (const f of FRAGMENTS) inventory[f.id] = 2;
+  for (const m of MEMORIES) inventory[m.id] = 1;
+  return withProgress(
+    {
+      ...base,
+      chantHistory: sample.chantHistory,
+      inventory,
+      equipment: { catalystId: null, skinId: base.equipment.skinId },
+    },
+    UNLOCK_ALL_MP,
+  );
+}
