@@ -5,7 +5,7 @@ import { Check, Crown, Paintbrush, Sparkles } from "lucide-react";
 import { BackToLibrary } from "@/components/back-to-library";
 import { CraftPanel } from "@/components/codex/craft-panel";
 import { MemoriesPanel } from "@/components/codex/memories-panel";
-import { ItemArt } from "@/components/item-art";
+import { HiddenArt, ItemArt } from "@/components/item-art";
 import { MpBar } from "@/components/mp-bar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -19,6 +19,7 @@ import {
   DOCUMENTS,
   GUIDANCE_CATALYSTS,
   ITEM_TYPES,
+  isZenithReward,
   RARITY_LABEL,
   type Item,
   type ItemRarity,
@@ -197,21 +198,26 @@ function ItemCard({ item, data, onSelect }: { item: Item; data: UserData; onSele
         equipped && "border-starlight/50",
       )}
     >
-      <ItemArt
-        icon={item.svgIcon}
-        rarity={item.rarity}
-        color={item.color}
-        seed={item.id}
-        locked={!owned}
-        className="aspect-square w-full max-w-20 transition-transform duration-500 group-hover:scale-105"
-      />
+      {/* 星天の塔の報酬は、授かるまで形も伏せる */}
+      {!owned && isZenithReward(item) ? (
+        <HiddenArt className="aspect-square w-full max-w-20" />
+      ) : (
+        <ItemArt
+          icon={item.svgIcon}
+          rarity={item.rarity}
+          color={item.color}
+          seed={item.id}
+          locked={!owned}
+          className="aspect-square w-full max-w-20 transition-transform duration-500 group-hover:scale-105"
+        />
+      )}
       <span className={cn("w-full truncate text-center text-[10px] tracking-wider", owned ? "text-foreground" : "text-muted-foreground/50")}>
         {owned ? item.name : "？？？"}
       </span>
       <span className="font-display text-[9px] tracking-[0.15em] text-muted-foreground/70">
         {item.kind === "lore"
           ? `AREA ${item.areaId}${item.variant ? (item.variant === "shadow" ? " · 影" : " · 蒼炎") : ""}`
-          : item.kind === "title"
+          : item.kind === "title" && owned
             ? `${item.zenithFloor}F · 称号`
             : owned
               ? item.type
@@ -261,7 +267,11 @@ function DecipherDialog({ item, data, onClose }: { item: Item; data: UserData; o
         <div className="relative mx-auto aspect-square w-full max-w-60 short:max-w-44">
           <CodexSigil color={color} dim={!owned} className="absolute inset-0 size-full" />
           <div className="codex-float absolute inset-[22%]">
-            <ItemArt icon={item.svgIcon} rarity={item.rarity} color={item.color} seed={item.id} locked={!owned} className="size-full" />
+            {!owned && isZenithReward(item) ? (
+              <HiddenArt className="size-full" />
+            ) : (
+              <ItemArt icon={item.svgIcon} rarity={item.rarity} color={item.color} seed={item.id} locked={!owned} className="size-full" />
+            )}
           </div>
         </div>
 

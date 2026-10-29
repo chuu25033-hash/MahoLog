@@ -115,6 +115,19 @@ export function ItemArt({
   );
 }
 
+/** 正体を伏せた遺物（星天の塔の報酬など）: 形も見せず、点線の円に「？」だけを浮かべる */
+export function HiddenArt({ className }: { className?: string }) {
+  return (
+    <svg viewBox="-50 -50 100 100" className={cn("overflow-visible", className)} aria-hidden>
+      <circle r="44" stroke="#64748b" strokeOpacity="0.35" strokeDasharray="2 4" {...hairline} />
+      <circle r="30" stroke="#64748b" strokeOpacity="0.2" {...hairline} />
+      <text y="13" textAnchor="middle" fontSize="36" fill="#64748b" fillOpacity="0.7">
+        ？
+      </text>
+    </svg>
+  );
+}
+
 /** 八芒星 {8/3}（半径 38） */
 const OCTAGRAM = Array.from({ length: 8 }, (_, i) => {
   const angle = ((-90 + ((i * 3) % 8) * 45) * Math.PI) / 180;

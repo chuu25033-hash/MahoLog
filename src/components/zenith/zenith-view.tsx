@@ -6,7 +6,7 @@ import { ArrowDownToLine, Lock, Orbit, Wand2 } from "lucide-react";
 import { BackToLibrary } from "@/components/back-to-library";
 import { EndingPanel } from "@/components/cycle/ascension-panels";
 import { CycleRings } from "@/components/cycle/cycle-rings";
-import { ItemArt } from "@/components/item-art";
+import { HiddenArt, ItemArt } from "@/components/item-art";
 import { MpBar } from "@/components/mp-bar";
 import { PageLoading } from "@/components/page-loading";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -175,10 +175,15 @@ function MilestoneRow({ floor, reached, rewards, data }: { floor: number; reache
           const owned = isDiscovered(data, item.id);
           return (
             <span key={item.id} className="flex min-w-0 items-center gap-1.5">
-              <ItemArt icon={item.svgIcon} rarity={item.rarity} color={item.color} seed={item.id} locked={!owned} className="size-9 shrink-0" />
+              {/* 授かるまでは、何が得られるかを伏せておく */}
+              {owned ? (
+                <ItemArt icon={item.svgIcon} rarity={item.rarity} color={item.color} seed={item.id} className="size-9 shrink-0" />
+              ) : (
+                <HiddenArt className="size-9 shrink-0" />
+              )}
               <span className="min-w-0">
                 <span className="block font-display text-[9px] tracking-[0.2em] text-muted-foreground">
-                  {item.kind === "title" ? "称号" : "天界遺物"} · {item.rarity}
+                  {owned ? `${item.kind === "title" ? "称号" : "天界遺物"} · ${item.rarity}` : "UNKNOWN"}
                 </span>
                 <span className={cn("block truncate text-xs tracking-wider", owned ? "text-foreground" : "text-muted-foreground/60")}>
                   {owned ? (item.kind === "title" ? `【${item.name}】` : `『${item.name}』`) : "？？？"}

@@ -553,6 +553,11 @@ export function findItem(id: string | null | undefined): Item | undefined {
   return EVERY_ITEM.find((item) => item.id === id);
 }
 
+/** 星天の塔の節目で授かるもの（天界遺物・称号）。所持するまで正体を伏せる */
+export function isZenithReward(item: Item) {
+  return item.kind === "title" || (item.kind === "relic" && item.zenithFloor !== undefined);
+}
+
 /** 宝箱の抽選に使うレア度 */
 export const RARITIES: Rarity[] = ["S", "A", "B", "C"];
 
