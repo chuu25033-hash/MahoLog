@@ -45,8 +45,9 @@ export function useClock() {
   return { elapsedMs, running, start, pause, reset, read };
 }
 
-/** 終了通知（音 + 振動） */
-export function notifyFinish() {
+/** 終了通知（音 + 振動）。設定で完了音を切っていれば鳴らさない */
+export function notifyFinish(chime = true) {
+  if (!chime) return;
   try {
     navigator.vibrate?.([200, 100, 200]);
   } catch {}

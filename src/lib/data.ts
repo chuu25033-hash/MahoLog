@@ -62,6 +62,13 @@ export async function getDashboardData() {
   return { ...dashboardSummary(profile, subjects, logs, now), subjects, isDemo: !isSupabaseConfigured };
 }
 
+export async function getSettingsData() {
+  await connection();
+  const { subjects } = await loadUserData(new Date());
+
+  return { subjects: subjects.filter((s) => s.is_active), isDemo: !isSupabaseConfigured };
+}
+
 export async function getTimerData() {
   await connection();
   const now = new Date();

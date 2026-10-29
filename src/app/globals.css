@@ -819,3 +819,29 @@
   .codex-sigil-outer,
   .codex-sigil-inner { animation: none; }
 }
+
+/* 設定「演出の軽量化」: 星屑・粒子を間引き、背景の常時アニメーションと重いぼかしを止める */
+[data-lite] .star:nth-child(3n),
+[data-lite] .star:nth-child(3n + 1),
+[data-lite] .mote:nth-child(n + 10),
+[data-lite] .particle:nth-child(2n),
+[data-lite] .aurora {
+  display: none;
+}
+
+[data-lite] .star,
+[data-lite] .mote,
+[data-lite] .glimmer,
+[data-lite] .glimmer-slow,
+[data-lite] .candle-glow,
+[data-lite] .candle-flame {
+  animation: none;
+}
+
+[data-lite] .star {
+  opacity: var(--max, 0.9);
+}
+
+[data-lite] .mote {
+  opacity: 0.5;
+}

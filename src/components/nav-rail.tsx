@@ -12,7 +12,7 @@ const ITEMS = [
   { href: "/trials", label: "星の試練", icon: Swords, ready: false },
   { href: "/history", label: "魔導の軌跡", icon: CalendarDays, ready: true },
   { href: "/ranking", label: "ランキング", icon: Trophy, ready: false },
-  { href: "/settings", label: "設定", icon: Settings, ready: false },
+  { href: "/settings", label: "設定", icon: Settings, ready: true },
 ] as const;
 
 const itemBase =

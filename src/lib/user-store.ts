@@ -49,6 +49,19 @@ export type DailyReward = {
   streak: number;
 };
 
+export const FOCUS_MINUTE_OPTIONS = [15, 25, 45, 60] as const;
+
+export type UserSettings = {
+  /** 主軸科目。詠唱画面で最初に選ばれる */
+  mainSubjectId: string | null;
+  /** 律動の詠唱の初期集中時間（分） */
+  defaultFocusMinutes: number;
+  /** 背景の粒子・重いアニメーションを抑える */
+  liteMode: boolean;
+  /** 詠唱完了時のベル音・振動 */
+  chime: boolean;
+};
+
 export type UserData = {
   userProfile: UserProfile;
   chantHistory: ChantRecord[];
@@ -58,6 +71,7 @@ export type UserData = {
   unlockedStages: string[];
   /** 装備中の触媒・テーマスキン */
   equipment: { catalystId: string | null; skinId: string | null };
+  settings: UserSettings;
 };
 
 const unlockedAt = (totalMp: number) => AREAS.filter((a) => isAreaUnlocked(a, totalMp)).map((a) => a.id);
@@ -71,6 +85,20 @@ export function initialUserData(): UserData {
     inventory: {},
     unlockedStages: unlockedAt(0),
     equipment: { catalystId: null, skinId: null },
+    settings: { mainSubjectId: null, defaultFocusMinutes: 25, liteMode: false, chime: true },
+  };
+}
+
+/** 保存データ（古い形式を含む）に初期値を補って読み込める形にする */
+function normalize(saved: Partial<UserData>): UserData {
+  const base = initialUserData();
+  return {
+    ...base,
+    ...saved,
+    userProfile: { ...base.userProfile, ...saved.userProfile },
+    dailyReward: { ...base.dailyReward, ...saved.dailyReward },
+    equipment: { ...base.equipment, ...saved.equipment },
+    settings: { ...base.settings, ...saved.settings },
   };
 }
 
@@ -155,15 +183,7 @@ function load(): UserData {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const saved = JSON.parse(raw) as Partial<UserData>;
-      const base = initialUserData();
-      state = {
-        ...base,
-        ...saved,
-        userProfile: { ...base.userProfile, ...saved.userProfile },
-        dailyReward: { ...base.dailyReward, ...saved.dailyReward },
-        equipment: { ...base.equipment, ...saved.equipment },
-      };
+      state = normalize(JSON.parse(raw) as Partial<UserData>);
       return state;
     }
   } catch {}
@@ -303,6 +323,33 @@ export const userActions = {
       const continued = s.dailyReward.lastClaimedDate === yesterday;
       return { ...s, dailyReward: { lastClaimedDate: jstDateKey(now), streak: continued ? s.dailyReward.streak + 1 : 1 } };
     });
+  },
+
+  setUsername(username: string) {
+    update((s) => ({ ...s, userProfile: { ...s.userProfile, username } }));
+  },
+
+  updateSettings(patch: Partial<UserSettings>) {
+    update((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
+  },
+
+  /** バックアップ用に保存データを JSON で書き出す */
+  exportData(): string {
+    return JSON.stringify(load(), null, 2);
+  },
+
+  /** バックアップの JSON で保存データを上書きする。形式が違えば false */
+  importData(json: string): boolean {
+    try {
+      const saved = JSON.parse(json);
+      if (typeof saved !== "object" || saved === null || typeof saved.userProfile !== "object" || !Array.isArray(saved.chantHistory)) {
+        return false;
+      }
+      update(() => normalize(saved));
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   /** 観測データの初期化 */

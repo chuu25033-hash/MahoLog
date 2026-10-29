@@ -17,13 +17,21 @@ import {
 import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
 import { CATALYSTS, blessingMultiplier, dropMultiplier, rollDrop } from "@/lib/items";
-import { activeSkin, armedCatalyst, getUserData, isDiscovered, todayChantMinutes, userActions, useUserData } from "@/lib/user-store";
+import {
+  FOCUS_MINUTE_OPTIONS,
+  activeSkin,
+  armedCatalyst,
+  getUserData,
+  isDiscovered,
+  todayChantMinutes,
+  userActions,
+  useUserData,
+} from "@/lib/user-store";
 import type { StudyMode, Subject, SubjectTotal } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ResultDialog, type StudyResult } from "./result-dialog";
 import { notifyFinish, useClock } from "./use-clock";
 
-const FOCUS_OPTIONS = [25, 30, 60] as const;
 const BREAK_OPTIONS = [5, 10, 20] as const;
 const IDLE_CHECK_MS = 2 * 60 * 60 * 1000; // ストップウォッチの放置確認（2時間）
 const IDLE_RESPONSE_MS = 5 * 60 * 1000; // 確認ダイアログの応答待ち
@@ -46,17 +54,25 @@ export function TimerPanel({
   initialWeekTotals,
   todayMinutes,
   isDemo,
+  initialFocusMin = 25,
+  initialSubjectId,
 }: {
   subjects: Subject[];
   initialTotalMp: number;
   initialWeekTotals: SubjectTotal[];
   todayMinutes: number;
   isDemo: boolean;
+  /** 設定画面のデフォルト詠唱時間 */
+  initialFocusMin?: number;
+  /** 設定画面の主軸科目 */
+  initialSubjectId?: string | null;
 }) {
   const [mode, setMode] = useState<StudyMode>("pomodoro");
-  const [focusMin, setFocusMin] = useState<number>(25);
+  const [focusMin, setFocusMin] = useState<number>(initialFocusMin);
   const [breakMin, setBreakMin] = useState<number>(5);
-  const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? "");
+  const [subjectId, setSubjectId] = useState(
+    subjects.find((s) => s.id === initialSubjectId)?.id ?? subjects[0]?.id ?? "",
+  );
   const [phase, setPhase] = useState<Phase>("idle");
   const { elapsedMs, running, start: resume, pause, reset, read } = useClock();
 
@@ -159,7 +175,7 @@ export function TimerPanel({
     if (phase !== "focus" && phase !== "break") return;
     const targetMs = (phase === "focus" ? focusMin : breakMin) * 60_000;
     const id = setTimeout(() => {
-      notifyFinish();
+      notifyFinish(getUserData().settings.chime);
       reset();
       if (phase === "focus") {
         // 自動で休憩を始めず、手動スタートの「休憩待機」へ
@@ -177,7 +193,7 @@ export function TimerPanel({
     if (mode !== "stopwatch" || !running || confirmOpen) return;
     const id = setTimeout(() => {
       checkpointRef.current = read();
-      notifyFinish();
+      notifyFinish(getUserData().settings.chime);
       setConfirmOpen(true);
     }, Math.max(0, confirmBaseMs + IDLE_CHECK_MS - read()));
     return () => clearTimeout(id);
@@ -323,7 +339,7 @@ export function TimerPanel({
 
         {mode === "pomodoro" && (
           <>
-            <OptionRow label="詠唱時間" unit="分" options={FOCUS_OPTIONS} value={focusMin} onChange={setFocusMin} disabled={phase !== "idle"} />
+            <OptionRow label="詠唱時間" unit="分" options={FOCUS_MINUTE_OPTIONS} value={focusMin} onChange={setFocusMin} disabled={phase !== "idle"} />
             <OptionRow label="静息時間" unit="分" options={BREAK_OPTIONS} value={breakMin} onChange={setBreakMin} disabled={phase !== "idle"} />
           </>
         )}
@@ -537,7 +553,7 @@ function OptionRow({
   return (
     <div>
       <p className="mb-2 text-xs tracking-[0.2em] text-muted-foreground">{label}</p>
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
         {options.map((o) => (
           <button
             key={o}
