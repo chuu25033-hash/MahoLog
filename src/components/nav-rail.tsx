@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { BookMarked, BookOpen, CalendarDays, Home, LogOut, Settings, Sparkles, Swords, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,7 +19,18 @@ const ITEMS = [
 const itemBase =
   "relative flex w-14 flex-col items-center gap-1 rounded-xl py-2 text-[10px] tracking-wider whitespace-nowrap transition-all duration-300 lg:w-16 lg:text-[11px]";
 
-export function NavRail({ signOutAction }: { signOutAction?: () => Promise<void> }) {
+/** ナビ項目の見た目（ナビ以外から差し込む項目と揃える） */
+export function navItemClass(active: boolean) {
+  return cn(
+    itemBase,
+    active
+      ? "bg-gradient-to-b from-starlight/12 to-aqua/5 text-starlight ring-1 ring-starlight/35 shadow-[0_0_14px_-4px_rgba(226,201,116,0.5)]"
+      : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
+  );
+}
+
+/** trials: 「星の試練」の位置に置く項目（ページ遷移ではなくダイアログを開く） */
+export function NavRail({ signOutAction, trials }: { signOutAction?: () => Promise<void>; trials?: ReactNode }) {
   const pathname = usePathname();
 
   return (
@@ -29,12 +41,10 @@ export function NavRail({ signOutAction }: { signOutAction?: () => Promise<void>
       </Link>
 
       {ITEMS.map(({ href, label, icon: Icon, ready }) => {
+        if (href === "/trials" && trials) return <div key={href}>{trials}</div>;
         const active = pathname === href;
         const className = cn(
-          itemBase,
-          active
-            ? "bg-gradient-to-b from-starlight/12 to-aqua/5 text-starlight ring-1 ring-starlight/35 shadow-[0_0_14px_-4px_rgba(226,201,116,0.5)]"
-            : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
+          navItemClass(active),
           !ready && "cursor-not-allowed opacity-35 hover:bg-transparent hover:text-muted-foreground",
         );
         return ready ? (

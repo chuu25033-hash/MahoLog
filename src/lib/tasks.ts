@@ -26,7 +26,7 @@ export type TaskDef = {
 };
 
 export const TASKS: TaskDef[] = [
-  { id: "d-visit", scope: "daily", title: "毎日の訪れ", description: "マホログを訪れる", unit: "回", reward: { kind: "mp", mp: 20 } },
+  { id: "d-visit", scope: "daily", title: "毎日の訪れ", description: "星天の導きを受け取り、今宵の探求を始める", unit: "回", reward: { kind: "mp", mp: 20 } },
   { id: "d-focus", scope: "daily", title: "秘術の集束", description: "合計25分以上の詠唱を完了する", unit: "分", reward: { kind: "mp", mp: 50 } },
   {
     id: "d-domain",
@@ -54,6 +54,8 @@ export type TaskContext = {
   activeSubjectIds: string[];
   /** 主軸科目 ID */
   mainSubjectId: string | null;
+  /** 本日の星天の導きを受け取ったか */
+  guidanceClaimed: boolean;
   now: Date;
 };
 
@@ -66,14 +68,14 @@ export function periodKey(scope: TaskScope, now: Date) {
 }
 
 /** 試練の現在の進捗 */
-export function measureTask(def: TaskDef, { history, activeSubjectIds, mainSubjectId, now }: TaskContext) {
+export function measureTask(def: TaskDef, { history, activeSubjectIds, mainSubjectId, guidanceClaimed, now }: TaskContext) {
   const since = periodStart(def.scope, now).getTime();
   const records = history.filter((r) => new Date(r.date).getTime() >= since);
   const minutes = records.reduce((acc, r) => acc + r.minutes, 0);
   const [progress, maxProgress] = (() => {
     switch (def.id) {
       case "d-visit":
-        return [1, 1];
+        return [guidanceClaimed ? 1 : 0, 1];
       case "d-focus":
         return [minutes, 25];
       case "d-domain": {

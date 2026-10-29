@@ -1,53 +1,69 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Gem, ScrollText, Sparkles } from "lucide-react";
+import { Check, Gem, Sparkles, Swords } from "lucide-react";
 import { ItemArt } from "@/components/item-art";
+import { navItemClass } from "@/components/nav-rail";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { GUIDANCE_CYCLE, claimGuidance, pendingGuidance } from "@/lib/celestial-guidance";
+import { jstDateKey } from "@/lib/date";
 import { calcLevel, rankOf } from "@/lib/game";
+import type { Item } from "@/lib/items";
 import { TASKS, type TaskDef, type TaskScope, type TaskState } from "@/lib/tasks";
 import type { Subject } from "@/lib/types";
-import { userActions, useUserData, type TaskClaim } from "@/lib/user-store";
+import { userActions, useUserData, type TaskClaim, type UserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 const SCOPES: { key: TaskScope; label: string; sub: string; reset: string }[] = [
-  { key: "daily", label: "日課の儀式", sub: "DAILY", reset: "毎日 午前0時に巡り直します" },
-  { key: "weekly", label: "週間の大誓約", sub: "WEEKLY", reset: "毎週 月曜の午前0時に巡り直します" },
+  { key: "daily", label: "日課の儀式", sub: "デイリー", reset: "毎日 午前0時に巡り直します" },
+  { key: "weekly", label: "週間の誓約", sub: "ウィークリー", reset: "毎週 月曜の午前0時に巡り直します" },
 ];
+
+const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
 
 const claimable = (t: TaskState | undefined) => !!t && !t.isClaimed && t.progress >= t.maxProgress;
 
-/** 魔術書庫に置く「試練」ボタン。受け取れる報酬があれば数を灯す */
-export function TrialsButton({ subjects }: { subjects: Subject[] }) {
+/** 受け取れる報酬（日課では星天の導きを含む）の数 */
+function readyCount(data: UserData, scope?: TaskScope) {
+  const tasks = TASKS.filter((t) => (!scope || t.scope === scope) && claimable(data.tasks[t.scope].items[t.id])).length;
+  const guidance = scope !== "weekly" && data.dailyReward.lastClaimedDate !== jstDateKey(new Date()) ? 1 : 0;
+  return tasks + guidance;
+}
+
+/**
+ * ナビの「星の試練」。星天の導き・日課の儀式・週間の誓約をひとつのダイアログで扱う。
+ * subjects は進捗の判定（詠唱に使う科目）に使い、読み込み中は null で押せない
+ */
+export function TrialsNavButton({ subjects }: { subjects: Subject[] | null }) {
   const data = useUserData();
   const [open, setOpen] = useState(false);
 
   // 開いた時点の詠唱履歴・日付で進捗を測り直す（日付をまたいだら巡り直す）
   useEffect(() => {
-    userActions.syncTasks(subjects);
+    if (subjects) userActions.syncTasks(subjects);
   }, [subjects, open]);
 
-  const ready = TASKS.filter((t) => claimable(data.tasks[t.scope].items[t.id])).length;
+  const ready = subjects ? readyCount(data) : 0;
 
   return (
     <>
       <button
+        type="button"
+        disabled={!subjects}
         onClick={() => setOpen(true)}
-        className={cn(
-          "flex h-auto items-center justify-start gap-2 rounded-2xl border bg-white/[0.03] px-3 py-2 text-sm tracking-[0.2em] backdrop-blur transition-all duration-300 hover:bg-white/[0.06]",
-          ready > 0 ? "claim-glow border-starlight/45" : "border-white/15 hover:border-white/30",
-        )}
+        aria-haspopup="dialog"
+        className={cn(navItemClass(open), "disabled:opacity-35")}
       >
-        <ScrollText className="size-4 text-starlight" strokeWidth={1.25} />
-        試練
+        <Swords className="size-5" strokeWidth={1.25} />
+        星の試練
         {ready > 0 && (
-          <span className="rounded-full border border-starlight/50 bg-starlight/10 px-1.5 font-display text-[10px] tracking-normal text-starlight">
-            {ready}
-          </span>
+          <span
+            className="absolute top-1.5 right-2.5 size-1.5 rounded-full bg-starlight shadow-[0_0_6px_#e2c974] lg:right-3.5"
+            aria-label={`受け取れる報酬 ${ready}`}
+          />
         )}
-        <span className="ml-auto font-display text-[10px] tracking-[0.25em] text-starlight/70">TASKS</span>
       </button>
-      {open && <TrialsDialog subjects={subjects} onClose={() => setOpen(false)} />}
+      {open && subjects && <TrialsDialog subjects={subjects} onClose={() => setOpen(false)} />}
     </>
   );
 }
@@ -68,12 +84,14 @@ function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClose: () 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-lg! gap-4 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-5 ring-starlight/25 backdrop-blur-2xl sm:max-w-lg!">
-        <DialogHeader className="gap-1">
-          <DialogTitle className="flex items-baseline gap-2 text-lg tracking-[0.25em] whitespace-nowrap">
-            星の試練
-            <span className="font-display text-[10px] tracking-[0.3em] text-starlight/70">TRIALS</span>
+        <DialogHeader className="items-center gap-1 text-center">
+          <DialogTitle className="text-lg tracking-[0.35em] whitespace-nowrap text-starlight-gradient">
+            <span className="-mr-[0.35em]">星の試練</span>
           </DialogTitle>
-          <DialogDescription className="flex items-baseline justify-between gap-3 text-[11px] tracking-wider whitespace-nowrap">
+          <p className="font-display text-[10px] tracking-[0.4em] whitespace-nowrap text-starlight/70">
+            <span className="-mr-[0.4em]">— ORBITS OF TRIALS —</span>
+          </p>
+          <DialogDescription className="mt-1 flex w-full items-baseline justify-between gap-3 text-[11px] tracking-wider whitespace-nowrap">
             <span className="truncate">{current.reset}</span>
             <span className="shrink-0">
               累積魔力 <span className="font-display text-sm text-starlight text-glow-gold">{totalMp.toLocaleString()}</span>
@@ -85,7 +103,7 @@ function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClose: () 
 
         <div role="tablist" aria-label="試練の種類" className="grid grid-cols-2 gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1">
           {SCOPES.map((s) => {
-            const ready = TASKS.filter((t) => t.scope === s.key && claimable(data.tasks[s.key].items[t.id])).length;
+            const ready = readyCount(data, s.key);
             return (
               <button
                 key={s.key}
@@ -100,7 +118,7 @@ function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClose: () 
                 )}
               >
                 {s.label}
-                <span className="font-display text-[9px] tracking-[0.2em] opacity-70">{s.sub}</span>
+                <span className="text-[10px] opacity-60">/ {s.sub}</span>
                 {ready > 0 && <span className="size-1.5 self-center rounded-full bg-starlight shadow-[0_0_6px_#e2c974]" />}
               </button>
             );
@@ -108,6 +126,7 @@ function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClose: () 
         </div>
 
         <ul className="flex flex-col gap-2">
+          {scope === "daily" && <GuidanceRow data={data} onClaimed={() => userActions.syncTasks(subjects)} />}
           {TASKS.filter((t) => t.scope === scope).map((def) => (
             <TaskRow
               key={def.id}
@@ -120,6 +139,100 @@ function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClose: () 
         </ul>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** 日課の最上段: 星天の導き（1日1回、7夜で一巡する連続受取） */
+function GuidanceRow({ data, onClaimed }: { data: UserData; onClaimed: () => void }) {
+  const [received, setReceived] = useState<{ item: Item; key: number } | null>(null);
+  const guidance = pendingGuidance();
+  const { streak } = data.dailyReward;
+  // 未受取なら今夜の位置、受取済みなら受け取った夜の位置（周期上）
+  const night = guidance ? guidance.night : ((Math.max(streak, 1) - 1) % GUIDANCE_CYCLE) + 1;
+  const lit = guidance ? guidance.night - 1 : night;
+
+  function receive() {
+    if (!guidance) return;
+    claimGuidance(guidance);
+    onClaimed();
+    setReceived((prev) => ({ item: guidance.reward, key: (prev?.key ?? 0) + 1 }));
+  }
+
+  return (
+    <li
+      className={cn(
+        "relative overflow-hidden rounded-xl border p-3 transition-colors duration-500",
+        guidance ? "border-starlight/35 bg-starlight/[0.04]" : "border-white/[0.06] bg-white/[0.01]",
+      )}
+    >
+      {received && (
+        <div key={received.key} className="pointer-events-none absolute inset-0 flex items-center justify-center">
+          <span className="claim-burst absolute size-40 rounded-full bg-[radial-gradient(closest-side,rgba(246,233,189,0.55),rgba(226,201,116,0.18)_55%,transparent)]" />
+          <span className="claim-float relative flex items-center gap-1.5 text-sm tracking-wider text-starlight text-glow-gold">
+            <ItemArt icon={received.item.svgIcon} rarity={received.item.rarity} color={received.item.color} seed={received.item.id} className="size-6" />
+            {received.item.name}
+          </span>
+        </div>
+      )}
+
+      <div className={cn("flex items-center gap-3", !guidance && "opacity-55")}>
+        <div className="size-10 shrink-0">
+          {guidance ? (
+            <ItemArt
+              icon={guidance.reward.svgIcon}
+              rarity={guidance.reward.rarity}
+              color={guidance.reward.color}
+              seed={guidance.reward.id}
+              className="size-full"
+            />
+          ) : (
+            <span className="flex size-full items-center justify-center rounded-full border border-white/10 text-muted-foreground">
+              <Check className="size-4" strokeWidth={1.5} />
+            </span>
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="flex items-baseline gap-2 text-sm tracking-wider whitespace-nowrap">
+            <span className="truncate">【星天の導き】</span>
+            <span className="ml-auto shrink-0 font-display text-[10px] tracking-[0.25em] text-starlight/70">
+              NIGHT {ROMAN[night - 1]} / {ROMAN[GUIDANCE_CYCLE - 1]}
+            </span>
+          </p>
+          <p className="mt-0.5 truncate text-[11px] tracking-wider text-muted-foreground">
+            {guidance ? `今宵の授かり物: ${guidance.reward.name}` : `本日の導きは授かりました（${streak}夜連続）`}
+          </p>
+          {/* 7夜の周期: 受け取った夜の星が灯る */}
+          <div className="mt-1.5 flex gap-1.5" aria-hidden>
+            {Array.from({ length: GUIDANCE_CYCLE }, (_, i) => (
+              <span
+                key={i}
+                className={cn(
+                  "text-[10px] leading-none",
+                  i < lit ? "text-starlight text-glow-gold" : guidance && i === lit ? "text-starlight/50" : "text-white/15",
+                )}
+              >
+                ✦
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="flex w-28 shrink-0 justify-end">
+          {guidance ? (
+            <button
+              type="button"
+              onClick={receive}
+              className="claim-glow flex items-center gap-1 rounded-full border border-starlight/60 bg-starlight/10 px-3 py-1 text-[11px] tracking-wider whitespace-nowrap text-starlight transition-colors hover:bg-starlight/20"
+            >
+              <Sparkles className="size-3" strokeWidth={1.5} /> 導きを受け取る
+            </button>
+          ) : (
+            <span className="flex items-center gap-1 text-[11px] tracking-wider text-muted-foreground">
+              <Check className="size-3.5" strokeWidth={1.5} /> 受取済み
+            </span>
+          )}
+        </div>
+      </div>
+    </li>
   );
 }
 

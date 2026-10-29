@@ -124,6 +124,7 @@ function syncedTasks(data: UserData, subjects: Pick<Subject, "id">[], now: Date)
     history: data.chantHistory,
     activeSubjectIds: activeSubjectsOf(subjects, data.userProfile.activeSubjects).map((s) => s.id),
     mainSubjectId: data.userProfile.subject,
+    guidanceClaimed: data.dailyReward.lastClaimedDate === jstDateKey(now),
     now,
   };
   const board = (scope: TaskScope): TaskBoard => {

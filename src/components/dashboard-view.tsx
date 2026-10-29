@@ -7,7 +7,6 @@ import { MpBar } from "@/components/mp-bar";
 import { PageLoading } from "@/components/page-loading";
 import { RadarPanel } from "@/components/radar-panel";
 import { StageCard } from "@/components/stage-card";
-import { TrialsButton } from "@/components/trials-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { WizardAvatar } from "@/components/wizard-avatar";
@@ -33,10 +32,10 @@ export function DashboardView({ summary, subjects, isDemo }: { summary: Dashboar
   const radar = Object.fromEntries(
     Object.entries(base.radar).map(([range, totals]) => [range, totals.filter((t) => activeIds.has(t.subjectId))]),
   ) as DashboardSummary["radar"];
-  return <Dashboard {...base} radar={radar} subjects={subjects} />;
+  return <Dashboard {...base} radar={radar} />;
 }
 
-function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSummary & { subjects: Subject[] }) {
+function Dashboard({ profile, totals, radar, recentLogs }: DashboardSummary) {
   const level = levelProgress(profile.total_study_time);
   const rank = rankOf(level.level);
 
@@ -126,8 +125,6 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
             魔導図鑑
             <span className="ml-auto font-display text-[10px] tracking-[0.25em] text-starlight/70">CODEX</span>
           </Link>
-
-          <TrialsButton subjects={subjects} />
 
           <Card size="sm" className="min-h-0 flex-1 px-3">
             <h2 className="flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
