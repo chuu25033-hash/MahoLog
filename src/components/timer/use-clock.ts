@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { soundManager } from "@/lib/sound/sound-manager";
 
 type ClockState = { accMs: number; startedAt: number | null };
 
@@ -45,26 +46,11 @@ export function useClock() {
   return { elapsedMs, running, start, pause, reset, read };
 }
 
-/** 終了通知（音 + 振動）。設定で完了音を切っていれば鳴らさない */
+/** 終了通知（魔力集束のチャイム + 振動）。設定で完了の報せを切っていれば鳴らさない */
 export function notifyFinish(chime = true) {
   if (!chime) return;
   try {
     navigator.vibrate?.([200, 100, 200]);
   } catch {}
-  try {
-    const ctx = new AudioContext();
-    [0, 0.25, 0.5].forEach((offset, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = [660, 880, 1320][i];
-      gain.gain.setValueAtTime(0.0001, ctx.currentTime + offset);
-      gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + offset + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + offset + 0.4);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(ctx.currentTime + offset);
-      osc.stop(ctx.currentTime + offset + 0.45);
-    });
-    setTimeout(() => ctx.close(), 1500);
-  } catch {}
+  soundManager.playSe("chantComplete");
 }

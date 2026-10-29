@@ -21,6 +21,7 @@ import { timerSummary } from "@/lib/aggregate";
 import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
 import { resolveSubSubject } from "@/lib/subjects";
+import { soundManager } from "@/lib/sound/sound-manager";
 import { setChantPresence } from "@/lib/worldline-store";
 import { CATALYSTS, blessingMultiplier, dropMultiplier, rollDrop } from "@/lib/items";
 import {
@@ -196,6 +197,12 @@ export function TimerPanel({
     return () => setChantPresence(false);
   }, [phase, area.id]);
 
+  // 魔力を集束している間は、環境音を控えめにする
+  useEffect(() => {
+    soundManager.setDucked(phase === "focus" && running);
+    return () => soundManager.setDucked(false);
+  }, [phase, running]);
+
   // ポモドーロ: 勉強・休憩の終了判定
   useEffect(() => {
     if (mode !== "pomodoro" || !running) return;
@@ -245,6 +252,7 @@ export function TimerPanel({
     reset();
     resume();
     setPhase("focus");
+    soundManager.playSe("chantStart");
   };
 
   const startBreak = () => {
@@ -258,6 +266,7 @@ export function TimerPanel({
     reset();
     setConfirmBaseMs(0);
     setPhase("idle");
+    soundManager.playSe("chantComplete");
     save(minutes);
   };
 
@@ -267,6 +276,7 @@ export function TimerPanel({
     reset();
     setConfirmBaseMs(0);
     setPhase(mode === "pomodoro" ? "breakReady" : "idle");
+    soundManager.playSe("chantComplete");
     save(minutes);
   };
 

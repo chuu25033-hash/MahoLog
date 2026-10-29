@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ItemArt } from "@/components/item-art";
 import { VEIL_COVER_MS, coverScreen } from "@/components/transition-veil";
 import { GUIDANCE_CYCLE, claimGuidance, pendingGuidance, type Guidance } from "@/lib/celestial-guidance";
+import { soundManager } from "@/lib/sound/sound-manager";
 import { StarChart } from "./star-chart";
 
 const DESTINATION = "/dashboard";
@@ -59,6 +60,7 @@ export function GuidanceScreen() {
   function receive() {
     if (!guidance || claiming) return;
     claimGuidance(guidance);
+    soundManager.playSe("reward");
     setClaiming(true);
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     // 品が光を放ってから、画面全体が星の光に満たされる

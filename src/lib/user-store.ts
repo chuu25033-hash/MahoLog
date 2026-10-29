@@ -69,6 +69,12 @@ export type UserSettings = {
   liteMode: boolean;
   /** 詠唱完了時のベル音・振動 */
   chime: boolean;
+  /** 音声全般（環境音・効果音）の ON / OFF */
+  sound: boolean;
+  /** 環境音の音量（0〜1） */
+  bgmVolume: number;
+  /** 効果音の音量（0〜1） */
+  seVolume: number;
 };
 
 export type UserData = {
@@ -98,7 +104,7 @@ export function initialUserData(): UserData {
     inventory: {},
     unlockedStages: unlockedAt(0),
     equipment: { catalystId: null, skinId: null },
-    settings: { defaultFocusMinutes: 25, liteMode: false, chime: true },
+    settings: { defaultFocusMinutes: 25, liteMode: false, chime: true, sound: true, bgmVolume: 0.5, seVolume: 0.7 },
     tasks: { daily: { periodKey: "", items: {} }, weekly: { periodKey: "", items: {} } },
     worldlines: { code: generateWorldlineCode(), bonds: [] },
   };

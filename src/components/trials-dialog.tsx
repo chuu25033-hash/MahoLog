@@ -8,6 +8,7 @@ import { GUIDANCE_CYCLE, claimGuidance, pendingGuidance } from "@/lib/celestial-
 import { jstDateKey } from "@/lib/date";
 import { calcLevel, rankOf } from "@/lib/game";
 import type { Item } from "@/lib/items";
+import { soundManager } from "@/lib/sound/sound-manager";
 import { TASKS, type TaskDef, type TaskScope, type TaskState } from "@/lib/tasks";
 import type { Subject } from "@/lib/types";
 import { userActions, useUserData, type TaskClaim, type UserData } from "@/lib/user-store";
@@ -45,7 +46,9 @@ export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClo
 
   function claim(def: TaskDef) {
     const result = userActions.claimTask(def.id, subjects);
-    if (result) setBurst((prev) => ({ taskId: def.id, claim: result, key: (prev?.key ?? 0) + 1 }));
+    if (!result) return;
+    soundManager.playSe("reward");
+    setBurst((prev) => ({ taskId: def.id, claim: result, key: (prev?.key ?? 0) + 1 }));
   }
 
   return (
@@ -121,6 +124,7 @@ function GuidanceRow({ data, onClaimed }: { data: UserData; onClaimed: () => voi
   function receive() {
     if (!guidance) return;
     claimGuidance(guidance);
+    soundManager.playSe("reward");
     onClaimed();
     setReceived((prev) => ({ item: guidance.reward, key: (prev?.key ?? 0) + 1 }));
   }

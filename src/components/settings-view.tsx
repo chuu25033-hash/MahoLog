@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import { Bell, Check, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Upload, UserRound } from "lucide-react";
+import { Bell, Check, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Sparkle, Upload, UserRound, Volume2, Wind } from "lucide-react";
 import { BackToLibrary } from "@/components/back-to-library";
 import { PageLoading } from "@/components/page-loading";
 import { SubjectPicker } from "@/components/subject-picker";
@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { jstDateKey } from "@/lib/date";
+import { soundManager } from "@/lib/sound/sound-manager";
 import { MIN_ACTIVE_SUBJECTS, activeSubjectsOf, resolveSubSubject } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
 import { FOCUS_MINUTE_OPTIONS, initialUserData, userActions, useStoredUserData } from "@/lib/user-store";
@@ -138,7 +139,34 @@ export function SettingsView({
           </Field>
         </Panel>
 
-        <Panel icon={ScrollText} title="探求データの管理" label="ARCHIVE">
+        <Panel icon={ScrollText} title="音と記録" label="SOUND & ARCHIVE">
+          <Field label="音の響き" hint="滞在する地の環境音と、操作の効果音">
+            <div className="flex flex-col gap-2">
+              <ToggleRow
+                icon={Volume2}
+                label="音声"
+                description="すべての環境音と効果音を鳴らします。切ると完了の報せも振動だけになります"
+                checked={settings.sound}
+                onChange={(sound) => userActions.updateSettings({ sound })}
+              />
+              <VolumeRow
+                icon={Wind}
+                label="環境音"
+                value={settings.bgmVolume}
+                disabled={!settings.sound}
+                onChange={(bgmVolume) => userActions.updateSettings({ bgmVolume })}
+              />
+              <VolumeRow
+                icon={Sparkle}
+                label="効果音"
+                value={settings.seVolume}
+                disabled={!settings.sound}
+                onChange={(seVolume) => userActions.updateSettings({ seVolume })}
+                onCommit={() => soundManager.playSe("tap")}
+              />
+            </div>
+          </Field>
+
           <DataControls />
         </Panel>
       </div>
@@ -282,6 +310,50 @@ function ToggleRow({
         />
       </button>
     </div>
+  );
+}
+
+/** 音量スライダー（0〜100%）。指を離したときに onCommit で試し鳴らしできる */
+function VolumeRow({
+  icon: Icon,
+  label,
+  value,
+  disabled,
+  onChange,
+  onCommit,
+}: {
+  icon: typeof UserRound;
+  label: string;
+  value: number;
+  disabled: boolean;
+  onChange: (value: number) => void;
+  onCommit?: () => void;
+}) {
+  const percent = Math.round(value * 100);
+  return (
+    <label
+      className={cn(
+        "flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.02] px-2.5 py-2 transition-opacity duration-300",
+        disabled && "opacity-45",
+      )}
+    >
+      <Icon className={cn("size-4 shrink-0", disabled ? "text-muted-foreground" : "text-aqua")} strokeWidth={1.25} />
+      <span className="shrink-0 text-sm tracking-wider whitespace-nowrap">{label}</span>
+      <input
+        type="range"
+        min={0}
+        max={100}
+        step={5}
+        value={percent}
+        disabled={disabled}
+        onChange={(e) => onChange(Number(e.target.value) / 100)}
+        onPointerUp={onCommit}
+        onKeyUp={onCommit}
+        aria-label={`${label}の音量`}
+        className="h-1.5 min-w-0 flex-1 cursor-pointer accent-aqua disabled:cursor-not-allowed"
+      />
+      <span className="w-9 shrink-0 text-right font-display text-xs text-muted-foreground">{percent}%</span>
+    </label>
   );
 }
 
