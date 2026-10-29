@@ -332,11 +332,12 @@ const SE: Record<SeKey, (ctx: AudioContext, out: AudioNode) => void> = {
     });
     tone(ctx, out, { freq: 880, at: 0.7, attack: 0.05, decay: 1.8, peak: 0.02 });
   },
-  // タップ: 深く澄んだ小石や水晶が静かに鳴る短音（芯の音に、水晶らしい非整数倍の響きを薄く添える）
+  // タップ: 澄んだ水晶が静かに鳴る短音。わずかに遅れて1オクターブ上が瞬き、星がきらめくような余韻を残す
   tap: (ctx, out) => {
-    tone(ctx, out, { freq: 587.3, attack: 0.006, decay: 0.45, peak: 0.06 });
-    tone(ctx, out, { freq: 293.7, attack: 0.006, decay: 0.2, peak: 0.02 });
-    tone(ctx, out, { freq: 587.3 * 2.76, attack: 0.006, decay: 0.22, peak: 0.01 });
+    tone(ctx, out, { freq: 880, attack: 0.006, decay: 0.5, peak: 0.055 });
+    tone(ctx, out, { freq: 440, attack: 0.006, decay: 0.2, peak: 0.015 });
+    tone(ctx, out, { freq: 880 * 2.76, attack: 0.006, decay: 0.2, peak: 0.007 });
+    tone(ctx, out, { freq: 1760, at: 0.04, attack: 0.02, decay: 0.7, peak: 0.012 });
   },
   // 静かな魔法陣起動音: 低くから昇る光と、ゆっくり開く和音（全体のトーンの基準）
   chantStart: (ctx, out) => {
