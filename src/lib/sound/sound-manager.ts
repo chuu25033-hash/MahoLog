@@ -9,6 +9,8 @@ const CROSSFADE_SEC = 2.5;
 /** 詠唱中の環境音: 音量を抑え、高域を落として集中を妨げないようにする */
 const DUCK_GAIN = 0.45;
 const DUCK_CUTOFF = 1800;
+/** 環境音の基準の大きさ。音量スライダー 100% でもこの割合までにとどめ、集中を邪魔しない微かな背景音にする */
+const AMBIENCE_LEVEL = 0.45;
 /** 他の効果音を鳴らした直後のタップ音は重ねない */
 const TAP_SUPPRESS_MS = 120;
 /** タップ音を鳴らす要素 */
@@ -157,7 +159,7 @@ class SoundManager {
     if (!bus) return;
     const set = (param: AudioParam, value: number) => (immediate ? (param.value = value) : ramp(param, value, bus.ctx));
     set(bus.master.gain, this.enabled ? this.volumes.master : 0);
-    set(bus.bgm.gain, this.hidden ? 0 : this.volumes.bgm);
+    set(bus.bgm.gain, this.hidden ? 0 : this.volumes.bgm * AMBIENCE_LEVEL);
     set(bus.se.gain, this.volumes.se);
   }
 

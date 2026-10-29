@@ -104,7 +104,7 @@ export function initialUserData(): UserData {
     inventory: {},
     unlockedStages: unlockedAt(0),
     equipment: { catalystId: null, skinId: null },
-    settings: { defaultFocusMinutes: 25, liteMode: false, chime: true, sound: true, bgmVolume: 0.5, seVolume: 0.7 },
+    settings: { defaultFocusMinutes: 25, liteMode: false, chime: true, sound: true, bgmVolume: 0.4, seVolume: 0.7 },
     tasks: { daily: { periodKey: "", items: {} }, weekly: { periodKey: "", items: {} } },
     worldlines: { code: generateWorldlineCode(), bonds: [] },
   };

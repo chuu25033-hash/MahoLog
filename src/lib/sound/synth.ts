@@ -251,16 +251,20 @@ type ToneOptions = {
   type?: OscillatorType;
 };
 
+/** 効果音の音程を全体に下げる倍率（各音の周波数・ノイズの帯域にかける）。重く静かな響きにする */
+const SE_PITCH = 0.76;
+
 function tone(ctx: AudioContext, out: AudioNode, o: ToneOptions) {
   const t = ctx.currentTime + (o.at ?? 0);
   const attack = o.attack ?? 0.005;
   const osc = ctx.createOscillator();
   osc.type = o.type ?? "sine";
-  osc.frequency.setValueAtTime(o.freq, t);
-  if (o.toFreq) osc.frequency.exponentialRampToValueAtTime(o.toFreq, t + attack + o.decay * 0.6);
+  osc.frequency.setValueAtTime(o.freq * SE_PITCH, t);
+  if (o.toFreq) osc.frequency.exponentialRampToValueAtTime(o.toFreq * SE_PITCH, t + attack + o.decay * 0.6);
   const gain = ctx.createGain();
-  gain.gain.setValueAtTime(SILENT, t);
-  gain.gain.exponentialRampToValueAtTime(o.peak, t + attack);
+  // 立ち上がりは直線で、鳴り始めから素直にふくらませる（指数だと終わり際に急に大きくなる）
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(o.peak, t + attack);
   gain.gain.exponentialRampToValueAtTime(SILENT, t + attack + o.decay);
   osc.connect(gain).connect(out);
   osc.start(t);
@@ -275,8 +279,8 @@ function whoosh(ctx: AudioContext, out: AudioNode, o: { from: number; to: number
   const filter = ctx.createBiquadFilter();
   filter.type = "bandpass";
   filter.Q.value = 2;
-  filter.frequency.setValueAtTime(o.from, t);
-  filter.frequency.exponentialRampToValueAtTime(o.to, t + o.duration);
+  filter.frequency.setValueAtTime(o.from * SE_PITCH, t);
+  filter.frequency.exponentialRampToValueAtTime(o.to * SE_PITCH, t + o.duration);
   const gain = ctx.createGain();
   gain.gain.setValueAtTime(SILENT, t);
   gain.gain.exponentialRampToValueAtTime(o.peak, t + o.duration * 0.6);
@@ -308,11 +312,11 @@ const SE: Record<SeKey, (ctx: AudioContext, out: AudioNode) => void> = {
     tone(ctx, out, { freq: 659.25, at: 0.8, attack: 0.15, decay: 2, peak: 0.035 });
     tone(ctx, out, { freq: 880, at: 0.9, attack: 0.12, decay: 1.6, peak: 0.015 });
   },
-  // 神聖な魔力集束チャイム: 柔らかな打鍵と長い余韻
+  // 神聖な魔力集束チャイム: 控えめな音量で、ふわりと立ち上がって長く残る
   chantComplete: (ctx, out) => {
     [523.25, 659.25, 784, 1046.5, 1318.5].forEach((freq, i) => {
-      tone(ctx, out, { freq, at: i * 0.14, attack: 0.02, decay: 2.6, peak: 0.11 });
-      tone(ctx, out, { freq: freq * 2.01, at: i * 0.14, attack: 0.02, decay: 1, peak: 0.01 });
+      tone(ctx, out, { freq, at: i * 0.14, attack: 0.15, decay: 2.6, peak: 0.055 });
+      tone(ctx, out, { freq: freq * 2.01, at: i * 0.14, attack: 0.15, decay: 1, peak: 0.005 });
     });
   },
   // 昇華音: 駆け上がる分散和音と、残る光
@@ -355,7 +359,7 @@ function softChain(ctx: AudioContext, destination: AudioNode) {
   if (input) return input;
   const tone = ctx.createBiquadFilter();
   tone.type = "lowpass";
-  tone.frequency.value = 2800;
+  tone.frequency.value = 2200;
   tone.Q.value = 0.4;
   const dry = ctx.createGain();
   dry.gain.value = 0.85;
@@ -363,7 +367,7 @@ function softChain(ctx: AudioContext, destination: AudioNode) {
   reverb.buffer = impulseResponse(ctx, 2.2);
   const wetTone = ctx.createBiquadFilter();
   wetTone.type = "lowpass";
-  wetTone.frequency.value = 1800;
+  wetTone.frequency.value = 1500;
   const wet = ctx.createGain();
   wet.gain.value = 0.4;
   tone.connect(dry).connect(destination);
