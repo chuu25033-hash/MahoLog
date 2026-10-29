@@ -5,6 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 /* スマホ横画面など高さが低い画面 */
 @custom-variant short (@media (max-height: 500px));
+/* 魔術書庫を1画面に収めるため、詰めて表示する高さ */
+@custom-variant compact (@media (max-height: 720px));
 
 @theme inline {
   --color-background: var(--background);

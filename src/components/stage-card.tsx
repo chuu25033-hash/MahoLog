@@ -13,7 +13,7 @@ import { useUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 /** ホームのステージ表示 + 滞在エリア（小ステージ）の選択 */
-export function StageCard({ totalMp }: { totalMp: number }) {
+export function StageCard({ totalMp, className }: { totalMp: number; className?: string }) {
   const data = useUserData();
   const [open, setOpen] = useState(false);
   const area = resolveArea(data.userProfile.currentStageId, totalMp);
@@ -21,7 +21,7 @@ export function StageCard({ totalMp }: { totalMp: number }) {
   const areaStage = STAGES.find((s) => s.id === area.stageId)!;
 
   return (
-    <Card className="gap-2 px-4">
+    <Card className={cn("gap-2 px-4", className)}>
       {/* 滞在ステージごとの淡い色味 */}
       <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br", areaStage.gradient)} />
       <div className="relative flex items-center gap-2 font-display text-[11px] tracking-[0.3em] text-starlight/80">
@@ -36,19 +36,20 @@ export function StageCard({ totalMp }: { totalMp: number }) {
         <span className="ml-2 text-[11px] tracking-wider text-muted-foreground">{area.alias ?? areaStage.name}</span>
       </p>
       {area.epigraph ? (
-        <p className="origin-epigraph relative text-xs leading-relaxed tracking-[0.2em] text-starlight/85">{area.epigraph}</p>
+        <p className="origin-epigraph relative text-xs leading-relaxed tracking-[0.2em] text-starlight/85 compact:hidden">{area.epigraph}</p>
       ) : (
-        <p className="relative text-xs leading-relaxed text-muted-foreground short:hidden">{area.description}</p>
+        <p className="relative text-xs leading-relaxed text-muted-foreground compact:hidden">{area.description}</p>
       )}
-      <p className="relative text-[11px] tracking-wider text-muted-foreground">
+      <p className="relative text-[11px] tracking-wider text-muted-foreground short:hidden">
         属性ブースト {boostLabel(area)}
         <span className="ml-1 font-display text-aqua">MP ×{area.boost.multiplier}</span>
       </p>
       {stage.next ? (
-        <div className="relative mt-1">
+        <div className="relative mt-1 short:mt-0">
           <MpBar ratio={stage.ratio} variant="stage" />
-          <p className="mt-1.5 text-xs tracking-wider text-muted-foreground">
-            次のステージ「<span className="text-foreground">{stage.next.name}</span>」まで あと
+          <p className="mt-1.5 text-xs tracking-wider text-muted-foreground short:mt-1 short:truncate short:text-[11px] short:whitespace-nowrap">
+            {/* 低い画面では1行に収めるため、ステージ名を省いて残り時間を優先する */}
+            次のステージ<span className="short:hidden">「<span className="text-foreground">{stage.next.name}</span>」</span>まで あと
             <span className="mx-1 text-starlight text-glow-gold">{formatMinutes(stage.remainingMinutes)}</span>
           </p>
         </div>
