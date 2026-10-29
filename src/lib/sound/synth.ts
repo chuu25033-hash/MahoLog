@@ -152,6 +152,10 @@ type Piece = {
   boxNotes: [number, number];
   /** 小節の後半にも和音をそっと置くか */
   afterBeat: boolean;
+  /** オルゴールを旋律の候補から何オクターブ上で鳴らすか */
+  boxOctave: number;
+  /** オルゴールの高域を丸める周波数（Hz） */
+  boxCutoff: number;
 };
 
 /** 小節内でオルゴールが鳴りうる位置（拍） */
@@ -167,7 +171,7 @@ function pianoPiece(ctx: AudioContext, out: AudioNode, layer: Layer, piece: Piec
   pianoTone.connect(send);
   const boxTone = ctx.createBiquadFilter();
   boxTone.type = "lowpass";
-  boxTone.frequency.value = 3200;
+  boxTone.frequency.value = piece.boxCutoff;
   boxTone.connect(send);
 
   const beat = piece.barSec / 4;
@@ -182,12 +186,12 @@ function pianoPiece(ctx: AudioContext, out: AudioNode, layer: Layer, piece: Piec
       piano(ctx, pianoTone, midi(chord[0]), t + beat * 2, 0.035 * piece.piano);
       piano(ctx, pianoTone, midi(chord[2]), t + beat * 2 + 0.2, 0.03 * piece.piano);
     }
-    // オルゴールは旋律の候補の 1 オクターブ上で、数音だけ
+    // オルゴールは旋律の候補を piece.boxOctave だけ上げて、数音だけ
     const [min, max] = piece.boxNotes;
     const count = min + Math.round(Math.random() * (max - min));
     const slots = [...BOX_SLOTS].sort(() => Math.random() - 0.5).slice(0, count);
     slots.forEach((slot) => {
-      const note = melody[Math.floor(Math.random() * melody.length)] + 12;
+      const note = melody[Math.floor(Math.random() * melody.length)] + 12 * piece.boxOctave;
       musicBox(ctx, boxTone, midi(note), t + slot * beat, piece.box);
     });
     bar += 1;
@@ -210,13 +214,24 @@ const TITLE_PIECE: Piece = {
   box: 0.035,
   boxNotes: [3, 4],
   afterBeat: true,
+  boxOctave: 1,
+  boxCutoff: 3200,
 };
 
 /**
  * 滞在する地ごとの曲。タイトルと同じピアノとオルゴールで、調と和音進行を変え、
- * 少しゆっくり・控えめに奏でる。下には空気のゆらぎ（超低域ドローン）を薄く敷く
+ * 少しゆっくり・控えめに奏でる。オルゴールはタイトルより1オクターブ低く、高域も丸めて落ち着かせる。
+ * 下には空気のゆらぎ（超低域ドローン）を薄く敷く
  */
-const STAGE_PIECE = { barSec: 5.6, piano: 0.85, box: 0.028, boxNotes: [2, 3], afterBeat: false } satisfies Omit<Piece, "chords">;
+const STAGE_PIECE = {
+  barSec: 5.6,
+  piano: 0.85,
+  box: 0.026,
+  boxNotes: [1, 2],
+  afterBeat: false,
+  boxOctave: 0,
+  boxCutoff: 1800,
+} satisfies Omit<Piece, "chords">;
 
 const SOUNDSCAPES: Record<Exclude<AmbienceKey, "title">, { root: number; chords: Chord[] }> = {
   // 旅立ちの前（星天の導き）: C の明るい進行 Cmaj7 → Am7 → Fmaj7 → G6
