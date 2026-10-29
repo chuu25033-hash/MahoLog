@@ -50,11 +50,14 @@ export function RadarPanel({ data }: { data: Record<RangeKey, SubjectTotal[]> })
           <MagicRadar data={current} />
         </div>
       </div>
-      {total > 0 && top && (
-        <p className="text-center text-xs tracking-wider text-muted-foreground">
-          合計 {formatMinutes(total)} ／ 得意属性 <span className="text-starlight">{top.name}</span>
-        </p>
-      )}
+      {/* 期間で文字数や表示有無が変わってもチャートの大きさが揃うよう、常に1行分の高さを確保する */}
+      <p className="h-4 truncate text-center text-xs leading-4 tracking-wider whitespace-nowrap text-muted-foreground">
+        {total > 0 && top && (
+          <>
+            合計 {formatMinutes(total)} ／ 得意属性 <span className="text-starlight">{top.name}</span>
+          </>
+        )}
+      </p>
     </div>
   );
 }
