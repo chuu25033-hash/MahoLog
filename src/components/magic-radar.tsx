@@ -8,10 +8,24 @@ import type { SubjectTotal } from "@/lib/types";
 export const MIN_RADAR_SUBJECTS = 3;
 
 /** 頂点に添える小さな星の輝き */
-function SparkleDot({ cx, cy, color, highlight }: { cx?: number; cy?: number; color: string; highlight?: boolean }) {
+function SparkleDot({
+  cx,
+  cy,
+  index,
+  color,
+  highlight,
+}: {
+  cx?: number;
+  cy?: number;
+  index: number;
+  color: string;
+  highlight?: boolean;
+}) {
   if (cx === undefined || cy === undefined) return null;
+  // 遅延を座標から作ると、描画アニメーションやリサイズで座標が動くたびに明滅の位相が飛んでちかちかするので、
+  // 頂点の順番から決めて位相を固定する
   return (
-    <g className="glimmer" style={{ animationDelay: `${(cx + cy) % 4}s` }}>
+    <g className="glimmer" style={{ animationDelay: `${-index * 0.9}s` }}>
       {/* 今回伸びた頂点: 金の細い光輪を重ねる */}
       {highlight && (
         <>
@@ -156,6 +170,7 @@ export function MagicRadar({
                 key={props.index}
                 cx={props.cx}
                 cy={props.cy}
+                index={props.index ?? 0}
                 color={chartData[props.index ?? 0]?.color ?? "#71e2ef"}
                 highlight={highlightSubjectId !== undefined && chartData[props.index ?? 0]?.subjectId === highlightSubjectId}
               />
