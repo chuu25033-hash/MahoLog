@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 const hairline = { vectorEffect: "non-scaling-stroke", fill: "none", strokeWidth: 1 } as const;
 
 const GOLD = "#e2c974";
+const AQUA = "#7fe8dc";
 const DIM = "#64748b";
 const ROMAN = ["I", "II", "III", "IV"];
 
@@ -73,19 +74,36 @@ function dominantAttribute(n: ObservedNight): Attribute {
   return SUBJECT_ATTRIBUTE[top?.[0] ?? "s2"] ?? "cyan";
 }
 
-/** 詠唱時間が長い夜ほど大きく、強く輝く */
-function starRadius(minutes: number) {
-  return 1.4 + Math.sqrt(Math.min(minutes, 300) / 240) * 3.2;
+/** 詠唱時間の強さ（0〜1） */
+const intensity = (minutes: number) => Math.min(minutes, 240) / 240;
+
+/** 詠唱時間が長い夜ほど四芒星が大きくなる（中心から尖端までの長さ） */
+function starSize(minutes: number) {
+  return 1.5 + Math.sqrt(intensity(minutes)) * 1.9;
 }
 
+/** 中心のゴールド/アクアの発光。詠唱時間が長いほど強く滲む */
 function starGlow(minutes: number, selected: boolean) {
-  const k = Math.min(minutes, 240) / 240;
-  const near = 1.5 + k * 3 + (selected ? 2 : 0);
-  const far = 4 + k * 12 + (selected ? 6 : 0);
-  const alpha = Math.round((0.35 + k * 0.6) * 255)
+  const k = intensity(minutes);
+  const near = 0.6 + k * 1.6 + (selected ? 1 : 0);
+  const far = 2 + k * 6 + (selected ? 3 : 0);
+  const alpha = Math.round((0.3 + k * 0.6) * 255)
     .toString(16)
     .padStart(2, "0");
-  return `drop-shadow(0 0 ${near}px ${GOLD}) drop-shadow(0 0 ${far}px ${GOLD}${alpha})`;
+  return `drop-shadow(0 0 ${near}px ${AQUA}) drop-shadow(0 0 ${far}px ${GOLD}${alpha})`;
+}
+
+/** 尖端までの長さ 1 の四芒星 ✦ */
+const SPARKLE = "M0,-1 Q0.1,-0.1 1,0 Q0.1,0.1 0,1 Q-0.1,0.1 -1,0 Q-0.1,-0.1 0,-1Z";
+
+/** 中心から細く伸びて消えていく光芒 */
+function flare(length: number, width: number) {
+  return `${-length},0 0,${-width} ${length},0 0,${width}`;
+}
+
+/** 半対角線 r の菱形 ◇ */
+function diamond(x: number, y: number, r: number) {
+  return `${x},${y - r} ${x + r},${y} ${x},${y + r} ${x - r},${y}`;
 }
 
 // 日付が変わるまでは同じ履歴を使い回す（getSnapshot は同じ参照を返す必要がある）
@@ -161,20 +179,32 @@ function CelestialChart({
 }) {
   const gradientId = useId().replace(/:/g, "");
   const observed = nights.filter((n) => n.minutes > 0);
-  // 日付順に結んだ星座の線。k 本目の線が伸びきった時点で k+1 番目の星が灯る
+  // 観測した夜は日付順に灯る。前夜から線が伸びてくる星は、線が届いた瞬間に灯る
   const order = new Map(observed.map((n, i) => [n, i]));
-  const litAt = (i: number) => (i === 0 ? TRACE_START - 0.2 : TRACE_START + (i - 1) * TRACE_STEP + TRACE_DURATION);
+  const litAt = (i: number) => TRACE_START + i * TRACE_STEP;
+  // 同じ週の中で前夜と今夜をともに観測できた場合だけ結ぶ。休息の夜で線は途切れる
+  const segments = nights.flatMap((n, j) => {
+    const prev = nights[j - 1];
+    return j > 0 && prev.week === n.week && prev.minutes > 0 && n.minutes > 0 ? [{ from: prev, to: n }] : [];
+  });
 
   return (
     <svg viewBox="-100 -100 200 200" className="size-[min(96cqw,96cqh)] overflow-visible" role="img" aria-label="詠唱の星図">
       <defs>
+        {/* 星は原点・尖端までの長さ 1 で描くので、グラデーションもその座標で定義する */}
         {Object.entries(ATTRIBUTES).map(([key, { stops }]) => (
-          <radialGradient key={key} id={`${gradientId}-${key}`}>
-            <stop offset="0%" stopColor={stops[0]} />
-            <stop offset="45%" stopColor={stops[1]} />
+          <radialGradient key={key} id={`${gradientId}-${key}`} gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1">
+            <stop offset="0%" stopColor="#ffffff" />
+            <stop offset="22%" stopColor={stops[0]} />
+            <stop offset="55%" stopColor={stops[1]} />
             <stop offset="100%" stopColor={stops[2]} />
           </radialGradient>
         ))}
+        <radialGradient id={`${gradientId}-flare`} gradientUnits="userSpaceOnUse" cx="0" cy="0" r="4">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+          <stop offset="25%" stopColor={GOLD} stopOpacity="0.6" />
+          <stop offset="100%" stopColor={GOLD} stopOpacity="0" />
+        </radialGradient>
       </defs>
 
       {/* ゆっくり回る外周の目盛り */}
@@ -216,16 +246,13 @@ function CelestialChart({
       {WEEK_CENTERS.map((c, w) => {
         if (!completed[w]) return null;
         const points = Array.from({ length: 7 }, (_, d) => starPosition(w, d));
-        const heptagram = Array.from({ length: 7 }, (_, i) => points[(i * 3) % 7]);
         const lastIndex = order.get(nights[w * 7 + 6]) ?? 0;
         return (
           <g key={w} className="memory-silhouette" style={{ "--delay": `${litAt(lastIndex) + 0.3}s` } as CSSProperties}>
             <circle cx={c.x} cy={c.y} r="30" stroke={GOLD} strokeOpacity="0.28" {...hairline} fill={GOLD} fillOpacity="0.03" />
             <circle cx={c.x} cy={c.y} r="33" stroke={GOLD} strokeOpacity="0.14" strokeDasharray="0.8 2.2" {...hairline} />
-            <polygon points={points.map((p) => `${p.x},${p.y}`).join(" ")} stroke={GOLD} strokeOpacity="0.18" {...hairline} />
-            <polygon points={heptagram.map((p) => `${p.x},${p.y}`).join(" ")} stroke={GOLD} strokeOpacity="0.32" {...hairline} />
             {points.map((p, d) => (
-              <line key={d} x1={c.x} y1={c.y} x2={p.x} y2={p.y} stroke={GOLD} strokeOpacity="0.08" {...hairline} />
+              <polygon key={d} points={diamond(p.x, p.y, 2.2)} stroke={GOLD} strokeOpacity="0.22" {...hairline} />
             ))}
           </g>
         );
@@ -249,22 +276,22 @@ function CelestialChart({
         </text>
       ))}
 
-      {/* 日付順に結ぶ光の線 */}
-      {observed.slice(1).map((n, i) => {
-        const from = starPosition(observed[i].week, observed[i].weekday);
-        const to = starPosition(n.week, n.weekday);
+      {/* 週の中を日付順に一本道で結ぶ光の線 */}
+      {segments.map(({ from: a, to: b }) => {
+        const from = starPosition(a.week, a.weekday);
+        const to = starPosition(b.week, b.weekday);
         return (
           <line
-            key={n.date.getTime()}
+            key={b.date.getTime()}
             x1={from.x}
             y1={from.y}
             x2={to.x}
             y2={to.y}
             pathLength={1}
             stroke="#cfe9ff"
-            strokeOpacity="0.55"
+            strokeOpacity="0.6"
             className="memory-trace"
-            style={{ "--delay": `${TRACE_START + i * TRACE_STEP}s`, "--dur": `${TRACE_DURATION}s` } as CSSProperties}
+            style={{ "--delay": `${litAt(order.get(b) ?? 0) - TRACE_DURATION}s`, "--dur": `${TRACE_DURATION}s` } as CSSProperties}
             {...hairline}
           />
         );
@@ -291,16 +318,18 @@ function CelestialChart({
             >
               <circle cx={p.x} cy={p.y} r="4" fill="transparent" />
               {n.future ? (
-                <circle cx={p.x} cy={p.y} r="1.4" stroke={DIM} strokeOpacity="0.5" strokeDasharray="0.6 1.2" {...hairline} />
+                <polygon points={diamond(p.x, p.y, 1.3)} stroke={DIM} strokeOpacity="0.5" strokeDasharray="0.6 1.2" {...hairline} />
               ) : (
-                <circle cx={p.x} cy={p.y} r="0.9" fill={DIM} fillOpacity="0.5" />
+                <polygon points={diamond(p.x, p.y, 0.8)} fill={DIM} fillOpacity="0.5" />
               )}
-              {isSelected && <circle cx={p.x} cy={p.y} r="4" stroke={DIM} strokeOpacity="0.8" {...hairline} />}
+              {isSelected && <polygon points={diamond(p.x, p.y, 3.4)} stroke={DIM} strokeOpacity="0.8" {...hairline} />}
             </g>
           );
         }
 
-        const r = starRadius(n.minutes);
+        const size = starSize(n.minutes);
+        const k = intensity(n.minutes);
+        const fill = `url(#${gradientId}-${dominantAttribute(n)})`;
         return (
           <g
             key={n.date.getTime()}
@@ -314,19 +343,29 @@ function CelestialChart({
             className="memory-star cursor-pointer outline-none"
             style={{ "--delay": `${litAt(order.get(n) ?? 0)}s` } as CSSProperties}
           >
-            <circle cx={p.x} cy={p.y} r={Math.max(r + 3, 5)} fill="transparent" />
+            <circle cx={p.x} cy={p.y} r={Math.max(size + 2.5, 5)} fill="transparent" />
             {isSelected && (
               <>
-                <circle cx={p.x} cy={p.y} r={r + 4} stroke={GOLD} className="guidance-halo" {...hairline} />
-                <circle cx={p.x} cy={p.y} r={r + 2.4} stroke={GOLD} strokeOpacity="0.6" {...hairline} />
+                <polygon points={diamond(p.x, p.y, size + 3.6)} stroke={GOLD} className="guidance-halo" {...hairline} />
+                <polygon points={diamond(p.x, p.y, size + 2.2)} stroke={GOLD} strokeOpacity="0.6" {...hairline} />
               </>
             )}
             <g
               className="memory-star-core"
-              style={{ transform: isSelected ? "scale(1.3)" : undefined, filter: starGlow(n.minutes, isSelected) }}
+              style={{ transform: isSelected ? "scale(1.25)" : undefined, filter: starGlow(n.minutes, isSelected) }}
             >
-              <circle cx={p.x} cy={p.y} r={r} fill={`url(#${gradientId}-${dominantAttribute(n)})`} />
-              <circle cx={p.x} cy={p.y} r={r * 0.32} fill="#ffffff" />
+              <g transform={`translate(${p.x} ${p.y}) scale(${size})`}>
+                {/* 上下左右へ伸びる十字の光芒と、斜めの淡い光芒 */}
+                <g fill={`url(#${gradientId}-flare)`}>
+                  <polygon points={flare(2.6 + k * 1.4, 0.05)} />
+                  <polygon points={flare(2.6 + k * 1.4, 0.05)} transform="rotate(90)" />
+                  <polygon points={flare(1.1, 0.04)} transform="rotate(45)" opacity="0.5" />
+                  <polygon points={flare(1.1, 0.04)} transform="rotate(-45)" opacity="0.5" />
+                </g>
+                <path d={SPARKLE} fill={fill} />
+                <path d={SPARKLE} transform="rotate(45) scale(0.5)" fill={fill} opacity="0.7" />
+                <path d={SPARKLE} transform="scale(0.32)" fill="#ffffff" opacity={0.7 + k * 0.3} />
+              </g>
             </g>
           </g>
         );
@@ -381,7 +420,7 @@ function NightDetail({ night }: { night: ObservedNight }) {
               {attribute && (
                 <span className="ml-auto flex items-center gap-1.5 text-foreground">
                   <span
-                    className="size-2 rounded-full"
+                    className="size-1.5 rotate-45"
                     style={{ background: `radial-gradient(circle, ${attribute.stops.join(", ")})`, boxShadow: `0 0 6px ${attribute.stops[2]}` }}
                   />
                   {attribute.label}の星
