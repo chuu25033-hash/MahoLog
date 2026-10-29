@@ -86,7 +86,7 @@ export function ResultDialog({ result, onClose }: { result: StudyResult; onClose
             <span className="text-foreground">{result.subject.name}</span> の魔力が高まった
           </DialogDescription>
           {capped && (
-            <p className="text-xs text-destructive">本日の上限（12時間）を超えた分は記録されません</p>
+            <p className="text-xs text-destructive">一夜に刻める詠唱は12時間まで。超えた分は星に届きません</p>
           )}
 
           {showBonus && afterLevel > beforeLevel && (

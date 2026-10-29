@@ -25,7 +25,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "マホログ",
-  description: "勉強時間を魔力に変えて、大魔法使いを目指す学習記録アプリ",
+  description: "詠唱時間を魔力に変えて、大魔法使いを目指す魔導の観測録",
 };
 
 export const viewport: Viewport = {

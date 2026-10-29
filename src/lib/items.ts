@@ -124,7 +124,13 @@ export const SKINS: SkinItem[] = [
   { id: "a-crown", rarity: "A", kind: "skin", stageId: 6, name: "天冠の円環", glyph: "ring", color: "#fbf3d4", effect: "魔法陣が天上の白金に輝く", skin: skin("#fbf3d4", "#e2c974", "rgba(251,243,212,0.12)") },
 ];
 
-export const ALL_ITEMS: Item[] = [...CATALYSTS, ...LORES, ...SKINS];
+/** 星天の導き（1日1回の授かり物）でのみ得られる触媒。宝箱の抽選には含めない */
+export const GUIDANCE_CATALYSTS: CatalystItem[] = [
+  { id: "g-stardust", rarity: "C", kind: "catalyst", name: "星屑の触媒", glyph: "vial", color: "#f6e9bd", multiplier: 1.2, weight: 0, effect: "次回の詠唱で獲得MP ×1.2" },
+  { id: "g-aurora", rarity: "C", kind: "catalyst", name: "極光の輝石", glyph: "crystal", color: "#9ef0c9", multiplier: 1.8, weight: 0, effect: "次回の詠唱で獲得MP ×1.8" },
+];
+
+export const ALL_ITEMS: Item[] = [...CATALYSTS, ...GUIDANCE_CATALYSTS, ...LORES, ...SKINS];
 
 export function findItem(id: string | null | undefined): Item | undefined {
   return ALL_ITEMS.find((item) => item.id === id);

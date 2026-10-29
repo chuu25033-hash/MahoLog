@@ -4,9 +4,12 @@ import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { VEIL_COVER_MS, coverScreen } from "@/components/transition-veil";
+import { pendingGuidance } from "@/lib/celestial-guidance";
 import { CelestialSphere } from "./celestial-sphere";
 
 const DESTINATION = "/dashboard";
+/** その日初めての観測では、星天の導きを挟んでから観測所へ向かう */
+const GUIDANCE = "/guidance";
 /** ホバー中の集光ループ 1 周の長さ（s）。粒子ごとの開始をこの範囲に散らす */
 const GATHER_S = 3.2;
 
@@ -39,14 +42,16 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
 
   useEffect(() => {
     router.prefetch(DESTINATION);
+    router.prefetch(GUIDANCE);
   }, [router]);
 
-  function start(href: string = DESTINATION) {
+  function start() {
     if (leaving) return;
     setBurst((b) => b + 1);
     setLeaving(true);
     coverScreen();
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const href = pendingGuidance() ? GUIDANCE : DESTINATION;
     window.setTimeout(() => router.push(href), reduced ? 0 : VEIL_COVER_MS);
   }
 

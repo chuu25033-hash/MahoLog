@@ -15,7 +15,7 @@ export default function LoginPage() {
           <BookOpen className="mx-auto size-10 text-starlight" strokeWidth={1} />
           <h1 className="mt-2 text-4xl tracking-[0.3em] text-starlight-gradient">マホログ</h1>
           <p className="font-display text-xs tracking-[0.5em] text-starlight/60">MAHOLOG</p>
-          <p className="mt-3 text-sm tracking-wider text-muted-foreground">勉強時間を魔力に変えて、大魔法使いを目指そう</p>
+          <p className="mt-3 text-sm tracking-wider text-muted-foreground">詠唱時間を魔力に変えて、大魔法使いを目指そう</p>
         </div>
       </div>
       <AuthForm />

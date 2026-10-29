@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { Coffee, FastForward, Hourglass, MapPin, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
+import { FastForward, Hourglass, MapPin, Moon, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
 import { saveStudyLog } from "@/app/actions/study";
 import { ItemArt } from "@/components/item-art";
 import { MagicCircle } from "@/components/magic-circle";
@@ -87,7 +87,7 @@ export function TimerPanel({
     (minutes: number) => {
       if (!subject) return;
       if (minutes < 1) {
-        setMessage("1分未満のため記録されませんでした");
+        setMessage("詠唱が短く、星に刻まれませんでした（1分未満）");
         return;
       }
       const beforeTotals = weekTotals;
@@ -232,8 +232,8 @@ export function TimerPanel({
   const statusLabel = {
     idle: "詠唱準備",
     focus: running ? "魔力集束中…" : "詠唱中断",
-    breakReady: "詠唱完了 — 休憩待機中",
-    break: running ? "休憩中" : "休憩中断",
+    breakReady: "詠唱完了 — 静息を待つ",
+    break: running ? "静息中" : "静息中断",
   }[phase];
 
   if (subjects.length === 0) {
@@ -251,8 +251,8 @@ export function TimerPanel({
         <div className="grid grid-cols-2 gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm">
           {(
             [
-              { key: "pomodoro", label: "ポモドーロ", icon: Hourglass },
-              { key: "stopwatch", label: "ストップウォッチ", icon: TimerIcon },
+              { key: "pomodoro", label: "律動の詠唱", icon: Hourglass },
+              { key: "stopwatch", label: "無窮の詠唱", icon: TimerIcon },
             ] as const
           ).map(({ key, label, icon: Icon }) => (
             <button
@@ -301,13 +301,13 @@ export function TimerPanel({
 
         {mode === "pomodoro" && (
           <>
-            <OptionRow label="勉強時間" unit="分" options={FOCUS_OPTIONS} value={focusMin} onChange={setFocusMin} disabled={phase !== "idle"} />
-            <OptionRow label="休憩時間" unit="分" options={BREAK_OPTIONS} value={breakMin} onChange={setBreakMin} disabled={phase !== "idle"} />
+            <OptionRow label="詠唱時間" unit="分" options={FOCUS_OPTIONS} value={focusMin} onChange={setFocusMin} disabled={phase !== "idle"} />
+            <OptionRow label="静息時間" unit="分" options={BREAK_OPTIONS} value={breakMin} onChange={setBreakMin} disabled={phase !== "idle"} />
           </>
         )}
         {mode === "stopwatch" && (
           <p className="text-xs leading-relaxed text-muted-foreground">
-            カウントアップで計測します。2時間連続で計測すると集中確認が表示されます。
+            果てなく詠唱を続けます。2時間途切れずに続くと、星が詠唱の継続を確かめに訪れます。
           </p>
         )}
 
@@ -399,7 +399,7 @@ export function TimerPanel({
             </p>
             <p className="flex items-center gap-2 text-sm tracking-[0.3em]">
               <span className="h-px w-6 bg-gradient-to-r from-transparent to-white/40" />
-              <span style={{ color, textShadow: `0 0 10px ${color}80` }}>{resting ? "休憩" : subject?.name}</span>
+              <span style={{ color, textShadow: `0 0 10px ${color}80` }}>{resting ? "静息" : subject?.name}</span>
               <span className="h-px w-6 bg-gradient-to-l from-transparent to-white/40" />
             </p>
 
@@ -428,7 +428,7 @@ export function TimerPanel({
               {phase === "breakReady" && (
                 <>
                   <Button size="lg" onClick={startBreak}>
-                    <Coffee /> 休憩を始める
+                    <Moon /> 静息に入る
                   </Button>
                   <Button size="lg" variant="secondary" onClick={() => setPhase("idle")}>
                     スキップ
@@ -454,7 +454,7 @@ export function TimerPanel({
                       setPhase("idle");
                     }}
                   >
-                    休憩を終える
+                    静息を終える
                   </Button>
                 </>
               )}
@@ -478,16 +478,16 @@ export function TimerPanel({
       <Dialog open={confirmOpen} onOpenChange={(open) => !open && continueFocus()}>
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle className="tracking-wider">まだ集中中ですか？</DialogTitle>
+            <DialogTitle className="tracking-wider">まだ詠唱を続けていますか？</DialogTitle>
             <DialogDescription>
-              2時間連続で計測しています。5分以内に応答がない場合、ここまでの記録を保存して一時停止します。
+              2時間、途切れず詠唱が続いています。5分以内に応答がなければ、ここまでの詠唱を観測記録に刻んで中断します。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="secondary" onClick={() => { setConfirmOpen(false); finish(); }}>
-              終了して記録
+              詠唱を終えて刻む
             </Button>
-            <Button onClick={continueFocus}>集中を続ける</Button>
+            <Button onClick={continueFocus}>詠唱を続ける</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

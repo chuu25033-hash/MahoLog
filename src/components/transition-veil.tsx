@@ -7,9 +7,17 @@ const COVER_EVENT = "maholog:veil-cover";
 /** 暗闇へ沈むまでの時間（ms）。呼び出し側はこの後に遷移する */
 export const VEIL_COVER_MS = 700;
 
-/** 画面全体を暗闇で覆う。覆ったまま遷移すると、遷移先で暗闇から浮かび上がる */
-export function coverScreen() {
-  window.dispatchEvent(new Event(COVER_EVENT));
+/** dark: 暗闇へ沈む / light: 星の光に満たされる */
+export type VeilTone = "dark" | "light";
+
+const TONE_BACKGROUND: Record<VeilTone, string> = {
+  dark: "radial-gradient(circle at 50% 50%, #0b1226 0%, #060914 55%, #020308 100%)",
+  light: "radial-gradient(circle at 50% 50%, #fffaf0 0%, #f6e9bd 30%, #b89a52 70%, #2a2414 100%)",
+};
+
+/** 画面全体をヴェールで覆う。覆ったまま遷移すると、遷移先でヴェールが晴れて浮かび上がる */
+export function coverScreen(tone: VeilTone = "dark") {
+  window.dispatchEvent(new CustomEvent<VeilTone>(COVER_EVENT, { detail: tone }));
 }
 
 /**
@@ -19,9 +27,13 @@ export function coverScreen() {
 export function TransitionVeil() {
   const pathname = usePathname();
   const [coveredAt, setCoveredAt] = useState<string | null>(null);
+  const [tone, setTone] = useState<VeilTone>("dark");
 
   useEffect(() => {
-    const onCover = () => setCoveredAt(window.location.pathname);
+    const onCover = (e: Event) => {
+      setTone((e as CustomEvent<VeilTone>).detail ?? "dark");
+      setCoveredAt(window.location.pathname);
+    };
     window.addEventListener(COVER_EVENT, onCover);
     return () => window.removeEventListener(COVER_EVENT, onCover);
   }, []);
@@ -36,9 +48,9 @@ export function TransitionVeil() {
       className={`fixed inset-0 z-[90] transition-opacity motion-reduce:duration-0 ${
         covered
           ? "pointer-events-auto opacity-100 duration-700 ease-in"
-          : "pointer-events-none opacity-0 duration-[1600ms] ease-out"
+          : `pointer-events-none opacity-0 ease-out ${tone === "light" ? "duration-[2200ms]" : "duration-[1600ms]"}`
       }`}
-      style={{ background: "radial-gradient(circle at 50% 50%, #0b1226 0%, #060914 55%, #020308 100%)" }}
+      style={{ background: TONE_BACKGROUND[tone] }}
     />
   );
 }

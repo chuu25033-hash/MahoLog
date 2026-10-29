@@ -544,3 +544,99 @@
     transform: translate(calc(-50% + var(--sx)), calc(-50% + var(--sy)));
   }
 }
+
+/* ---------- 星天の導き ---------- */
+/* 星図が暗闇から浮かび上がる */
+@keyframes guidance-chart-in {
+  from { opacity: 0; transform: scale(0.94) rotate(-8deg); filter: blur(3px); }
+  to { opacity: 1; transform: scale(1) rotate(0deg); filter: blur(0); }
+}
+
+.guidance-chart > :first-child {
+  animation: guidance-chart-in 2s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+/* 本日の星: スターライトゴールドに明滅する */
+@keyframes guidance-star-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.guidance-star-today {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: guidance-star-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes guidance-halo {
+  0% { opacity: 0.8; transform: scale(0.5); }
+  100% { opacity: 0; transform: scale(2.2); }
+}
+
+.guidance-halo {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: guidance-halo 2.4s ease-out infinite;
+}
+
+/* 辿った星座の線が順に引かれる */
+@keyframes guidance-trace {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+.guidance-trace {
+  stroke-dasharray: 1;
+  animation: guidance-trace 1.6s ease-out 0.6s both;
+}
+
+/* 授かり物が光の粒子とともに浮かび上がり、ゆるやかに漂う */
+@keyframes guidance-item-in {
+  0% { opacity: 0; transform: translateY(14px) scale(0.6); filter: blur(6px) brightness(2); }
+  60% { opacity: 1; filter: blur(0) brightness(1.4); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0) brightness(1); }
+}
+
+@keyframes guidance-item-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4%); }
+}
+
+.guidance-item {
+  animation:
+    guidance-item-in 1.8s cubic-bezier(0.2, 0.7, 0.2, 1) 1s both,
+    guidance-item-float 5s ease-in-out 2.8s infinite;
+}
+
+@keyframes guidance-item-claim {
+  0% { transform: scale(1); filter: brightness(1); }
+  100% { transform: scale(1.35); filter: brightness(2.6) blur(1px); opacity: 0.4; }
+}
+
+.guidance-item.guidance-item-claim {
+  animation: guidance-item-claim 0.9s ease-in both;
+}
+
+@keyframes guidance-mote {
+  0% { transform: translate3d(0, 0, 0); opacity: 0; }
+  25%, 60% { opacity: 0.85; }
+  100% { transform: translate3d(var(--drift), -120px, 0); opacity: 0; }
+}
+
+.guidance-mote {
+  position: absolute;
+  bottom: 30%;
+  border-radius: 9999px;
+  opacity: 0;
+  animation: guidance-mote var(--dur) ease-out var(--delay) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guidance-chart > :first-child,
+  .guidance-star-today,
+  .guidance-halo,
+  .guidance-trace,
+  .guidance-item,
+  .guidance-mote { animation: none; }
+  .guidance-mote { display: none; }
+}

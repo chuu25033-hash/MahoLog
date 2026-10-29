@@ -14,7 +14,7 @@ import { getDashboardData } from "@/lib/data";
 import { formatMinutes, levelProgress } from "@/lib/game";
 import { cn } from "@/lib/utils";
 
-const MODE_LABEL = { pomodoro: "ポモドーロ", stopwatch: "ストップウォッチ" } as const;
+const MODE_LABEL = { pomodoro: "律動の詠唱", stopwatch: "無窮の詠唱" } as const;
 
 async function HomeContent() {
   const { profile, totals, radar, recentLogs } = await getDashboardData();
@@ -57,9 +57,9 @@ async function HomeContent() {
 
           <div className="grid grid-cols-3 gap-2">
             {[
-              { label: "今日", value: totals.today, icon: Sun },
-              { label: "今週", value: totals.week, icon: Moon },
-              { label: "今月", value: totals.month, icon: Sparkles },
+              { label: "今宵", value: totals.today, icon: Sun },
+              { label: "七夜", value: totals.week, icon: Moon },
+              { label: "月巡り", value: totals.month, icon: Sparkles },
             ].map(({ label, value, icon: Icon }) => (
               <Card key={label} size="sm" className="items-center gap-1 px-2 text-center">
                 <Icon className="size-4 text-aqua/80" strokeWidth={1.25} />
@@ -75,7 +75,7 @@ async function HomeContent() {
           <RadarPanel data={radar} />
         </Card>
 
-        {/* 右: 詠唱開始 & 直近ログ */}
+        {/* 右: 詠唱開始 & 詠唱の記憶 */}
         <section className="col-span-3 flex flex-col gap-3">
           <Link
             href="/timer"
@@ -85,7 +85,7 @@ async function HomeContent() {
             )}
           >
             <Wand2 className="size-6! transition-transform duration-500 group-hover:-rotate-12" strokeWidth={1.25} />
-            詠唱を始める
+            詠唱を開始する
             <span className="font-display text-[10px] tracking-[0.3em] text-starlight/70">BEGIN THE CHANT</span>
           </Link>
 
@@ -99,9 +99,12 @@ async function HomeContent() {
           </Link>
 
           <Card size="sm" className="min-h-0 flex-1 px-3">
-            <h2 className="text-sm tracking-[0.2em]">最近の詠唱記録</h2>
+            <h2 className="flex items-baseline gap-2 text-sm tracking-[0.2em]">
+              詠唱の記憶
+              <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60">OBSERVATIONAL MEMORY</span>
+            </h2>
             {recentLogs.length === 0 ? (
-              <p className="text-xs text-muted-foreground">まだ記録がありません</p>
+              <p className="text-xs text-muted-foreground">まだ記憶は刻まれていません</p>
             ) : (
               <ul className="flex flex-col text-xs">
                 {recentLogs.map((log) => (

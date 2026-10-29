@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookMarked, BookOpen, CalendarDays, Home, LogOut, Settings, Sparkles, Trophy } from "lucide-react";
+import { BookMarked, BookOpen, CalendarDays, Home, LogOut, Settings, Sparkles, Swords, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
-  { href: "/dashboard", label: "ホーム", icon: Home, ready: true },
+  { href: "/dashboard", label: "観測所", icon: Home, ready: true },
   { href: "/timer", label: "詠唱", icon: Sparkles, ready: true },
   { href: "/collection", label: "図鑑", icon: BookMarked, ready: true },
-  { href: "/history", label: "履歴", icon: CalendarDays, ready: false },
+  { href: "/trials", label: "星の試練", icon: Swords, ready: false },
+  { href: "/history", label: "観測記録", icon: CalendarDays, ready: false },
   { href: "/ranking", label: "ランキング", icon: Trophy, ready: false },
   { href: "/settings", label: "設定", icon: Settings, ready: false },
 ] as const;
@@ -22,7 +23,7 @@ export function NavRail({ signOutAction }: { signOutAction?: () => Promise<void>
 
   return (
     <nav className="glass flex h-full w-16 shrink-0 flex-col items-center gap-1 rounded-none py-3 lg:w-20">
-      <Link href="/dashboard" className="mb-3 flex flex-col items-center gap-0.5 text-starlight" aria-label="マホログ ホーム">
+      <Link href="/dashboard" className="mb-3 flex flex-col items-center gap-0.5 text-starlight" aria-label="マホログ 観測所">
         <BookOpen className="size-6" strokeWidth={1.25} />
         <span className="text-[10px] tracking-[0.2em] text-glow-gold">マホログ</span>
       </Link>
