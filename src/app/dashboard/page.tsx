@@ -99,9 +99,9 @@ async function HomeContent() {
           </Link>
 
           <Card size="sm" className="min-h-0 flex-1 px-3">
-            <h2 className="flex items-baseline gap-2 text-sm tracking-[0.2em]">
+            <h2 className="flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
               詠唱の記憶
-              <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60">OBSERVATIONAL MEMORY</span>
+              <span className="min-w-0 truncate font-display text-[9px] tracking-[0.25em] text-starlight/60">OBSERVATIONAL MEMORY</span>
             </h2>
             {recentLogs.length === 0 ? (
               <p className="text-xs text-muted-foreground">まだ記憶は刻まれていません</p>
@@ -114,7 +114,7 @@ async function HomeContent() {
                       style={{ background: log.subject?.color, boxShadow: `0 0 6px ${log.subject?.color}` }}
                     />
                     <span className="min-w-0 truncate tracking-wider">{log.subject?.name ?? "—"}</span>
-                    <span className="hidden text-[11px] text-muted-foreground lg:inline">{MODE_LABEL[log.mode]}</span>
+                    <span className="hidden text-[11px] whitespace-nowrap text-muted-foreground lg:inline">{MODE_LABEL[log.mode]}</span>
                     <span className="ml-auto font-display whitespace-nowrap text-aqua">
                       +{log.duration_minutes} <span className="text-[10px]">MP</span>
                     </span>

@@ -26,13 +26,13 @@ export function CollectionView() {
     <div className="flex flex-col gap-4 p-3 lg:p-5">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em]">
+          <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap">
             魔導図鑑
             <span className="font-display text-[10px] tracking-[0.3em] text-starlight/70">ARCANE CODEX</span>
           </h1>
           <p className="text-xs tracking-wider text-muted-foreground">詠唱を終えると、滞在エリアの宝箱からアイテムが見つかることがあります</p>
         </div>
-        <p className="text-right text-xs tracking-wider text-muted-foreground">
+        <p className="text-right text-xs tracking-wider whitespace-nowrap text-muted-foreground">
           収集率
           <span className="ml-2 font-display text-2xl text-starlight-gradient">{found}</span>
           <span className="font-display"> / {ALL_ITEMS.length}</span>
@@ -43,10 +43,10 @@ export function CollectionView() {
         const items = ALL_ITEMS.filter((i) => i.rarity === rarity);
         return (
           <section key={rarity} className="glass rounded-2xl p-3 lg:p-4">
-            <h2 className="mb-3 flex items-baseline gap-2 text-sm tracking-[0.2em]">
+            <h2 className="mb-3 flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
               <span className="font-display text-[11px] text-starlight/80">RARE {rarity}</span>
               {RARITY_LABEL[rarity]}
-              <span className="text-[11px] tracking-wider text-muted-foreground">{caption}</span>
+              <span className="min-w-0 truncate text-[11px] tracking-wider text-muted-foreground">{caption}</span>
               <span className="ml-auto font-display text-xs text-muted-foreground">
                 {items.filter((i) => mock.discovered.includes(i.id)).length} / {items.length}
               </span>
