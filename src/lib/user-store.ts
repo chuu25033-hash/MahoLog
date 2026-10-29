@@ -1,7 +1,7 @@
 "use client";
 
 // アプリ全体のローカル永続データ（localStorage の maholog_user_data に JSON で保存）。
-// プロフィール・詠唱履歴・星天の導きの受取状況・所持アイテム・解放済みステージを保持する。
+// プロフィール・詠唱履歴・星天の導きの受取状況・所持アイテム・解放済みステージ・設定・試練の進捗を保持する。
 import { useSyncExternalStore } from "react";
 import { AREAS, isAreaUnlocked, resolveArea } from "./areas";
 import { jstDateKey, startOfJstDay } from "./date";
@@ -9,7 +9,9 @@ import { demoProfile } from "./demo";
 import { calcLevel, rankOf } from "./game";
 import { DEFAULT_SKIN, findItem, type CatalystItem, type Item, type Skin } from "./items";
 import { mockObservedNights } from "./star-memory";
-import type { Profile, StudyLog, StudyMode } from "./types";
+import { activeSubjectsOf } from "./subjects";
+import { TASKS, drawCatalyst, measureTask, periodKey, type TaskBoard, type TaskScope } from "./tasks";
+import type { Profile, StudyLog, StudyMode, Subject } from "./types";
 
 export const STORAGE_KEY = "maholog_user_data";
 const DAY = 24 * 60 * 60 * 1000;
@@ -78,6 +80,8 @@ export type UserData = {
   /** 装備中の触媒・テーマスキン */
   equipment: { catalystId: string | null; skinId: string | null };
   settings: UserSettings;
+  /** 試練（日課の儀式・週間の大誓約）の進捗と受取状況 */
+  tasks: Record<TaskScope, TaskBoard>;
 };
 
 const unlockedAt = (totalMp: number) => AREAS.filter((a) => isAreaUnlocked(a, totalMp)).map((a) => a.id);
@@ -92,6 +96,7 @@ export function initialUserData(): UserData {
     unlockedStages: unlockedAt(0),
     equipment: { catalystId: null, skinId: null },
     settings: { defaultFocusMinutes: 25, liteMode: false, chime: true },
+    tasks: { daily: { periodKey: "", items: {} }, weekly: { periodKey: "", items: {} } },
   };
 }
 
@@ -109,8 +114,33 @@ function normalize(saved: Partial<UserData>): UserData {
     dailyReward: { ...base.dailyReward, ...saved.dailyReward },
     equipment: { ...base.equipment, ...saved.equipment },
     settings: { ...base.settings, ...settings },
+    tasks: { ...base.tasks, ...saved.tasks },
   };
 }
+
+/** 試練の進捗を詠唱履歴から測り直す。期間が変わっていれば受取状況も巡り直す */
+function syncedTasks(data: UserData, subjects: Pick<Subject, "id">[], now: Date): UserData["tasks"] {
+  const context = {
+    history: data.chantHistory,
+    activeSubjectIds: activeSubjectsOf(subjects, data.userProfile.activeSubjects).map((s) => s.id),
+    mainSubjectId: data.userProfile.subject,
+    now,
+  };
+  const board = (scope: TaskScope): TaskBoard => {
+    const key = periodKey(scope, now);
+    const prev = data.tasks[scope];
+    const items = Object.fromEntries(
+      TASKS.filter((t) => t.scope === scope).map((t) => [
+        t.id,
+        { ...measureTask(t, context), isClaimed: prev.periodKey === key && (prev.items[t.id]?.isClaimed ?? false) },
+      ]),
+    );
+    return { periodKey: key, items };
+  };
+  return { daily: board("daily"), weekly: board("weekly") };
+}
+
+export type TaskClaim = { mp: number; item: CatalystItem | null };
 
 /** 累積MPから階級・解放済みステージを導き直す */
 function withProgress(data: UserData, totalMp: number): UserData {
@@ -380,6 +410,34 @@ export const userActions = {
     } catch {
       return false;
     }
+  },
+
+  /** 試練の進捗を最新にする（変化がなければ保存も通知もしない） */
+  syncTasks(subjects: Pick<Subject, "id">[], now = new Date()) {
+    const current = load();
+    const tasks = syncedTasks(current, subjects, now);
+    if (JSON.stringify(tasks) === JSON.stringify(current.tasks)) return;
+    update((s) => ({ ...s, tasks }));
+  },
+
+  /** 達成した試練の報酬を受け取る: MP は累積魔力・階級へ、触媒は所持品へ。受け取れなければ null */
+  claimTask(taskId: string, subjects: Pick<Subject, "id">[], now = new Date()): TaskClaim | null {
+    const def = TASKS.find((t) => t.id === taskId);
+    if (!def) return null;
+    const tasks = syncedTasks(load(), subjects, now);
+    const task = tasks[def.scope].items[taskId];
+    if (!task || task.isClaimed || task.progress < task.maxProgress) return null;
+    const claim: TaskClaim =
+      def.reward.kind === "mp" ? { mp: def.reward.mp, item: null } : { mp: 0, item: drawCatalyst(def.reward.rare) };
+    update((s) => {
+      const claimed = {
+        ...tasks,
+        [def.scope]: { ...tasks[def.scope], items: { ...tasks[def.scope].items, [taskId]: { ...task, isClaimed: true } } },
+      };
+      const inventory = claim.item ? { ...s.inventory, [claim.item.id]: (s.inventory[claim.item.id] ?? 0) + 1 } : s.inventory;
+      return withProgress({ ...s, tasks: claimed, inventory }, s.userProfile.totalMp + claim.mp);
+    });
+    return claim;
   },
 
   /** 観測データの初期化 */
