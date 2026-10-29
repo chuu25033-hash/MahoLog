@@ -3,14 +3,27 @@
 import { useState, type CSSProperties } from "react";
 import { Check, Paintbrush, Sparkles } from "lucide-react";
 import { BackToLibrary } from "@/components/back-to-library";
+import { CraftPanel } from "@/components/codex/craft-panel";
+import { MemoriesPanel } from "@/components/codex/memories-panel";
 import { ItemArt } from "@/components/item-art";
 import { MpBar } from "@/components/mp-bar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { findArea, type Rarity } from "@/lib/areas";
+import { findArea } from "@/lib/areas";
+import { oreCount, recipeRelics, restoredCount } from "@/lib/crafting";
 import { STAGES } from "@/lib/game";
-import { ALL_ITEMS, GUIDANCE_CATALYSTS, ITEM_TYPES, RARITIES, RARITY_LABEL, type Item, type ItemType } from "@/lib/items";
-import { armedCatalyst, isDiscovered, userActions, useUserData, type UserData } from "@/lib/user-store";
+import {
+  ALL_ITEMS,
+  CODEX_RARITIES,
+  DOCUMENTS,
+  GUIDANCE_CATALYSTS,
+  ITEM_TYPES,
+  RARITY_LABEL,
+  type Item,
+  type ItemRarity,
+  type ItemType,
+} from "@/lib/items";
+import { armedCatalyst, hasItem, isDiscovered, userActions, useUserData, type UserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 /** 拡大縮小しても 1px を保つ光の線 */
@@ -18,22 +31,25 @@ const hairline = { vectorEffect: "non-scaling-stroke", fill: "none", strokeWidth
 
 const RUNES = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ";
 
-const RARITY_CAPTION: Record<Rarity, string> = {
+const RARITY_CAPTION: Record<ItemRarity, string> = {
+  SS: "錬成陣でのみ生まれる、神話に謳われる遺物",
   S: "世界の理そのものに触れる、伝説の遺物",
   A: "所持するだけで加護を授ける秘宝と、魔法陣の装い",
   B: "各エリアに眠る伝承の品",
   C: "次回の詠唱で獲得MPを高める消耗品",
 };
 
-const RARITY_TONE: Record<Rarity, string> = {
+const RARITY_TONE: Record<ItemRarity, string> = {
+  SS: "border-starlight/80 text-starlight text-glow-gold",
   S: "border-starlight/70 text-starlight text-glow-gold",
   A: "border-amethyst/55 text-amethyst",
   B: "border-starlight/45 text-starlight",
   C: "border-aqua/40 text-aqua",
 };
 
-type Filter = "すべて" | ItemType;
-const FILTERS: Filter[] = ["すべて", ...ITEM_TYPES];
+/** 分類の絞り込みに加えて、古代文書の復元（星脈の記憶）と錬成陣の頁を持つ */
+type Filter = "すべて" | ItemType | "星脈の記憶" | "錬成陣";
+const FILTERS: ("すべて" | ItemType)[] = ["すべて", ...ITEM_TYPES];
 
 /** 古代の秘術図鑑: 遺物を解読・閲覧する（未所持はシルエット） */
 export function CollectionView() {
@@ -55,7 +71,7 @@ export function CollectionView() {
               <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">ARCANE CODEX</span>
             </h1>
             <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase]">
-              宝箱や星天の導きで見つけた遺物を解読し、その来歴と秘めた力を書き留めます
+              宝箱や星天の導きで見つけた遺物を解読し、古代文書を復元し、錬成陣で神話の遺物を生み出します
             </p>
           </div>
         </div>
@@ -74,39 +90,68 @@ export function CollectionView() {
         </div>
       </header>
 
-      <div role="tablist" aria-label="分類" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs">
-        {FILTERS.map((f) => {
-          const items = ALL_ITEMS.filter((i) => f === "すべて" || i.type === f);
-          const active = f === filter;
-          return (
+      <div className="flex flex-wrap items-center gap-2">
+        <div role="tablist" aria-label="分類" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs">
+          {FILTERS.map((f) => {
+            const items = ALL_ITEMS.filter((i) => f === "すべて" || i.type === f);
+            const active = f === filter;
+            return (
+              <button
+                key={f}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setFilter(f)}
+                className={cn(
+                  "flex items-baseline gap-1.5 rounded-full px-4 py-1.5 tracking-[0.2em] whitespace-nowrap transition-all duration-300",
+                  active
+                    ? "bg-gradient-to-b from-starlight/15 to-aqua/5 text-starlight ring-1 ring-starlight/35"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {f}
+                <span className="font-display text-[10px] opacity-70">
+                  {items.filter((i) => isDiscovered(data, i.id)).length}/{items.length}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div role="tablist" aria-label="古代文書と錬成" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs">
+          {(
+            [
+              { key: "星脈の記憶", count: `${restoredCount(data)}/${DOCUMENTS.length}` },
+              { key: "錬成陣", count: `原石 ${oreCount(data)}` },
+            ] as const
+          ).map(({ key, count }) => (
             <button
-              key={f}
+              key={key}
               role="tab"
-              aria-selected={active}
-              onClick={() => setFilter(f)}
+              aria-selected={filter === key}
+              onClick={() => setFilter(key)}
               className={cn(
                 "flex items-baseline gap-1.5 rounded-full px-4 py-1.5 tracking-[0.2em] whitespace-nowrap transition-all duration-300",
-                active
+                filter === key
                   ? "bg-gradient-to-b from-starlight/15 to-aqua/5 text-starlight ring-1 ring-starlight/35"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {f}
-              <span className="font-display text-[10px] opacity-70">
-                {items.filter((i) => isDiscovered(data, i.id)).length}/{items.length}
-              </span>
+              {key}
+              <span className="font-display text-[10px] opacity-70">{count}</span>
             </button>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
-      {RARITIES.map((rarity) => {
+      {filter === "星脈の記憶" && <MemoriesPanel data={data} />}
+      {filter === "錬成陣" && <CraftPanel data={data} />}
+
+      {filter !== "星脈の記憶" && filter !== "錬成陣" && CODEX_RARITIES.map((rarity) => {
         const items = visible.filter((i) => i.rarity === rarity);
         if (items.length === 0) return null;
         return (
           <section key={rarity} className="glass rounded-2xl p-3 lg:p-4">
             <h2 className="mb-3 flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
-              <span className={cn("font-display text-[11px]", rarity === "S" ? "text-starlight text-glow-gold" : "text-starlight/80")}>RARE {rarity}</span>
+              <span className={cn("font-display text-[11px]", rarity === "S" || rarity === "SS" ? "text-starlight text-glow-gold" : "text-starlight/80")}>RARE {rarity}</span>
               {RARITY_LABEL[rarity]}
               <span className="min-w-0 truncate text-[11px] tracking-wider text-muted-foreground">{RARITY_CAPTION[rarity]}</span>
               <span className="ml-auto font-display text-xs text-muted-foreground">
@@ -144,6 +189,7 @@ function ItemCard({ item, data, onSelect }: { item: Item; data: UserData; onSele
           ? "border-white/12 bg-gradient-to-b from-white/[0.04] to-transparent hover:border-starlight/40 hover:shadow-[0_0_14px_-4px_rgba(226,201,116,0.45)]"
           : "border-white/5 bg-black/20 hover:border-white/15",
         owned && item.rarity === "S" && "border-starlight/30 shadow-[0_0_18px_-8px_rgba(226,201,116,0.6)]",
+        owned && item.rarity === "SS" && "border-starlight/50 shadow-[0_0_22px_-6px_rgba(226,201,116,0.75)]",
         equipped && "border-starlight/50",
       )}
     >
@@ -176,6 +222,8 @@ function originHint(item: Item) {
     return `AREA ${item.areaId} ${area?.name ?? ""}の宝箱`;
   }
   if (item.kind === "catalyst") return GUIDANCE_CATALYSTS.includes(item) ? "星天の導き" : "各エリアの宝箱";
+  if (item.kind === "material") return "遺物の還元";
+  if (item.kind === "relic" && item.recipe) return `錬成陣（星屑の原石 ${item.recipe.ore}・${recipeRelics(item).map((r) => `『${r.name}』`).join("")}）`;
   const stage = STAGES.find((s) => s.id === item.stageId);
   return `STAGE ${item.stageId}「${stage?.name ?? ""}」以降の宝箱`;
 }
@@ -247,7 +295,11 @@ function DecipherDialog({ item, data, onClose }: { item: Item; data: UserData; o
           </Button>
         )}
         {owned && item.kind === "relic" && (
-          <p className="text-center text-[11px] tracking-[0.2em] text-starlight/80">所持しているあいだ、加護が働き続けます</p>
+          <p className="text-center text-[11px] tracking-[0.2em] text-starlight/80 [word-break:auto-phrase]">
+            {hasItem(data, item.id)
+              ? "所持しているあいだ、加護が働き続けます"
+              : "錬成陣に捧げたため、いまは手元にありません（宝箱で再び見つかれば加護が戻ります）"}
+          </p>
         )}
       </DialogContent>
     </Dialog>

@@ -396,6 +396,32 @@ const SE: Record<SeKey, (ctx: AudioContext, out: AudioNode) => void> = {
     tone(ctx, out, { freq: 784, at: 1.4, attack: 0.03, decay: 3, peak: 0.03 });
     tone(ctx, out, { freq: 784 * 2.01, at: 1.4, attack: 0.03, decay: 1.4, peak: 0.004 });
   },
+  // 古代文書の復元: 古い頁がほどけるような柔らかな和音が、ゆっくり立ちのぼる
+  restore: (ctx, out) => {
+    tone(ctx, out, { freq: 174.6, attack: 0.5, decay: 3.2, peak: 0.06 });
+    [349.2, 440, 523.25, 659.25].forEach((freq, i) => {
+      tone(ctx, out, { freq, at: 0.3 + i * 0.28, attack: 0.25, decay: 2.8, peak: 0.04 });
+    });
+    tone(ctx, out, { freq: 1046.5, at: 1.5, attack: 0.1, decay: 2.4, peak: 0.015 });
+  },
+  // 還元: 遺物がほどけて星屑へ沈んでいく、下降する短い響き
+  dissolve: (ctx, out) => {
+    tone(ctx, out, { freq: 880, toFreq: 440, attack: 0.02, decay: 0.6, peak: 0.045 });
+    tone(ctx, out, { freq: 659.25, toFreq: 329.6, at: 0.06, attack: 0.02, decay: 0.7, peak: 0.03 });
+    whoosh(ctx, out, { from: 1200, to: 300, duration: 0.6, peak: 0.015 });
+  },
+  // 神話遺物の錬成: 深い地鳴りのような礎、交差する光の和音、最後に重い鐘
+  craft: (ctx, out) => {
+    tone(ctx, out, { freq: 98, toFreq: 196, attack: 0.8, decay: 3.6, peak: 0.1 });
+    tone(ctx, out, { freq: 146.8, at: 0.2, attack: 0.8, decay: 3.4, peak: 0.05 });
+    whoosh(ctx, out, { from: 150, to: 900, duration: 2.2, peak: 0.03 });
+    [293.7, 370, 440, 587.3].forEach((freq, i) => {
+      tone(ctx, out, { freq, at: 1 + i * 0.22, attack: 0.3, decay: 3, peak: 0.04 });
+    });
+    tone(ctx, out, { freq: 196, at: 2.2, attack: 0.02, decay: 4, peak: 0.06 });
+    tone(ctx, out, { freq: 196 * 2.76, at: 2.2, attack: 0.02, decay: 2, peak: 0.012 });
+    tone(ctx, out, { freq: 587.3, at: 2.25, attack: 0.04, decay: 3.4, peak: 0.03 });
+  },
 };
 
 const softChains = new WeakMap<AudioNode, AudioNode>();

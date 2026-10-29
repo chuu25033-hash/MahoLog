@@ -30,7 +30,7 @@ import {
   activeSkin,
   armedCatalyst,
   getUserData,
-  isDiscovered,
+  hasItem,
   localStudyLogs,
   todayChantMinutes,
   userActions,
@@ -146,7 +146,8 @@ export function TimerPanel({
         );
         // 獲得MP = 勉強時間 × エリアの属性ブースト × 秘宝の加護 × 触媒
         // TODO: Supabase 接続時はボーナス分の MP も DB に保存する（現状はローカル表示のみ）
-        const owned = (id: string) => isDiscovered(getUserData(), id);
+        // 加護は手元にある秘宝・神話遺物・復元した文書だけが授ける（錬成に捧げた秘宝は外れる）
+        const owned = (id: string) => hasItem(getUserData(), id);
         const areaBoost = areaMultiplier(area, subject.name);
         const blessing = blessingMultiplier(owned, subject.name);
         const usedCatalyst = userActions.consumeCatalyst();

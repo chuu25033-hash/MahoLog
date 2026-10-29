@@ -7,7 +7,18 @@ import { AREAS, isAreaUnlocked, resolveArea } from "./areas";
 import { jstDateKey, startOfJstDay } from "./date";
 import { demoProfile } from "./demo";
 import { calcLevel, rankOf } from "./game";
-import { DEFAULT_SKIN, findItem, type CatalystItem, type Item, type Skin } from "./items";
+import { canCraft, canRestore, dissolveValue, fragmentsOf, memoryOf, surplusCount } from "./crafting";
+import {
+  DEFAULT_SKIN,
+  MYTHICS,
+  STARDUST_ORE,
+  findItem,
+  type CatalystItem,
+  type Item,
+  type MemoryItem,
+  type RelicItem,
+  type Skin,
+} from "./items";
 import { mockObservedNights } from "./star-memory";
 import { activeSubjectsOf } from "./subjects";
 import { TASKS, drawCatalyst, measureTask, periodKey, type TaskBoard, type TaskScope } from "./tasks";
@@ -290,6 +301,11 @@ export function isDiscovered(data: UserData, id: string) {
   return id in data.inventory;
 }
 
+/** いま手元にあるか（触媒を使い切ったり、秘宝を錬成に捧げたりすると図鑑には残るが手元からは消える） */
+export function hasItem(data: UserData, id: string) {
+  return (data.inventory[id] ?? 0) > 0;
+}
+
 export function activeSkin(data: UserData): Skin {
   const item = findItem(data.equipment.skinId);
   return item?.kind === "skin" ? item.skin : DEFAULT_SKIN;
@@ -469,6 +485,50 @@ export const userActions = {
       return withProgress({ ...s, tasks: claimed, inventory }, s.userProfile.totalMp + claim.mp);
     });
     return claim;
+  },
+
+  /** 古代文書の復元: 4葉の断片を1つずつ使い、星脈の記憶として登録する。復元できなければ null */
+  restoreDocument(documentId: string): MemoryItem | null {
+    if (!canRestore(load(), documentId)) return null;
+    const memory = memoryOf(documentId);
+    update((s) => {
+      const inventory = { ...s.inventory, [memory.id]: 1 };
+      for (const f of fragmentsOf(documentId)) inventory[f.id] = (inventory[f.id] ?? 0) - 1;
+      return { ...s, inventory };
+    });
+    return memory;
+  },
+
+  /** 余剰の遺物を星屑の原石へ還元する。得た原石の数を返す */
+  dissolve(itemId: string, amount: number): number {
+    const item = findItem(itemId);
+    if (!item) return 0;
+    const n = Math.min(amount, surplusCount(load(), item));
+    if (n <= 0) return 0;
+    const ore = n * dissolveValue(item);
+    update((s) => {
+      const left = (s.inventory[item.id] ?? 0) - n;
+      return {
+        ...s,
+        inventory: { ...s.inventory, [item.id]: left, [STARDUST_ORE.id]: (s.inventory[STARDUST_ORE.id] ?? 0) + ore },
+        // 装備中の触媒を使い切ったら装備も外す
+        equipment: { ...s.equipment, catalystId: s.equipment.catalystId === item.id && left <= 0 ? null : s.equipment.catalystId },
+      };
+    });
+    return ore;
+  },
+
+  /** 神話遺物の錬成: 星屑の原石と指定の秘宝を捧げて生み出す。錬成できなければ null */
+  craft(mythicId: string): RelicItem | null {
+    const mythic = MYTHICS.find((m) => m.id === mythicId);
+    if (!mythic?.recipe || !canCraft(load(), mythic)) return null;
+    const { ore, relics } = mythic.recipe;
+    update((s) => {
+      const inventory = { ...s.inventory, [mythic.id]: 1, [STARDUST_ORE.id]: (s.inventory[STARDUST_ORE.id] ?? 0) - ore };
+      for (const id of relics) inventory[id] = (inventory[id] ?? 0) - 1;
+      return { ...s, inventory };
+    });
+    return mythic;
   },
 
   /** 観測データの初期化 */

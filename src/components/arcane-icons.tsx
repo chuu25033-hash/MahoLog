@@ -80,26 +80,28 @@ export function ArrowGlyph({ className, title }: IconProps) {
 export function RankSigil({ numeral, animate = false, className }: { numeral: string; animate?: boolean; className?: string }) {
   const tier = Math.max(1, RANKS.findIndex((r) => r.numeral === numeral) + 1);
   const c = 32;
+  // 描き起こす演出では pathLength で線の長さを揃えるため non-scaling-stroke を外し、表示幅（size-24）で約 1px の太さにする
+  const stroke = animate ? { ...line, vectorEffect: undefined, strokeWidth: 0.67 } : line;
   const layers: ReactNode[] = [
     // I: 内なる円と、中央の灯
     <>
-      <circle cx={c} cy={c} r={9} {...line} pathLength={1} />
+      <circle cx={c} cy={c} r={9} {...stroke} pathLength={1} />
       <circle cx={c} cy={c} r={1.4} fill="currentColor" />
     </>,
     // II: 正三角形
-    <polygon key="triangle" points={polygon(c, c, 17, 3)} {...line} pathLength={1} />,
+    <polygon key="triangle" points={polygon(c, c, 17, 3)} {...stroke} pathLength={1} />,
     // III: 逆三角形を重ねて六芒星に
-    <polygon key="inverted" points={polygon(c, c, 17, 3, 180)} {...line} pathLength={1} />,
+    <polygon key="inverted" points={polygon(c, c, 17, 3, 180)} {...stroke} pathLength={1} />,
     // IV: 外周の円
-    <circle key="outer" cx={c} cy={c} r={23} {...line} pathLength={1} />,
+    <circle key="outer" cx={c} cy={c} r={23} {...stroke} pathLength={1} />,
     // V: 斜めに置いた正方形（星の座標）
-    <polygon key="square" points={polygon(c, c, 23, 4, 45)} {...line} opacity={0.6} pathLength={1} />,
+    <polygon key="square" points={polygon(c, c, 23, 4, 45)} {...stroke} opacity={0.6} pathLength={1} />,
     // VI: 外周の十二の刻み
     <>
       {Array.from({ length: 12 }, (_, i) => {
         const [x1, y1] = polar(c, c, 23, i * 30);
         const [x2, y2] = polar(c, c, 26, i * 30);
-        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} {...line} pathLength={1} />;
+        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} {...stroke} pathLength={1} />;
       })}
     </>,
     // VII: 六芒星の頂に灯る六つの星
@@ -110,14 +112,14 @@ export function RankSigil({ numeral, animate = false, className }: { numeral: st
       })}
     </>,
     // VIII: 破線の天球の輪
-    <circle key="dashed" cx={c} cy={c} r={28.5} {...line} strokeDasharray="1 3" opacity={0.7} />,
+    <circle key="dashed" cx={c} cy={c} r={28.5} {...stroke} strokeDasharray="1 3" opacity={0.7} />,
     // IX: 四方と四隅へ伸びる光条と、内側の小さな輪
     <>
-      <circle cx={c} cy={c} r={4.5} {...line} pathLength={1} />
+      <circle cx={c} cy={c} r={4.5} {...stroke} pathLength={1} />
       {Array.from({ length: 8 }, (_, i) => {
         const [x1, y1] = polar(c, c, 26, i * 45);
         const [x2, y2] = polar(c, c, i % 2 === 0 ? 31 : 29.5, i * 45);
-        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} {...line} pathLength={1} />;
+        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} {...stroke} pathLength={1} />;
       })}
     </>,
     // X: 中央の灯が四芒星となって輝き、印が完成する

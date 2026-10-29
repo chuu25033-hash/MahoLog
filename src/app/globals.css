@@ -500,6 +500,56 @@
   }
 }
 
+/* 神話遺物の錬成: 錬成陣が描き起こされ、光の線が回りながら交差し、閃光ののちに遺物が現れる */
+@keyframes craft-cross {
+  0% { opacity: 0; transform: rotate(-40deg) scale(0.4); }
+  45% { opacity: 1; }
+  100% { opacity: 0.3; transform: rotate(0deg) scale(1); }
+}
+
+@keyframes craft-flash {
+  0% { opacity: 0; transform: scale(0.2); }
+  30% { opacity: 0.85; }
+  100% { opacity: 0; transform: scale(2.6); }
+}
+
+@keyframes craft-reveal {
+  from { opacity: 0; transform: scale(0.8); filter: blur(4px); }
+}
+
+.craft-line {
+  stroke-dasharray: 1;
+  animation: sigil-draw 1.6s cubic-bezier(0.3, 0.6, 0.2, 1) both;
+  animation-delay: calc(var(--i) * 140ms);
+}
+
+.craft-cross {
+  animation: craft-cross 2.4s cubic-bezier(0.3, 0.6, 0.2, 1) 0.4s both;
+}
+
+.craft-flash {
+  opacity: 0;
+  animation: craft-flash 1.2s ease-out 2s both;
+}
+
+.craft-reveal {
+  animation: craft-reveal 1.2s ease-out 2.3s both;
+}
+
+.craft-caption {
+  animation: craft-reveal 1s ease-out 2.8s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .craft-line,
+  .craft-cross,
+  .craft-flash,
+  .craft-reveal,
+  .craft-caption {
+    animation: none;
+  }
+}
+
 @keyframes chest-shake {
   0%, 100% { transform: rotate(0deg); }
   20% { transform: rotate(-4deg); }

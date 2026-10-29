@@ -8,10 +8,13 @@ export type ItemType = "触媒" | "伝承" | "装置";
 
 export const ITEM_TYPES: ItemType[] = ["触媒", "伝承", "装置"];
 
+/** アイテムのレア度。SS（神話）は錬成でのみ生まれ、宝箱からは出ない */
+export type ItemRarity = Rarity | "SS";
+
 type ItemBase = {
   id: string;
   name: string;
-  rarity: Rarity;
+  rarity: ItemRarity;
   type: ItemType;
   /** 図鑑に記される解読文 */
   flavorText: string;
@@ -48,14 +51,49 @@ export type SkinItem = ItemBase & {
   skin: Skin;
 };
 
-/** 所持しているだけで加護を与える秘宝 */
+/** 所持しているだけで加護を与える秘宝（SS は錬成で生まれる神話遺物） */
 export type RelicItem = ItemBase & {
-  rarity: "A" | "S";
+  rarity: "A" | "S" | "SS";
   kind: "relic";
-  /** このステージ以降の宝箱で見つかる */
+  /** このステージ以降の宝箱で見つかる（神話遺物は錬成の目安） */
   stageId: number;
   effect: string;
   blessing: Blessing;
+  /** 神話遺物の錬成に要るもの */
+  recipe?: Recipe;
+};
+
+/** 錬成の材料: 星屑の原石の数と、捧げる秘宝 */
+export type Recipe = { ore: number; relics: string[] };
+
+/** 古代文書の断片（I〜IV）。同じ文書の4葉が揃うと復元できる */
+export type FragmentItem = ItemBase & {
+  rarity: "B";
+  kind: "fragment";
+  documentId: string;
+  /** 何葉目か（1〜4） */
+  part: number;
+  stageId: number;
+  effect?: undefined;
+};
+
+/** 復元した古代文書（星脈の記憶）。1冊ごとに全属性の獲得MPがわずかに高まる */
+export type MemoryItem = ItemBase & {
+  rarity: "S";
+  kind: "memory";
+  documentId: string;
+  stageId: number;
+  /** 復元して読める古代の記憶 */
+  memory: string[];
+  effect: string;
+  blessing: Blessing;
+};
+
+/** 錬成の素材（星屑の原石） */
+export type MaterialItem = ItemBase & {
+  rarity: "C";
+  kind: "material";
+  effect?: undefined;
 };
 
 /** 秘宝の加護 */
@@ -66,7 +104,7 @@ export type Blessing = {
   drop?: number;
 };
 
-export type Item = CatalystItem | LoreItem | SkinItem | RelicItem;
+export type Item = CatalystItem | LoreItem | SkinItem | RelicItem | FragmentItem | MemoryItem | MaterialItem;
 
 export type Skin = {
   /** 魔法陣の線 */
@@ -211,41 +249,248 @@ export const GUIDANCE_CATALYSTS: CatalystItem[] = [
   catalyst("g-aurora", "極光の輝石", "crystal", "#9ef0c9", 1.8, 0, "七夜を欠かさず歩んだ者にだけ授けられる極光の欠片。秘めた魔力は、ひと晩で星座ひとつを描くほど。"),
 ];
 
-export const ALL_ITEMS: Item[] = [...RELICS, ...SKINS, ...LORES, ...CATALYSTS, ...GUIDANCE_CATALYSTS];
+/** 古代文書: 各ステージに1冊。4葉の断片を集めて復元すると、世界の核心に触れる記憶が読める */
+export const DOCUMENTS: { id: string; stageId: number; title: string; color: string; memory: string[] }[] = [
+  {
+    id: "doc-1",
+    stageId: 1,
+    title: "灯火の誓約",
+    color: "#e2c974",
+    memory: [
+      "はじめに、世界には灯がひとつしかなかった。",
+      "それは誰かが知ろうとした、その瞬間にだけ生まれる小さな光だった。問いを抱いた者の机の上にだけ、灯はともる。",
+      "だから我らは誓う。灯を絶やさぬために、今宵もひとつ、まだ知らぬことを知ろうと。",
+      "――この誓いを読む者よ。あなたの机の灯もまた、最初の灯から分かたれたものである。",
+    ],
+  },
+  {
+    id: "doc-2",
+    stageId: 2,
+    title: "樹海の言の葉",
+    color: "#8fdcc4",
+    memory: [
+      "樹海の木々は、読まれた言葉を養分にして育つ。",
+      "声に出して読まれた一文は根となり、黙って考え抜かれた一文は幹となる。忘れられた言葉は落ち葉となって、次の誰かの足もとを柔らかくする。",
+      "迷ったときは耳を澄ませ。森はいつも、あなたがかつて読んだ言葉で道を囁いている。",
+    ],
+  },
+  {
+    id: "doc-3",
+    stageId: 3,
+    title: "星読みの手稿",
+    color: "#a882fb",
+    memory: [
+      "空の星は、かつてこの地で学んだ者たちの灯である。",
+      "ひとりが一夜を費やして理を解くたび、夜空にはひとつ星が増える。星読みたちが数えていたのは天体ではなく、先人たちの夜の数だった。",
+      "明日の星が今日より一つ多いのは、今夜、誰かが学ぶことを諦めなかったからだ。",
+    ],
+  },
+  {
+    id: "doc-4",
+    stageId: 4,
+    title: "凍れる時の碑文",
+    color: "#cfe9ff",
+    memory: [
+      "時は誰にも等しく流れる。けれど、深く集中した者の時だけは凍りつき、結晶となって残る。",
+      "大回廊を満たす氷は、すべて誰かの一時間である。触れれば冷たいが、決して溶けることはない。",
+      "費やした時は失われない。それは形を変えて、あなたの内に積もっていく。",
+    ],
+  },
+  {
+    id: "doc-5",
+    stageId: 5,
+    title: "熾火の錬成録",
+    color: "#f2a38d",
+    memory: [
+      "知識は錬成に似ている。ばらばらの素材も、熱を加え続ければいつか一つの理に溶け合う。",
+      "炉の火を絶やすな。たとえ今日の成果が灰に見えても、その灰はまだ温かい。",
+      "熾火はやがて炎となる。錬成録の最後の頁は、あなたが書き加えるために空けてある。",
+    ],
+  },
+  {
+    id: "doc-6",
+    stageId: 6,
+    title: "星冠の聖典",
+    color: "#fbf3d4",
+    memory: [
+      "世界の奥地に眠る秘術とは、特別な呪文ではなかった。",
+      "それは一夜一夜の学びを、一度も無駄と思わずに積み重ねること。最初の灯から始まり、樹海で言葉を拾い、星を数え、時を凍らせ、熾火を絶やさなかった者だけが、この祭壇に辿り着く。",
+      "ここに至ったあなたこそが、次の誰かにとっての最初の灯である。",
+    ],
+  },
+];
+
+const ROMAN_PARTS = ["I", "II", "III", "IV"];
+
+const FRAGMENT_TEXT = [
+  "表題と書き出しが残る、最初の一葉。",
+  "文の半ばで途切れた二葉目。滲んだインクの奥に、星の名がいくつか読み取れる。",
+  "焦げ跡の残る三葉目。誰かの手で何度も読み返された跡がある。",
+  "結びの一節が記された最後の葉。署名だけが、光にかざすと浮かび上がる。",
+];
+
+/** 古代文書の断片（各文書 I〜IV の4葉）。そのステージの宝箱で、伝承の品と同じ枠から見つかる */
+export const FRAGMENTS: FragmentItem[] = DOCUMENTS.flatMap((doc) =>
+  ROMAN_PARTS.map((numeral, i) => ({
+    id: `frag-${doc.stageId}-${i + 1}`,
+    rarity: "B" as const,
+    kind: "fragment" as const,
+    type: "伝承" as const,
+    name: `『${doc.title}』断片 ${numeral}`,
+    flavorText: `『${doc.title}』の断片。${FRAGMENT_TEXT[i]}`,
+    svgIcon: GLYPHS.parchment,
+    color: doc.color,
+    documentId: doc.id,
+    part: i + 1,
+    stageId: doc.stageId,
+  })),
+);
+
+/** 復元した古代文書。1冊につき全属性の獲得MP +1%（永久） */
+export const MEMORIES: MemoryItem[] = DOCUMENTS.map((doc) => ({
+  id: `mem-${doc.stageId}`,
+  rarity: "S",
+  kind: "memory",
+  type: "伝承",
+  name: `『${doc.title}』`,
+  flavorText: doc.memory[0],
+  svgIcon: GLYPHS.tome,
+  color: doc.color,
+  documentId: doc.id,
+  stageId: doc.stageId,
+  memory: doc.memory,
+  blessing: { mp: { rate: 0.01 } },
+  effect: blessingLabel({ mp: { rate: 0.01 } }),
+}));
+
+/** 錬成の素材。余った遺物を還元して得る */
+export const STARDUST_ORE: MaterialItem = {
+  id: "ore-stardust",
+  rarity: "C",
+  kind: "material",
+  type: "触媒",
+  name: "星屑の原石",
+  flavorText: "還元された遺物の魔力が、星屑となって凝り固まった原石。錬成陣に捧げれば、新たな形を得る。",
+  svgIcon: GLYPHS.crystal,
+  color: "#cfe9ff",
+};
+
+/** 神話遺物（SS）: 宝箱からは出ず、星屑の原石と秘宝を捧げる錬成でのみ生まれる */
+export const MYTHICS: RelicItem[] = [
+  {
+    ...relic(
+      "ss-sphere",
+      "SS",
+      "装置",
+      3,
+      "真理を象る天球儀",
+      "armillary",
+      "#c9b6ff",
+      { mp: { rate: 0.45, subjects: ["数学", "理科"] }, drop: 0.05 },
+      "調律器の環と観測者の数式がひとつに溶け合った天球儀。回せば世界の理がそのまま形を取り、見る者に答えではなく問いの美しさを示す。",
+    ),
+    recipe: { ore: 80, relics: ["r-armillary", "r-observer"] },
+  },
+  {
+    ...relic(
+      "ss-origin",
+      "SS",
+      "伝承",
+      5,
+      "万語を綴る原典",
+      "tome",
+      "#fbf3d4",
+      { mp: { rate: 0.45, subjects: ["国語", "英語", "社会"] } },
+      "あらゆる言葉の写本が、ただ一冊の原典へと還った姿。頁を開くたびに、読む者の母語でまだ誰も書いていない一節が浮かぶ。",
+    ),
+    recipe: { ore: 100, relics: ["r-codex", "r-kotodama", "r-epigraph"] },
+  },
+  {
+    ...relic(
+      "ss-astrolabe",
+      "SS",
+      "装置",
+      4,
+      "星海を巡る羅盤",
+      "compass",
+      "#9ef0c9",
+      { drop: 0.4 },
+      "羅針儀の針と黄昏の砂が錬り合わされた羅盤。針は宝の在処ではなく、まだ誰も辿り着いていない星の海を指し続ける。",
+    ),
+    recipe: { ore: 60, relics: ["r-sandtray", "r-compass"] },
+  },
+  {
+    ...relic(
+      "ss-starfire",
+      "SS",
+      "触媒",
+      6,
+      "始まりの星火",
+      "core",
+      "#f6e9bd",
+      { mp: { rate: 0.3 } },
+      "最初の星の芯と夜明けの輝石が重なり、ふたたび灯った始まりの火。この火の前では、あらゆる学びが一夜目の新しさを取り戻す。",
+    ),
+    recipe: { ore: 120, relics: ["r-starcore", "r-starstone"] },
+  },
+];
+
+/** 図鑑（秘術図鑑の一覧）に並ぶ遺物。断片・記憶・素材はそれぞれ専用の場所で扱う */
+export const ALL_ITEMS: Item[] = [...MYTHICS, ...RELICS, ...SKINS, ...LORES, ...CATALYSTS, ...GUIDANCE_CATALYSTS];
+
+const EVERY_ITEM: Item[] = [...ALL_ITEMS, ...FRAGMENTS, ...MEMORIES, STARDUST_ORE];
 
 export function findItem(id: string | null | undefined): Item | undefined {
-  return ALL_ITEMS.find((item) => item.id === id);
+  return EVERY_ITEM.find((item) => item.id === id);
 }
 
+/** 宝箱の抽選に使うレア度 */
 export const RARITIES: Rarity[] = ["S", "A", "B", "C"];
 
-export const RARITY_LABEL: Record<Rarity, string> = {
+/** 図鑑に並べるレア度（神話を含む） */
+export const CODEX_RARITIES: ItemRarity[] = ["SS", ...RARITIES];
+
+export const RARITY_LABEL: Record<ItemRarity, string> = {
+  SS: "神話",
   S: "至宝",
   A: "秘宝",
   B: "稀品",
   C: "常品",
 };
 
-/** 所持している秘宝の加護による獲得MPの倍率 */
+/** 加護を持つもの（秘宝・神話遺物・復元した古代文書） */
+const BLESSED: (RelicItem | MemoryItem)[] = [...RELICS, ...MYTHICS, ...MEMORIES];
+
+/** 所持している秘宝・神話遺物・古代文書の加護による獲得MPの倍率 */
 export function blessingMultiplier(owned: (id: string) => boolean, subjectName: string) {
-  return RELICS.filter((r) => owned(r.id) && r.blessing.mp && (!r.blessing.mp.subjects || r.blessing.mp.subjects.includes(subjectName)))
+  return BLESSED.filter((r) => owned(r.id) && r.blessing.mp && (!r.blessing.mp.subjects || r.blessing.mp.subjects.includes(subjectName)))
     .reduce((acc, r) => acc + r.blessing.mp!.rate, 1);
 }
 
-/** 所持している秘宝の加護による宝箱ドロップ率の倍率 */
+/** 所持している秘宝・神話遺物の加護による宝箱ドロップ率の倍率 */
 export function dropMultiplier(owned: (id: string) => boolean) {
-  return RELICS.filter((r) => owned(r.id)).reduce((acc, r) => acc + (r.blessing.drop ?? 0), 1);
+  return BLESSED.filter((r) => owned(r.id)).reduce((acc, r) => acc + (r.blessing.drop ?? 0), 1);
 }
+
+/** 稀品（B）の枠での伝承の品の重み。断片はそれぞれ 1（伝承の品 50%・断片 4葉で 50%） */
+const LORE_WEIGHT = 4;
 
 /** エリアで抽選対象になるアイテム */
 export function dropPool(area: Area): Record<Rarity, Item[]> {
   const relics = RELICS.filter((r) => r.stageId <= area.stageId);
   return {
     C: CATALYSTS,
-    B: LORES.filter((l) => l.areaId === area.id),
+    B: [...LORES.filter((l) => l.areaId === area.id), ...FRAGMENTS.filter((f) => f.stageId === area.stageId)],
     A: [...SKINS.filter((s) => s.stageId <= area.stageId), ...relics.filter((r) => r.rarity === "A")],
     S: relics.filter((r) => r.rarity === "S"),
   };
+}
+
+/** 抽選の重み: 触媒は種類ごとの weight、伝承の品は LORE_WEIGHT、それ以外は等しく 1 */
+function dropWeight(item: Item) {
+  if (item.kind === "catalyst") return item.weight;
+  if (item.kind === "lore") return LORE_WEIGHT;
+  return 1;
 }
 
 function pickWeighted<T>(list: T[], weight: (t: T) => number, random: () => number): T {
@@ -261,7 +506,7 @@ function pickWeighted<T>(list: T[], weight: (t: T) => number, random: () => numb
 /**
  * タイマー完了時のドロップ抽選。
  * 1. エリアの確率テーブル（S → A → B → C の順に区間を割り当て）でレア度を決める。秘宝の加護で各確率が上がる
- * 2. そのレア度のプールから1つ選ぶ（触媒は weight、それ以外は等確率）
+ * 2. そのレア度のプールから1つ選ぶ（dropWeight の重み付き。触媒は weight、稀品は伝承の品 4・断片 各1）
  */
 export function rollDrop(area: Area, random: () => number = Math.random, boost = 1): Item | null {
   const pool = dropPool(area);
@@ -270,7 +515,7 @@ export function rollDrop(area: Area, random: () => number = Math.random, boost =
   for (const rarity of RARITIES) {
     edge += area.drops[rarity] * boost;
     if (r < edge && pool[rarity].length > 0) {
-      return pickWeighted<Item>(pool[rarity], (i) => (i.kind === "catalyst" ? i.weight : 1), random);
+      return pickWeighted<Item>(pool[rarity], dropWeight, random);
     }
   }
   return null;

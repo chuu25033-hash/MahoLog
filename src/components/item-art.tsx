@@ -1,4 +1,4 @@
-import type { Rarity } from "@/lib/areas";
+import type { ItemRarity } from "@/lib/items";
 import { cn } from "@/lib/utils";
 
 /** 拡大縮小しても 1px を保つ光の線 */
@@ -38,7 +38,7 @@ export function ItemArt({
 }: {
   /** svgIcon（SVG パス） */
   icon: string;
-  rarity: Rarity;
+  rarity: ItemRarity;
   color: string;
   seed: string;
   locked?: boolean;
@@ -70,13 +70,23 @@ export function ItemArt({
             <polygon points="0,40 34.6,-20 -34.6,-20" {...hairline} />
           </g>
         )}
-        {rarity === "S" && (
+        {(rarity === "S" || rarity === "SS") && (
           // 至宝: 八芒星 {8/3} と外周の二重環
           <g stroke={stroke}>
             <circle r="47" strokeOpacity="0.3" {...hairline} />
             <polygon points={OCTAGRAM} strokeOpacity="0.24" {...hairline} />
             {[0, 90, 180, 270].map((deg) => (
               <polygon key={deg} points="0,-52 1.6,-48.5 0,-45 -1.6,-48.5" strokeOpacity="0.6" transform={`rotate(${deg})`} {...hairline} />
+            ))}
+          </g>
+        )}
+        {rarity === "SS" && (
+          // 神話: 至宝の紋様に、ずらした八芒星と十二の星の刻みを重ねる
+          <g stroke={stroke}>
+            <circle r="51" strokeOpacity="0.25" strokeDasharray="1 2" {...hairline} />
+            <polygon points={OCTAGRAM} strokeOpacity="0.2" transform="rotate(22.5)" {...hairline} />
+            {Array.from({ length: 12 }, (_, i) => (
+              <circle key={i} cy="-51" r="0.8" fill={stroke} stroke="none" transform={`rotate(${i * 30})`} />
             ))}
           </g>
         )}

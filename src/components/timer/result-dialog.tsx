@@ -46,6 +46,7 @@ const RARITY_TONE = {
   B: "border-starlight/45 text-starlight",
   A: "border-amethyst/55 text-amethyst",
   S: "border-starlight/70 text-starlight text-glow-gold",
+  SS: "border-starlight/80 text-starlight text-glow-gold",
 } as const;
 
 /** 詠唱完了後のパネル。成長の物語に沿って 成果 → 探求度 → 魔術階級 → 新たな領域 の順に進む */
@@ -384,7 +385,9 @@ function DropReveal({
             <span className={cn("rounded-full border px-2 text-[10px] tracking-[0.2em]", RARITY_TONE[drop.item.rarity])}>
               RARE {drop.item.rarity} · {drop.item.type}
             </span>
-            <span className="text-sm tracking-[0.15em] text-foreground">『{drop.item.name}』</span>
+            <span className="text-sm tracking-[0.15em] text-foreground">
+              {drop.item.kind === "fragment" ? drop.item.name : `『${drop.item.name}』`}
+            </span>
             <span className="text-[11px] text-muted-foreground">
               {drop.item.kind === "lore"
                 ? drop.isNew
@@ -398,7 +401,11 @@ function DropReveal({
                     ? drop.isNew
                       ? `${drop.item.effect}の加護を得た`
                       : "既に所持している秘宝だ"
-                    : drop.item.effect}
+                    : drop.item.kind === "fragment"
+                      ? drop.isNew
+                        ? "古代文書の断片だ（図鑑の「星脈の記憶」へ）"
+                        : "既に持っている断片だ（錬成陣で還元できる）"
+                      : drop.item.effect}
             </span>
           </div>
         ) : (
