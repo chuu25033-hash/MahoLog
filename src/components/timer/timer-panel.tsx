@@ -294,7 +294,7 @@ export function TimerPanel({
   return (
     <div className="grid h-full grid-cols-12 gap-3 p-3 lg:gap-4 lg:p-5">
       {/* 左: 設定パネル */}
-      <section className="glass col-span-4 flex min-h-0 flex-col gap-4 scroll-area rounded-2xl p-3 short:gap-3 lg:p-5">
+      <section className="glass col-span-4 flex min-h-0 flex-col gap-3 scroll-area scrollbar-none rounded-2xl p-3 short:gap-2 lg:p-4">
         <div className="grid grid-cols-2 gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm">
           {(
             [
@@ -320,7 +320,7 @@ export function TimerPanel({
         </div>
 
         <div>
-          <p className="mb-2 text-xs tracking-[0.2em] text-muted-foreground">属性（科目 ➔ 詳細）</p>
+          <p className="mb-1.5 text-xs tracking-[0.2em] text-muted-foreground">属性（科目 ➔ 詳細）</p>
           <SubjectPicker
             subjects={subjects}
             subjectId={subjectId}
@@ -334,10 +334,10 @@ export function TimerPanel({
         </div>
 
         {mode === "pomodoro" && (
-          <>
+          <div className="space-y-1.5">
             <OptionRow label="詠唱時間" unit="分" options={FOCUS_MINUTE_OPTIONS} value={focusMin} onChange={setFocusMin} disabled={phase !== "idle"} />
             <OptionRow label="静息時間" unit="分" options={BREAK_OPTIONS} value={breakMin} onChange={setBreakMin} disabled={phase !== "idle"} />
-          </>
+          </div>
         )}
         {mode === "stopwatch" && (
           <p className="text-xs leading-relaxed text-muted-foreground">
@@ -345,7 +345,7 @@ export function TimerPanel({
           </p>
         )}
 
-        <div className="space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-2.5 text-xs tracking-wider">
+        <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-2.5 text-xs tracking-wider">
           <p className="flex items-center gap-1.5 text-muted-foreground">
             <MapPin className="size-3.5 text-aqua/80" strokeWidth={1.25} />
             滞在中 <span className="font-display text-[10px] text-starlight/80">AREA {area.id}</span>
@@ -387,7 +387,7 @@ export function TimerPanel({
           </div>
         </div>
 
-        <div className="mt-auto space-y-1 border-t border-white/10 pt-3 text-xs tracking-wider text-muted-foreground">
+        <div className="mt-auto space-y-0.5 border-t border-white/10 pt-2 text-xs tracking-wider text-muted-foreground">
           <p className="flex items-baseline justify-between gap-2">
             本日の獲得魔力
             <span>
@@ -551,16 +551,16 @@ function OptionRow({
   disabled: boolean;
 }) {
   return (
-    <div>
-      <p className="mb-2 text-xs tracking-[0.2em] text-muted-foreground">{label}</p>
-      <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+    <div className="flex items-center gap-2">
+      <p className="w-14 shrink-0 text-xs tracking-[0.2em] whitespace-nowrap text-muted-foreground">{label}</p>
+      <div className="grid flex-1 gap-1.5" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
         {options.map((o) => (
           <button
             key={o}
             disabled={disabled}
             onClick={() => onChange(o)}
             className={cn(
-              "rounded-xl border py-1.5 font-display text-base transition-all duration-300 disabled:opacity-50",
+              "rounded-lg border py-1 font-display text-sm transition-all duration-300 disabled:opacity-50",
               o === value
                 ? "border-starlight/55 bg-starlight/[0.08] text-starlight shadow-[0_0_12px_-3px_rgba(226,201,116,0.45)]"
                 : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
