@@ -643,3 +643,57 @@
   .guidance-mote { animation: none; }
   .guidance-mote { display: none; }
 }
+
+/* ---------- 星図の記憶 ---------- */
+/* 星から星へ光の線が伸びる */
+@keyframes memory-trace {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+.memory-trace {
+  stroke-dasharray: 1;
+  animation: memory-trace var(--dur, 0.45s) ease-out var(--delay, 0s) both;
+}
+
+/* 線が届いた瞬間に星が灯る */
+@keyframes memory-star-in {
+  0% { opacity: 0; transform: scale(0.2); }
+  60% { opacity: 1; transform: scale(1.25); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.memory-star {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: memory-star-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) var(--delay, 0s) both;
+}
+
+.memory-star-core {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.4s ease, filter 0.4s ease;
+}
+
+/* 7夜が揃った週の星座がぼんやり浮かび上がり、ゆるやかに呼吸する */
+@keyframes memory-silhouette-in {
+  from { opacity: 0; filter: blur(3px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+@keyframes memory-silhouette-breath {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.memory-silhouette {
+  animation:
+    memory-silhouette-in 2.4s ease-out var(--delay, 0s) both,
+    memory-silhouette-breath 7s ease-in-out calc(var(--delay, 0s) + 2.4s) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-trace,
+  .memory-star,
+  .memory-silhouette { animation: none; }
+}

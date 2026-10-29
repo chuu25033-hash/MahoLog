@@ -10,7 +10,7 @@ const ITEMS = [
   { href: "/timer", label: "詠唱", icon: Sparkles, ready: true },
   { href: "/collection", label: "図鑑", icon: BookMarked, ready: true },
   { href: "/trials", label: "星の試練", icon: Swords, ready: false },
-  { href: "/history", label: "観測記録", icon: CalendarDays, ready: false },
+  { href: "/history", label: "観測記録", icon: CalendarDays, ready: true },
   { href: "/ranking", label: "ランキング", icon: Trophy, ready: false },
   { href: "/settings", label: "設定", icon: Settings, ready: false },
 ] as const;
