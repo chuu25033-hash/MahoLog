@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { BookMarked, BookOpen, CalendarDays, Home, LogOut, Settings, Sparkles, Swords, Trophy } from "lucide-react";
+import { BookMarked, CalendarDays, Home, LogOut, Settings, Sparkles, Swords, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
@@ -35,11 +35,6 @@ export function NavRail({ signOutAction, trials }: { signOutAction?: () => Promi
 
   return (
     <nav className="glass flex h-full w-16 shrink-0 flex-col items-center gap-1 rounded-none py-3 lg:w-20">
-      <Link href="/dashboard" className="mb-3 flex flex-col items-center gap-0.5 text-starlight" aria-label="マホログ 魔術書庫">
-        <BookOpen className="size-6" strokeWidth={1.25} />
-        <span className="text-[10px] tracking-[0.2em] text-glow-gold">マホログ</span>
-      </Link>
-
       {ITEMS.map(({ href, label, icon: Icon, ready }) => {
         if (href === "/trials" && trials) return <div key={href}>{trials}</div>;
         const active = pathname === href;
