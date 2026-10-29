@@ -752,43 +752,10 @@
 
 .origin-epigraph { animation: origin-epigraph-in 2.4s ease-out both; }
 
-/* ---------- 遠い世界線の残光（他の探究者の気配） ---------- */
-@keyframes worldline-pulse {
-  0% { opacity: 0; transform: scale(0.4); }
-  20% { opacity: 0.85; transform: scale(1); }
-  38% { opacity: 0.3; }
-  56% { opacity: 0.7; }
-  100% { opacity: 0; transform: scale(0.6); }
-}
-
-@keyframes worldline-ripple {
-  0% { opacity: 0.5; transform: scale(0.5); }
-  100% { opacity: 0; transform: scale(4); }
-}
-
-.worldline-dot {
-  animation: worldline-pulse var(--life) ease-in-out forwards;
-}
-
-.worldline-dot::after {
-  content: "";
-  position: absolute;
-  inset: -2px;
-  border-radius: 9999px;
-  border: 1px solid currentColor;
-  opacity: 0;
-  animation: worldline-ripple 3.2s ease-out 0.4s;
-}
-
-/* 見つめている間は消えずに留まる */
-.worldline:hover .worldline-dot,
-.worldline:hover .worldline-dot::after { animation-play-state: paused; }
-
 @media (prefers-reduced-motion: reduce) {
   .candle-glow,
   .candle-flame,
   .origin-epigraph { animation: none; }
-  .worldline { display: none; }
 }
 
 /* 古代の秘術図鑑: 解読ダイアログの遺物はゆっくり浮遊し、背後の魔法陣が静かに回転・発光する */
@@ -880,4 +847,47 @@
 
 .claim-float {
   animation: claim-float 1.8s ease-out forwards;
+}
+
+/* ---------- 結びし世界線: 相手の詠唱の開始・完了を知らせる光の一筋と、気配の灯 ---------- */
+@keyframes worldline-sweep {
+  0% { transform: translateX(-40vw); opacity: 0; }
+  15% { opacity: 1; }
+  80% { opacity: 0.8; }
+  100% { transform: translateX(120vw); opacity: 0; }
+}
+
+.worldline-sweep {
+  position: absolute;
+  left: 0;
+  width: 36vw;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--pulse-color) 70%, #fff8dc 92%, transparent);
+  box-shadow: 0 0 10px 1px var(--pulse-color);
+  opacity: 0;
+  animation: worldline-sweep 4s ease-in-out forwards;
+}
+
+@keyframes worldline-note {
+  0% { opacity: 0; transform: translateY(4px); }
+  15%, 75% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; }
+}
+
+.worldline-note {
+  animation: worldline-note 4.2s ease-out forwards;
+}
+
+@keyframes presence-glow {
+  0%, 100% { box-shadow: 0 0 3px rgba(113, 226, 239, 0.5); }
+  50% { box-shadow: 0 0 9px 1px rgba(113, 226, 239, 0.9); }
+}
+
+.presence-glow {
+  animation: presence-glow 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .worldline-sweep { display: none; }
+  .presence-glow { animation: none; box-shadow: 0 0 6px rgba(113, 226, 239, 0.8); }
 }

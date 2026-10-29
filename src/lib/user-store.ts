@@ -11,6 +11,7 @@ import { DEFAULT_SKIN, findItem, type CatalystItem, type Item, type Skin } from 
 import { mockObservedNights } from "./star-memory";
 import { activeSubjectsOf } from "./subjects";
 import { TASKS, drawCatalyst, measureTask, periodKey, type TaskBoard, type TaskScope } from "./tasks";
+import { generateWorldlineCode } from "./worldlines";
 import type { Profile, StudyLog, StudyMode, Subject } from "./types";
 
 export const STORAGE_KEY = "maholog_user_data";
@@ -82,6 +83,8 @@ export type UserData = {
   settings: UserSettings;
   /** 試練（日課の儀式・週間の大誓約）の進捗と受取状況 */
   tasks: Record<TaskScope, TaskBoard>;
+  /** 結びし世界線（デモモード用。Supabase 接続時は DB に持つ）: 自分の世界線IDと、結んだ相手の世界線ID */
+  worldlines: { code: string; bonds: { code: string; boundAt: string }[] };
 };
 
 const unlockedAt = (totalMp: number) => AREAS.filter((a) => isAreaUnlocked(a, totalMp)).map((a) => a.id);
@@ -97,6 +100,7 @@ export function initialUserData(): UserData {
     equipment: { catalystId: null, skinId: null },
     settings: { defaultFocusMinutes: 25, liteMode: false, chime: true },
     tasks: { daily: { periodKey: "", items: {} }, weekly: { periodKey: "", items: {} } },
+    worldlines: { code: generateWorldlineCode(), bonds: [] },
   };
 }
 
@@ -115,6 +119,7 @@ function normalize(saved: Partial<UserData>): UserData {
     equipment: { ...base.equipment, ...saved.equipment },
     settings: { ...base.settings, ...settings },
     tasks: { ...base.tasks, ...saved.tasks },
+    worldlines: { ...base.worldlines, ...saved.worldlines },
   };
 }
 
@@ -224,7 +229,10 @@ function load(): UserData {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      state = normalize(JSON.parse(raw) as Partial<UserData>);
+      const saved = JSON.parse(raw) as Partial<UserData>;
+      state = normalize(saved);
+      // 世界線IDは一度発行したら変えない
+      if (!saved.worldlines) persist();
       return state;
     }
   } catch {}
@@ -411,6 +419,22 @@ export const userActions = {
     } catch {
       return false;
     }
+  },
+
+  /** デモモード: 世界線IDで結ぶ（模擬の相手なので申し出を待たずに結ばれる） */
+  bindWorldline(code: string): "accepted" | "exists" | "self" {
+    const { worldlines } = load();
+    if (code === worldlines.code) return "self";
+    if (worldlines.bonds.some((b) => b.code === code)) return "exists";
+    update((s) => ({
+      ...s,
+      worldlines: { ...s.worldlines, bonds: [...s.worldlines.bonds, { code, boundAt: new Date().toISOString() }] },
+    }));
+    return "accepted";
+  },
+
+  unbindWorldline(code: string) {
+    update((s) => ({ ...s, worldlines: { ...s.worldlines, bonds: s.worldlines.bonds.filter((b) => b.code !== code) } }));
   },
 
   /** 試練の進捗を最新にする（変化がなければ保存も通知もしない） */

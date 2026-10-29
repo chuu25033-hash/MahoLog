@@ -21,6 +21,7 @@ import { timerSummary } from "@/lib/aggregate";
 import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
 import { resolveSubSubject } from "@/lib/subjects";
+import { setChantPresence } from "@/lib/worldline-store";
 import { CATALYSTS, blessingMultiplier, dropMultiplier, rollDrop } from "@/lib/items";
 import {
   FOCUS_MINUTE_OPTIONS,
@@ -187,6 +188,13 @@ export function TimerPanel({
     },
     [area, isDemo, mode, subject, subSubject, subjects, totalMp, weekTotals],
   );
+
+  // 詠唱している間だけ、結ばれた世界線へ「深き集中」の気配を残す（記録時の完了は DB 側で刻まれる）
+  useEffect(() => {
+    if (phase !== "focus") return;
+    setChantPresence(true, area.id);
+    return () => setChantPresence(false);
+  }, [phase, area.id]);
 
   // ポモドーロ: 勉強・休憩の終了判定
   useEffect(() => {

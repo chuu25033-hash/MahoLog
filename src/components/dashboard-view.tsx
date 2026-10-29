@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BookMarked, CalendarDays, Moon, Settings, Sparkles, Sun, Swords, Wand2 } from "lucide-react";
+import { BookMarked, CalendarDays, Moon, Orbit, Settings, Sparkles, Sun, Swords, Wand2 } from "lucide-react";
 import { AreaAmbience } from "@/components/area-ambience";
+import { BoundWorldlinesDialog } from "@/components/bound-worldlines-dialog";
 import { MpBar } from "@/components/mp-bar";
 import { PageLoading } from "@/components/page-loading";
 import { RadarPanel } from "@/components/radar-panel";
@@ -12,7 +13,6 @@ import { TrialsDialog, readyCount } from "@/components/trials-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { WizardAvatar } from "@/components/wizard-avatar";
-import { WorldlineEchoes } from "@/components/worldline-echoes";
 import { dashboardSummary, type DashboardSummary } from "@/lib/aggregate";
 import { formatMinutes, levelProgress, rankOf } from "@/lib/game";
 import { activeSubjectsOf } from "@/lib/subjects";
@@ -44,9 +44,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
   return (
     <>
       <AreaAmbience totalMp={profile.total_study_time} />
-      <WorldlineEchoes />
-      {/* 隙間は背景の世界線の残光へホバーを通す */}
-      <div data-open-sky className="scroll-area grid h-full grid-cols-12 gap-3 p-3 animate-in fade-in duration-700 lg:gap-4 lg:p-5">
+      <div className="scroll-area grid h-full grid-cols-12 gap-3 p-3 animate-in fade-in duration-700 lg:gap-4 lg:p-5">
         {/* 左: プロフィール・ステージ・合計 */}
         <section className="col-span-4 flex flex-col gap-3">
           <Card className="gap-3 px-4">
@@ -163,7 +161,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
 
 const tileClass = cn(
   buttonVariants({ variant: "outline" }),
-  "group relative h-full min-h-20 flex-col gap-1 rounded-2xl px-2 py-3 text-sm tracking-[0.2em] whitespace-nowrap",
+  "group relative h-full min-h-16 flex-col gap-1 rounded-2xl px-2 py-2 text-sm tracking-[0.2em] whitespace-nowrap",
 );
 
 function TileContent({ icon: Icon, label, sub }: { icon: typeof Swords; label: string; sub: string }) {
@@ -180,6 +178,7 @@ function TileContent({ icon: Icon, label, sub }: { icon: typeof Swords; label: s
 function MenuTiles({ subjects }: { subjects: Subject[] }) {
   const data = useUserData();
   const [trialsOpen, setTrialsOpen] = useState(false);
+  const [worldlinesOpen, setWorldlinesOpen] = useState(false);
   const ready = readyCount(data);
 
   // 受け取れる報酬の印を灯すため、表示した時点の進捗に測り直す
@@ -188,7 +187,7 @@ function MenuTiles({ subjects }: { subjects: Subject[] }) {
   }, [subjects]);
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-3 gap-2">
+    <div className="grid min-h-0 flex-1 grid-cols-2 gap-2">
       <button type="button" onClick={() => setTrialsOpen(true)} aria-haspopup="dialog" className={cn(tileClass, ready > 0 && "claim-glow border-starlight/45")}>
         <TileContent icon={Swords} label="星の試練" sub="TRIALS" />
         {ready > 0 && (
@@ -200,10 +199,14 @@ function MenuTiles({ subjects }: { subjects: Subject[] }) {
       <Link href="/history" className={tileClass}>
         <TileContent icon={CalendarDays} label="魔導の軌跡" sub="CHRONICLE" />
       </Link>
+      <button type="button" onClick={() => setWorldlinesOpen(true)} aria-haspopup="dialog" className={tileClass}>
+        <TileContent icon={Orbit} label="結びし世界線" sub="BOUND WORLDLINES" />
+      </button>
       <Link href="/settings" className={tileClass}>
         <TileContent icon={Settings} label="設定" sub="SETTINGS" />
       </Link>
       {trialsOpen && <TrialsDialog subjects={subjects} onClose={() => setTrialsOpen(false)} />}
+      {worldlinesOpen && <BoundWorldlinesDialog onClose={() => setWorldlinesOpen(false)} />}
     </div>
   );
 }
