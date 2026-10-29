@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { FastForward, Hourglass, MapPin, Moon, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
 import { saveStudyLog } from "@/app/actions/study";
+import { ArrowGlyph } from "@/components/arcane-icons";
 import { BackToLibrary } from "@/components/back-to-library";
 import { ItemArt } from "@/components/item-art";
 import { MagicCircle } from "@/components/magic-circle";
@@ -352,7 +353,7 @@ export function TimerPanel({
           </div>
 
           <div>
-            <p className="mb-1.5 text-xs tracking-[0.2em] text-muted-foreground">属性（科目 ➔ 詳細）</p>
+            <p className="mb-1.5 text-xs tracking-[0.2em] text-muted-foreground">属性（科目 <ArrowGlyph /> 詳細）</p>
             <SubjectPicker
               subjects={subjects}
               subjectId={subject?.id ?? null}

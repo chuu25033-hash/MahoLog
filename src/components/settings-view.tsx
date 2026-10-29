@@ -2,6 +2,7 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import { Bell, Check, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Sparkle, Upload, UserRound, Volume2, Wind } from "lucide-react";
+import { ArrowGlyph } from "@/components/arcane-icons";
 import { BackToLibrary } from "@/components/back-to-library";
 import { PageLoading } from "@/components/page-loading";
 import { SubjectPicker } from "@/components/subject-picker";
@@ -120,7 +121,14 @@ export function SettingsView({
         <Panel icon={Hexagon} title="詠唱の領域" label="DOMAINS">
           <ActiveSubjectsField subjects={subjects} activeIds={activeSubjects.map((s) => s.id)} />
 
-          <Field label="主軸カテゴリ ➔ 詳細科目" hint="詠唱画面で最初に選ばれます">
+          <Field
+            label={
+              <span>
+                主軸カテゴリ <ArrowGlyph /> 詳細科目
+              </span>
+            }
+            hint="詠唱画面で最初に選ばれます"
+          >
             <SubjectPicker
               subjects={activeSubjects}
               subjectId={mainSubject?.id ?? null}
@@ -259,7 +267,7 @@ function Panel({
   );
 }
 
-function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+function Field({ label, hint, children }: { label: ReactNode; hint?: string; children: ReactNode }) {
   return (
     <div>
       <p className="mb-2 flex items-baseline justify-between gap-2 text-xs tracking-[0.2em] whitespace-nowrap text-muted-foreground">

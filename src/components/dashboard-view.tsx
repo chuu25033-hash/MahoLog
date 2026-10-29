@@ -13,6 +13,7 @@ import { TrialsDialog, readyCount } from "@/components/trials-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { WizardAvatar } from "@/components/wizard-avatar";
+import { RankSigil } from "@/components/arcane-icons";
 import { dashboardSummary, type DashboardSummary } from "@/lib/aggregate";
 import { formatMinutes, levelProgress, rankOf } from "@/lib/game";
 import { activeSubjectsOf } from "@/lib/subjects";
@@ -49,13 +50,14 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
         <section className="col-span-4 flex min-h-0 flex-col gap-3 short:gap-2">
           <Card className="shrink-0 gap-3 px-4 compact:gap-2 compact:py-3 short:py-2">
             <div className="flex items-center gap-3">
-              <WizardAvatar avatar={profile.avatar_url} className="short:size-9 short:text-lg" />
+              <WizardAvatar avatar={profile.avatar_url} className="short:size-9" />
               <div className="min-w-0">
                 <p className="truncate text-base tracking-wider whitespace-nowrap">
                   <span className="text-[11px] tracking-[0.2em] text-muted-foreground">秘術探究者・</span>
                   {profile.username}
                 </p>
-                <p className="truncate text-[11px] tracking-[0.2em] whitespace-nowrap text-starlight/85">
+                <p className="flex items-center truncate text-[11px] tracking-[0.2em] whitespace-nowrap text-starlight/85">
+                  <RankSigil numeral={rank.numeral} className="mr-1 size-5 shrink-0 text-starlight" />
                   <span className="mr-1.5 font-display text-[10px] tracking-[0.2em] text-starlight/60">RANK {rank.numeral}</span>
                   {rank.title}
                 </p>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronRight, Crown, Gift, Hourglass, MapPinned, Sparkles } from "lucide-react";
+import { ChevronRight, Gift, Hourglass, MapPinned, Sparkles } from "lucide-react";
+import { ArrowGlyph, RankSigil } from "@/components/arcane-icons";
 import { ItemArt, TreasureChest } from "@/components/item-art";
 import { MagicRadar } from "@/components/magic-radar";
 import { MpBar } from "@/components/mp-bar";
@@ -167,7 +168,12 @@ function ResultPanel({ result, subjects, onClaimed }: { result: StudyResult; sub
         <DialogDescription>
           <span className="text-foreground">
             {result.subject.name}
-            {result.subSubject && ` ➔ ${result.subSubject}`}
+            {result.subSubject && (
+              <>
+                {" "}
+                <ArrowGlyph className="text-muted-foreground" /> {result.subSubject}
+              </>
+            )}
           </span>{" "}
           の魔力が高まった
         </DialogDescription>
@@ -283,7 +289,7 @@ function RankPanel({ level }: { level: number }) {
       </DialogTitle>
       <div className="rank-line w-full" />
       <div className="flex animate-in flex-col items-center gap-2 fade-in slide-in-from-bottom-2 duration-1000 [animation-delay:700ms] [animation-fill-mode:both]">
-        <Crown className="size-6 text-starlight" strokeWidth={1} />
+        <RankSigil numeral={rank.numeral} animate className="size-24 text-starlight drop-shadow-[0_0_6px_rgba(226,201,116,0.5)] short:size-16" />
         <p className="font-display text-sm tracking-[0.4em] whitespace-nowrap text-starlight/80">
           <span className="-mr-[0.4em]">RANK {rank.numeral}</span>
         </p>

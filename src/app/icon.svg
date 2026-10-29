@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <circle cx="24" cy="24" r="24" fill="#080c16"/>
+  <g fill="none" stroke="#e2c974" stroke-width="2" stroke-linejoin="round">
+    <circle cx="24" cy="24" r="21" opacity="0.55"/>
+    <circle cx="24" cy="24" r="17.5"/>
+    <polygon points="24,6.5 39.16,32.75 8.84,32.75"/>
+  </g>
+  <circle cx="24" cy="24" r="5" fill="#e2c974" opacity="0.2"/>
+  <circle cx="24" cy="24" r="2.4" fill="#fff4cf"/>
+</svg>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Check, Gem, Sparkles } from "lucide-react";
+import { RankSigil, Sparkle } from "@/components/arcane-icons";
 import { ItemArt } from "@/components/item-art";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { GUIDANCE_CYCLE, claimGuidance, pendingGuidance } from "@/lib/celestial-guidance";
@@ -66,7 +67,10 @@ export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClo
             <span className="shrink-0">
               累積魔力 <span className="font-display text-sm text-starlight text-glow-gold">{totalMp.toLocaleString()}</span>
               <span className="font-display text-[10px]"> MP</span>
-              <span className="ml-2 font-display text-[10px] tracking-[0.2em] text-starlight/70">RANK {rank.numeral}</span>
+              <span className="ml-2 inline-flex items-center gap-1 align-middle font-display text-[10px] tracking-[0.2em] text-starlight/70">
+                <RankSigil numeral={rank.numeral} className="size-3.5 text-starlight" />
+                RANK {rank.numeral}
+              </span>
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -178,11 +182,11 @@ function GuidanceRow({ data, onClaimed }: { data: UserData; onClaimed: () => voi
               <span
                 key={i}
                 className={cn(
-                  "text-[10px] leading-none",
+                  "size-2.5",
                   i < lit ? "text-starlight text-glow-gold" : guidance && i === lit ? "text-starlight/50" : "text-white/15",
                 )}
               >
-                ✦
+                <Sparkle className="size-full" />
               </span>
             ))}
           </div>

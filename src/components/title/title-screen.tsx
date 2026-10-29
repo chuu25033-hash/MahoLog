@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArcaneLogo } from "@/components/arcane-icons";
 import { VEIL_COVER_MS, coverScreen } from "@/components/transition-veil";
 import { pendingGuidance } from "@/lib/celestial-guidance";
 import { soundManager } from "@/lib/sound/sound-manager";
@@ -120,7 +121,7 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
           aria-hidden
         >
           <span className="h-px w-16 bg-gradient-to-r from-transparent to-starlight/50" />
-          <span className="text-[10px]">✦</span>
+          <ArcaneLogo className="size-6 text-starlight/80 drop-shadow-[0_0_6px_rgba(226,201,116,0.5)]" />
           <span className="h-px w-16 bg-gradient-to-l from-transparent to-starlight/50" />
         </div>
 

@@ -1,6 +1,7 @@
+import { ArrowGlyph } from "@/components/arcane-icons";
 import { cn } from "@/lib/utils";
 
-/** 選択中の科目を「理科 ➔ 物理」の形で、1px の二重線とルーン文字の枠に収めて示す */
+/** 選択中の科目を「理科 › 物理」の形で、1px の二重線とルーン文字の枠に収めて示す */
 export function SubjectRuneChip({
   name,
   subSubject,
@@ -26,7 +27,7 @@ export function SubjectRuneChip({
       {subSubject && (
         <>
           <span className="text-[10px] tracking-normal text-muted-foreground" aria-label="の">
-            ➔
+            <ArrowGlyph className="size-3" />
           </span>
           <span className="truncate text-[#e8fbfd]">{subSubject}</span>
         </>

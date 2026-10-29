@@ -472,6 +472,34 @@
   }
 }
 
+/* 魔術階級の印: 層を内側から順に、線で描き起こす */
+@keyframes sigil-fade {
+  from { opacity: 0; }
+}
+
+@keyframes sigil-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+
+.sigil-layer {
+  animation: sigil-fade 0.8s ease-out both;
+  animation-delay: calc(var(--i) * 160ms + 400ms);
+}
+
+.sigil-layer [pathLength] {
+  stroke-dasharray: 1;
+  animation: sigil-draw 1.4s cubic-bezier(0.3, 0.6, 0.2, 1) both;
+  animation-delay: calc(var(--i) * 160ms + 400ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sigil-layer,
+  .sigil-layer [pathLength] {
+    animation: none;
+  }
+}
+
 @keyframes chest-shake {
   0%, 100% { transform: rotate(0deg); }
   20% { transform: rotate(-4deg); }
