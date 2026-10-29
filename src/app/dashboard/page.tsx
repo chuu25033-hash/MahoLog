@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { WizardAvatar } from "@/components/wizard-avatar";
 import { WorldlineEchoes } from "@/components/worldline-echoes";
 import { getDashboardData } from "@/lib/data";
-import { formatMinutes, levelProgress } from "@/lib/game";
+import { formatMinutes, levelProgress, rankOf } from "@/lib/game";
 import { cn } from "@/lib/utils";
 
 const MODE_LABEL = { pomodoro: "律動の詠唱", stopwatch: "無窮の詠唱" } as const;
@@ -20,6 +20,7 @@ const MODE_LABEL = { pomodoro: "律動の詠唱", stopwatch: "無窮の詠唱" }
 async function HomeContent() {
   const { profile, totals, radar, recentLogs } = await getDashboardData();
   const level = levelProgress(profile.total_study_time);
+  const rank = rankOf(level.level);
 
   return (
     <>
@@ -33,15 +34,19 @@ async function HomeContent() {
             <div className="flex items-center gap-3">
               <WizardAvatar avatar={profile.avatar_url} />
               <div className="min-w-0">
-                <p className="truncate text-base tracking-wider">{profile.username}</p>
-                <p className="truncate text-[11px] tracking-[0.2em] whitespace-nowrap text-muted-foreground">
-                  秘術探究者
-                  <span className="ml-1.5 font-display text-[9px] tracking-[0.2em] text-starlight/60">ARCANE SEEKER</span>
+                <p className="truncate text-base tracking-wider whitespace-nowrap">
+                  <span className="text-[11px] tracking-[0.2em] text-muted-foreground">秘術探究者・</span>
+                  {profile.username}
+                </p>
+                <p className="truncate text-[11px] tracking-[0.2em] whitespace-nowrap text-starlight/85">
+                  <span className="mr-1.5 font-display text-[10px] tracking-[0.2em] text-starlight/60">RANK {rank.numeral}</span>
+                  {rank.title}
                 </p>
               </div>
-              <div className="ml-auto text-right">
-                <p className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">LEVEL</p>
+              <div className="ml-auto shrink-0 text-right">
+                <p className="text-[10px] tracking-[0.3em] whitespace-nowrap text-muted-foreground">探求度</p>
                 <p className="font-display text-3xl leading-none text-starlight-gradient">{level.level}</p>
+                <p className="font-display text-[9px] tracking-[0.2em] whitespace-nowrap text-starlight/60">PHASE {level.level}</p>
               </div>
             </div>
             <div>
@@ -51,7 +56,7 @@ async function HomeContent() {
                   <span className="font-display"> MP</span>
                 </span>
                 <span className="text-muted-foreground">
-                  次のLvまで <span className="font-display text-aqua">{level.remaining}</span>
+                  次なる感応まで <span className="font-display text-aqua">{level.remaining}</span>
                   <span className="font-display"> MP</span>
                 </span>
               </div>

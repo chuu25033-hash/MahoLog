@@ -7,7 +7,7 @@ import { MagicRadar } from "@/components/magic-radar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import type { Area } from "@/lib/areas";
-import { calcLevel, stageProgress } from "@/lib/game";
+import { calcLevel, rankOf, stageProgress } from "@/lib/game";
 import { RARITY_LABEL, type CatalystItem, type Item } from "@/lib/items";
 import type { Subject, SubjectTotal } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -92,7 +92,15 @@ export function ResultDialog({ result, onClose }: { result: StudyResult; onClose
           {showBonus && afterLevel > beforeLevel && (
             <div className="flex animate-in items-center gap-2 rounded-xl border border-starlight/40 bg-starlight/[0.07] px-4 py-2 text-starlight shadow-[0_0_18px_-4px_rgba(226,201,116,0.5)] zoom-in-75 fade-in duration-700">
               <Crown className="size-5" strokeWidth={1.25} />
-              <span className="font-display tracking-[0.15em]">LEVEL UP · {beforeLevel} → {afterLevel}</span>
+              <span className="tracking-[0.15em]">
+                探求度 <span className="font-display">{beforeLevel} → {afterLevel}</span>
+              </span>
+            </div>
+          )}
+          {showBonus && rankOf(afterLevel) !== rankOf(beforeLevel) && (
+            <div className="flex animate-in flex-col items-center gap-1 rounded-xl border border-starlight/40 bg-starlight/[0.05] px-4 py-2 text-starlight slide-in-from-bottom-4 fade-in duration-1000">
+              <span className="font-display text-xs tracking-[0.3em]">RANK {rankOf(afterLevel).numeral}</span>
+              <span className="text-lg tracking-[0.2em] text-foreground">「{rankOf(afterLevel).title}」へ昇格</span>
             </div>
           )}
           {showBonus && afterStage.id !== beforeStage.id && (

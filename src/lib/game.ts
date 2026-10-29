@@ -30,6 +30,26 @@ export function levelProgress(totalMp: number) {
   };
 }
 
+/** 秘術探究者の魔術階級。探求度（= レベル）が minPhase に達すると昇格する */
+export type Rank = { numeral: string; title: string; minPhase: number };
+
+export const RANKS: Rank[] = [
+  { numeral: "I", title: "門前の解読者", minPhase: 1 },
+  { numeral: "II", title: "羊皮紙の解明者", minPhase: 5 },
+  { numeral: "III", title: "秘文字の紡ぎ手", minPhase: 10 },
+  { numeral: "IV", title: "幽遠の観測士", minPhase: 15 },
+  { numeral: "V", title: "深淵の探究者", minPhase: 20 },
+  { numeral: "VI", title: "星環の調律師", minPhase: 30 },
+  { numeral: "VII", title: "秘術の執書師", minPhase: 40 },
+  { numeral: "VIII", title: "真理の解明者", minPhase: 50 },
+  { numeral: "IX", title: "残光の導く者", minPhase: 65 },
+  { numeral: "X", title: "至高の綴り手", minPhase: 80 },
+];
+
+export function rankOf(phase: number): Rank {
+  return [...RANKS].reverse().find((r) => phase >= r.minPhase) ?? RANKS[0];
+}
+
 export type Stage = {
   id: number;
   name: string;

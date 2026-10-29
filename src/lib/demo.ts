@@ -3,7 +3,7 @@ import type { Profile, StudyLog, Subject } from "./types";
 // Supabase 未設定時に表示するサンプルデータ
 export const demoProfile: Profile = {
   id: "demo",
-  username: "探究者ルナ",
+  username: "ルナ",
   avatar_url: "wizard-1",
   total_study_time: 1530,
   current_level: 17,
