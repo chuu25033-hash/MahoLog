@@ -25,7 +25,7 @@ import {
   type ItemRarity,
   type ItemType,
 } from "@/lib/items";
-import { armedCatalyst, hasItem, isDiscovered, userActions, useUserData, type UserData } from "@/lib/user-store";
+import { armedCatalyst, hasItem, isDiscovered, knowsZenith, userActions, useUserData, type UserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 /** 拡大縮小しても 1px を保つ光の線 */
@@ -34,11 +34,17 @@ const hairline = { vectorEffect: "non-scaling-stroke", fill: "none", strokeWidth
 const RUNES = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ";
 
 const RARITY_CAPTION: Record<ItemRarity, string> = {
-  SS: "錬成陣と星天の塔でのみ得られる、神話に謳われる遺物と称号",
-  S: "世界の理そのものに触れる、伝説の遺物と称号",
+  SS: "錬成陣でのみ生まれる、神話に謳われる遺物",
+  S: "世界の理そのものに触れる、伝説の遺物",
   A: "所持するだけで加護を授ける秘宝と、魔法陣の装い",
   B: "各エリアに眠る伝承の品",
   C: "次回の詠唱で獲得MPを高める消耗品",
+};
+
+/** 星天の塔が開いてからの説明（天界遺物と称号が加わる） */
+const ZENITH_CAPTION: Partial<Record<ItemRarity, string>> = {
+  SS: "錬成陣と星天の塔でのみ得られる、神話に謳われる遺物と称号",
+  S: "世界の理そのものに触れる、伝説の遺物と称号",
 };
 
 const RARITY_TONE: Record<ItemRarity, string> = {
@@ -58,9 +64,13 @@ export function CollectionView() {
   const data = useUserData();
   const [filter, setFilter] = useState<Filter>("すべて");
   const [selected, setSelected] = useState<Item | null>(null);
-  const found = ALL_ITEMS.filter((i) => isDiscovered(data, i.id)).length;
-  const rate = found / ALL_ITEMS.length;
-  const visible = ALL_ITEMS.filter((i) => filter === "すべて" || i.type === filter);
+  // 星天の塔の報酬は、塔が開くまで図鑑に存在ごと載せない
+  const zenithKnown = knowsZenith(data);
+  const codex = zenithKnown ? ALL_ITEMS : ALL_ITEMS.filter((i) => !isZenithReward(i));
+  const found = codex.filter((i) => isDiscovered(data, i.id)).length;
+  const rate = found / codex.length;
+  const visible = codex.filter((i) => filter === "すべて" || i.type === filter);
+  const captions = zenithKnown ? { ...RARITY_CAPTION, ...ZENITH_CAPTION } : RARITY_CAPTION;
 
   return (
     <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 p-3 lg:p-5">
@@ -87,7 +97,7 @@ export function CollectionView() {
           </p>
           <MpBar ratio={rate} variant="stage" />
           <p className="mt-1 text-right font-display text-[10px] tracking-[0.2em] text-muted-foreground">
-            {found} / {ALL_ITEMS.length} DECIPHERED
+            {found} / {codex.length} DECIPHERED
           </p>
         </div>
       </header>
@@ -95,7 +105,7 @@ export function CollectionView() {
       <div className="flex flex-wrap items-center gap-2">
         <div role="tablist" aria-label="分類" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs">
           {FILTERS.map((f) => {
-            const items = ALL_ITEMS.filter((i) => f === "すべて" || i.type === f);
+            const items = codex.filter((i) => f === "すべて" || i.type === f);
             const active = f === filter;
             return (
               <button
@@ -155,7 +165,7 @@ export function CollectionView() {
             <h2 className="mb-3 flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
               <span className={cn("font-display text-[11px]", rarity === "S" || rarity === "SS" ? "text-starlight text-glow-gold" : "text-starlight/80")}>RARE {rarity}</span>
               {RARITY_LABEL[rarity]}
-              <span className="min-w-0 truncate text-[11px] tracking-wider text-muted-foreground">{RARITY_CAPTION[rarity]}</span>
+              <span className="min-w-0 truncate text-[11px] tracking-wider text-muted-foreground">{captions[rarity]}</span>
               <span className="ml-auto font-display text-xs text-muted-foreground">
                 {items.filter((i) => isDiscovered(data, i.id)).length} / {items.length}
               </span>

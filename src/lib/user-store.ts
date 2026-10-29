@@ -208,6 +208,14 @@ export function equippedTitle(data: UserData) {
   return item?.kind === "title" && isDiscovered(data, item.id) ? item : null;
 }
 
+/**
+ * 星天の塔の存在を知っているか（図鑑に塔の報酬を載せるか）。
+ * 端末の累積MPで制覇を判定し、Supabase 接続時のように端末の MP が無くても、塔に入ったことがあれば知っている
+ */
+export function knowsZenith(data: UserData) {
+  return isZenithOpen(data, data.userProfile.totalMp) || data.zenith.minutes > 0 || data.userProfile.currentStageId === "zenith";
+}
+
 /** 星天の塔での登頂: 昇る前後の階層と、越えた節目で授かったもの */
 export type ZenithClimb = { beforeFloor: number; afterFloor: number; rewards: { item: Item; isNew: boolean }[] };
 
