@@ -3,11 +3,12 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { VEIL_COVER_MS, coverScreen } from "@/components/transition-veil";
 import { CelestialSphere } from "./celestial-sphere";
 
 const DESTINATION = "/dashboard";
-/** 光のフェードが満ちてから遷移するまでの時間 */
-const LEAVE_MS = 1100;
+/** ホバー中の集光ループ 1 周の長さ（s）。粒子ごとの開始をこの範囲に散らす */
+const GATHER_S = 2.2;
 
 /** ボタン周囲の星屑: [角度, 距離(px), 大きさ, 遅延] — 決定的な配置 */
 const SPARKS = Array.from({ length: 18 }, (_, i) => {
@@ -17,7 +18,8 @@ const SPARKS = Array.from({ length: 18 }, (_, i) => {
     x: Math.cos(angle) * dist * 1.6,
     y: Math.sin(angle) * dist * 0.7,
     size: i % 4 === 0 ? 3 : 2,
-    delay: (i % 6) * 0.08,
+    delay: (i % 6) * 0.04,
+    gather: (((i * 7) % 18) / 18) * GATHER_S,
   };
 });
 
@@ -43,8 +45,9 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
     if (leaving) return;
     setBurst((b) => b + 1);
     setLeaving(true);
+    coverScreen();
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.setTimeout(() => router.push(href), reduced ? 0 : LEAVE_MS);
+    window.setTimeout(() => router.push(href), reduced ? 0 : VEIL_COVER_MS);
   }
 
   return (
@@ -73,28 +76,37 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
 
       {/* 天球儀 */}
       <CelestialSphere
-        className={`pointer-events-none absolute inset-0 flex items-center justify-center p-[4vh] transition-all duration-[1400ms] ${leaving ? "scale-110 opacity-0" : "opacity-70"}`}
+        className={`pointer-events-none absolute inset-0 flex items-center justify-center p-[4vh] transition-all duration-700 ease-in ${leaving ? "scale-105 opacity-0" : "opacity-60"}`}
       />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(closest-side,rgba(8,12,22,0.75),transparent)]" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(closest-side,rgba(8,12,22,0.8)_35%,rgba(8,12,22,0.35)_70%,transparent)]" aria-hidden />
 
       <main
-        className={`relative z-10 flex flex-col items-center px-6 text-center transition-all duration-1000 ${leaving ? "scale-[1.03] opacity-0 blur-[2px]" : ""}`}
+        className={`relative z-10 flex flex-col items-center px-6 text-center transition-all duration-700 ease-in ${leaving ? "scale-[0.98] opacity-0 blur-[2px]" : ""}`}
       >
-        <h1
-          className="title-rise title-logo text-6xl font-semibold tracking-[0.35em] text-starlight-gradient short:text-5xl lg:text-7xl"
+        <p
+          className="title-rise flex items-center gap-3 whitespace-nowrap text-xs tracking-[0.6em] text-starlight/75 short:text-[11px] lg:text-sm"
           style={{ "--rise-delay": "0.2s" } as CSSProperties}
         >
-          <span className="-mr-[0.35em]">マホログ</span>
+          <span className="h-px w-8 bg-gradient-to-r from-transparent to-starlight/60" aria-hidden />
+          <span className="-mr-[0.6em]">魔導録</span>
+          <span className="h-px w-8 bg-gradient-to-l from-transparent to-starlight/60" aria-hidden />
+        </p>
+        <h1
+          className="title-rise title-logo mt-4 whitespace-nowrap font-display text-[clamp(3rem,13vh,6.5rem)] font-medium leading-none tracking-[0.18em] text-starlight-gradient short:mt-2"
+          style={{ "--rise-delay": "0.45s" } as CSSProperties}
+          aria-label="マホログ MAHOLOG"
+        >
+          <span className="-mr-[0.18em]">MAHOLOG</span>
         </h1>
         <p
-          className="title-rise mt-3 font-display text-[11px] tracking-[0.45em] text-starlight/70 short:mt-2 lg:text-xs"
-          style={{ "--rise-delay": "0.6s" } as CSSProperties}
+          className="title-rise mt-4 whitespace-nowrap font-display text-[10px] tracking-[0.5em] text-starlight/55 short:mt-2 lg:text-[11px]"
+          style={{ "--rise-delay": "0.8s" } as CSSProperties}
         >
-          MAHOLOG — Arcane Observatory for Knowledge
+          <span className="-mr-[0.5em]">Arcane Observatory for Knowledge</span>
         </p>
 
         <div
-          className="title-rise my-8 flex items-center gap-3 text-starlight/40 short:my-4"
+          className="title-rise my-7 flex items-center gap-3 text-starlight/40 short:my-4"
           style={{ "--rise-delay": "0.9s" } as CSSProperties}
           aria-hidden
         >
@@ -135,7 +147,7 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
                       "--sy": `${s.y}px`,
                       width: s.size,
                       height: s.size,
-                      transitionDelay: `${s.delay}s`,
+                      "--spark-delay": `${s.gather}s`,
                     } as CSSProperties
                   }
                 />
@@ -179,15 +191,6 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
         </div>
       </main>
 
-      {/* 柔らかな光のフェードアウト */}
-      <div
-        className={`pointer-events-none absolute inset-0 z-20 transition-opacity duration-[1100ms] ease-in ${leaving ? "opacity-100" : "opacity-0"}`}
-        style={{
-          background:
-            "radial-gradient(circle at 50% 62%, rgba(255,248,220,0.9) 0%, rgba(226,201,116,0.45) 30%, rgba(8,12,22,0.96) 75%)",
-        }}
-        aria-hidden
-      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cinzel, Geist_Mono, Shippori_Mincho } from "next/font/google";
 import { Smartphone } from "lucide-react";
 import { StarField } from "@/components/star-field";
+import { TransitionVeil } from "@/components/transition-veil";
 import "./globals.css";
 
 const mincho = Shippori_Mincho({
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="h-dvh overflow-hidden bg-midnight">
         <StarField />
         {children}
+        <TransitionVeil />
         <div className="rotate-hint night-sky fixed inset-0 z-[100] flex-col items-center justify-center gap-4 p-8 text-center">
           <Smartphone className="size-10 rotate-90 text-starlight" strokeWidth={1.25} />
           <p className="text-lg tracking-widest">端末を横向きにしてください</p>
