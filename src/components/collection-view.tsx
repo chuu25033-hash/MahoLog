@@ -19,6 +19,7 @@ import {
   DOCUMENTS,
   GUIDANCE_CATALYSTS,
   ITEM_TYPES,
+  cycleOfItem,
   isZenithReward,
   RARITY_LABEL,
   type Item,
@@ -64,9 +65,11 @@ export function CollectionView() {
   const data = useUserData();
   const [filter, setFilter] = useState<Filter>("すべて");
   const [selected, setSelected] = useState<Item | null>(null);
-  // 星天の塔の報酬は、塔が開くまで図鑑に存在ごと載せない
+  // 星天の塔の報酬は塔が開くまで、周回限定の品（影・蒼炎）はその周に入るまで、図鑑に存在ごと載せない
   const zenithKnown = knowsZenith(data);
-  const codex = zenithKnown ? ALL_ITEMS : ALL_ITEMS.filter((i) => !isZenithReward(i));
+  const codex = ALL_ITEMS.filter(
+    (i) => (zenithKnown || !isZenithReward(i)) && (cycleOfItem(i) <= data.cycle.count || isDiscovered(data, i.id)),
+  );
   const found = codex.filter((i) => isDiscovered(data, i.id)).length;
   const rate = found / codex.length;
   const visible = codex.filter((i) => filter === "すべて" || i.type === filter);

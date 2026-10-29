@@ -558,6 +558,13 @@ export function isZenithReward(item: Item) {
   return item.kind === "title" || (item.kind === "relic" && item.zenithFloor !== undefined);
 }
 
+/** 何周目から現れるか（周回限定版の伝承の品・章の魔法陣スキン）。それ以外は 1 */
+export function cycleOfItem(item: Item) {
+  if (item.kind === "lore" && item.variant) return item.variant === "shadow" ? 2 : 3;
+  if (item.kind === "skin" && item.cycle) return item.cycle;
+  return 1;
+}
+
 /** 宝箱の抽選に使うレア度 */
 export const RARITIES: Rarity[] = ["S", "A", "B", "C"];
 
