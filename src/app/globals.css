@@ -805,7 +805,7 @@
 .codex-float { animation: codex-float 6s ease-in-out infinite; }
 .codex-sigil { animation: codex-sigil-glow 5s ease-in-out infinite; }
 .codex-sigil-outer,
-.codex-sigil-inner { transform-box: view-box; transform-origin: 0 0; } /* viewBox の原点（中心）で回す */
+.codex-sigil-inner { transform-box: fill-box; transform-origin: center; } /* 各環は中心対称なので、自身の外接矩形の中心＝魔法陣の中心で回る */
 .codex-sigil-outer { animation: codex-spin 60s linear infinite; }
 .codex-sigil-inner { animation: codex-spin 90s linear infinite reverse; }
 

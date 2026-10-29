@@ -275,8 +275,11 @@ function CodexSigil({ color, dim, className }: { color: string; dim: boolean; cl
         {Array.from({ length: 72 }, (_, i) => (
           <line key={i} y1="-47" y2={i % 6 === 0 ? -44.5 : -45.8} strokeOpacity={i % 6 === 0 ? 0.6 : 0.3} transform={`rotate(${i * 5})`} {...hairline} />
         ))}
-        <text fontSize="3.4" fill={color} fillOpacity="0.55" letterSpacing="1.2">
-          <textPath href="#codex-rune-path">{RUNES.repeat(2)}</textPath>
+        {/* 円周いっぱいに字間を広げて一周させる（継ぎ目で重ならないよう少し短く） */}
+        <text fontSize="3.4" fill={color} fillOpacity="0.55">
+          <textPath href="#codex-rune-path" textLength={2 * Math.PI * 41 - 3} lengthAdjust="spacing">
+            {RUNES.repeat(2)}
+          </textPath>
         </text>
       </g>
       <g className="codex-sigil-inner" stroke={color}>
