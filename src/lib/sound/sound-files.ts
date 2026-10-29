@@ -2,11 +2,11 @@
 // 登録の無い音、読み込めなかった音は Web Audio API で生成した音で代わりに鳴らす。
 // 例: ambience: { hearth: "/sounds/ambience/hearth.mp3" }, se: { tap: "/sounds/se/tap.mp3" }
 
-/** 滞在ステージごとの環境音 */
-export type AmbienceKey = "hearth" | "forest" | "stars" | "frost" | "forge" | "sanctum";
+/** 環境音（prelude は魔術書庫に入る前の画面、ほかは滞在ステージごと） */
+export type AmbienceKey = "prelude" | "hearth" | "forest" | "stars" | "frost" | "forge" | "sanctum";
 
 /** 操作・演出の効果音 */
-export type SeKey = "tap" | "chantStart" | "chantComplete" | "reward";
+export type SeKey = "begin" | "tap" | "chantStart" | "chantComplete" | "reward";
 
 export const SOUND_FILES: {
   ambience: Partial<Record<AmbienceKey, string>>;

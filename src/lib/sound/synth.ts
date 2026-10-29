@@ -123,6 +123,29 @@ function crackles(ctx: AudioContext, out: AudioNode, layer: Layer, o: { interval
   layer.timers.push(setTimeout(pop, o.interval));
 }
 
+/** 星のまたたき: ときおり、遠くで小さな鈴が柔らかく鳴る */
+function twinkles(ctx: AudioContext, out: AudioNode, layer: Layer, o: { freqs: number[]; interval: number; level: number }) {
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.value = 1600;
+  filter.connect(out);
+  const chime = () => {
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    osc.frequency.value = o.freqs[Math.floor(Math.random() * o.freqs.length)];
+    const gain = ctx.createGain();
+    const peak = o.level * (0.4 + Math.random() * 0.6);
+    gain.gain.setValueAtTime(SILENT, t);
+    gain.gain.exponentialRampToValueAtTime(peak, t + 0.06);
+    gain.gain.exponentialRampToValueAtTime(SILENT, t + 3.5);
+    osc.connect(gain).connect(filter);
+    osc.start(t);
+    osc.stop(t + 3.6);
+    layer.timers.push(setTimeout(chime, o.interval * (0.5 + Math.random())));
+  };
+  layer.timers.push(setTimeout(chime, o.interval * 0.4));
+}
+
 /** 持続音の和音。各音の強さを別々の周期で揺らし、呼吸するように響かせる */
 function drone(
   ctx: AudioContext,
@@ -153,6 +176,12 @@ function drone(
 }
 
 const AMBIENCE: Record<AmbienceKey, (ctx: AudioContext, out: AudioNode, layer: Layer) => void> = {
+  // 旅立ちの前（タイトル・ログイン・星天の導き）: 夜空に溶ける低い和音と、遠い星のまたたき
+  prelude: (ctx, out, l) => {
+    drone(ctx, out, l, { freqs: [146.8, 220, 293.7, 440], level: 0.04, cutoff: 900 });
+    wind(ctx, out, l, { cutoff: 240, level: 0.14, rate: 0.02 });
+    twinkles(ctx, out, l, { freqs: [587.3, 659.25, 880, 987.8, 1174.7], interval: 2600, level: 0.035 });
+  },
   // 小屋: 静かな暖炉と、壁の外を抜ける風
   hearth: (ctx, out, l) => {
     rumble(ctx, out, l, { cutoff: 260, level: 0.4 });
@@ -257,6 +286,15 @@ function whoosh(ctx: AudioContext, out: AudioNode, o: { from: number; to: number
 }
 
 const SE: Record<SeKey, (ctx: AudioContext, out: AudioNode) => void> = {
+  // 旅立ち: 低くふくらむ光と、ゆっくり開く和音
+  begin: (ctx, out) => {
+    tone(ctx, out, { freq: 146.8, toFreq: 293.7, attack: 0.3, decay: 2, peak: 0.09 });
+    whoosh(ctx, out, { from: 200, to: 900, duration: 1.2, peak: 0.03 });
+    [293.7, 440, 587.3].forEach((freq, i) => {
+      tone(ctx, out, { freq, at: 0.25 + i * 0.12, attack: 0.2, decay: 2.2, peak: 0.045 });
+    });
+    tone(ctx, out, { freq: 1174.7, at: 0.7, attack: 0.05, decay: 1.8, peak: 0.02 });
+  },
   // 控えめなクリスタル音: 高すぎない音域で、ふわりと立ち上げる
   tap: (ctx, out) => {
     tone(ctx, out, { freq: 1318.5, attack: 0.012, decay: 0.55, peak: 0.07 });

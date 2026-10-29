@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { VEIL_COVER_MS, coverScreen } from "@/components/transition-veil";
 import { pendingGuidance } from "@/lib/celestial-guidance";
+import { soundManager } from "@/lib/sound/sound-manager";
 import { CelestialSphere } from "./celestial-sphere";
 
 const DESTINATION = "/dashboard";
@@ -49,6 +50,7 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
     if (leaving) return;
     setBurst((b) => b + 1);
     setLeaving(true);
+    soundManager.playSe("begin");
     coverScreen();
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const href = pendingGuidance() ? GUIDANCE : DESTINATION;

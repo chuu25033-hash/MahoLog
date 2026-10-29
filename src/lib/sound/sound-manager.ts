@@ -104,11 +104,12 @@ class SoundManager {
       if (bus.ctx.state === "running") void this.syncAmbience();
       else void bus.ctx.resume().then(() => this.syncAmbience());
     };
-    // React のハンドラより後に走るので、詠唱開始などの効果音を鳴らした操作ではタップ音が重ならない
+    // 押せる要素かは押した時点で見る（押すと無効になるボタンもある）。
+    // 鳴らすのは各ハンドラの後にして、詠唱開始などの効果音を鳴らした操作ではタップ音を重ねない
     const onClick = (e: MouseEvent) => {
       const target = (e.target as Element | null)?.closest?.(TAP_TARGET);
       if (!target || target.matches(':disabled, [aria-disabled="true"]')) return;
-      this.playSe("tap");
+      setTimeout(() => this.playSe("tap"), 0);
     };
     // 画面が隠れている間は環境音を絞る（完了の報せは鳴らせるよう、音そのものは止めない）
     const onVisibility = () => {
@@ -117,12 +118,12 @@ class SoundManager {
     };
     window.addEventListener("pointerdown", unlock, true);
     window.addEventListener("keydown", unlock, true);
-    document.addEventListener("click", onClick);
+    document.addEventListener("click", onClick, true);
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.removeEventListener("pointerdown", unlock, true);
       window.removeEventListener("keydown", unlock, true);
-      document.removeEventListener("click", onClick);
+      document.removeEventListener("click", onClick, true);
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }
