@@ -21,7 +21,7 @@ const SCOPES: { key: TaskScope; label: string; sub: string; reset: string }[] = 
 
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
 
-const claimable = (t: TaskState | undefined) => !!t && !t.isClaimed && t.progress >= t.maxProgress;
+export const claimable = (t: TaskState | undefined) => !!t && !t.isClaimed && t.progress >= t.maxProgress;
 
 /** 受け取れる報酬（日課では星天の導きを含む）の数 */
 export function readyCount(data: UserData, scope?: TaskScope) {
@@ -207,7 +207,7 @@ function GuidanceRow({ data, onClaimed }: { data: UserData; onClaimed: () => voi
   );
 }
 
-function RewardLabel({ def }: { def: TaskDef }) {
+export function RewardLabel({ def }: { def: TaskDef }) {
   if (def.reward.kind === "mp") {
     return (
       <span className="font-display text-xs text-aqua">

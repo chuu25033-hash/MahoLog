@@ -429,6 +429,49 @@
   animation: burst-ring 1.6s ease-out both;
 }
 
+/* 魔術階級の昇格: 1px の光の線が中央から静かに伸び、線上を光の粒が渡っていく */
+@keyframes rank-line {
+  0% { transform: scaleX(0); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: scaleX(1); opacity: 1; }
+}
+
+@keyframes rank-glint {
+  0% { left: 0%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+
+.rank-line {
+  position: relative;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(226, 201, 116, 0.85) 30%, rgba(255, 248, 220, 0.95) 50%, rgba(226, 201, 116, 0.85) 70%, transparent);
+  box-shadow: 0 0 8px rgba(226, 201, 116, 0.55);
+  transform-origin: center;
+  animation: rank-line 1.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.rank-line::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: #fff8dc;
+  box-shadow: 0 0 8px 2px rgba(255, 248, 220, 0.8);
+  transform: translate(-50%, -50%);
+  animation: rank-glint 2.6s ease-in-out 1.2s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rank-line,
+  .rank-line::after {
+    animation: none;
+  }
+}
+
 @keyframes chest-shake {
   0%, 100% { transform: rotate(0deg); }
   20% { transform: rotate(-4deg); }

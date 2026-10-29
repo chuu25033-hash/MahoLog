@@ -378,6 +378,24 @@ const SE: Record<SeKey, (ctx: AudioContext, out: AudioNode) => void> = {
     whoosh(ctx, out, { from: 400, to: 1600, duration: 0.8, peak: 0.02 });
     tone(ctx, out, { freq: 1318.5, at: 0.38, attack: 0.08, decay: 1.8, peak: 0.02 });
   },
+  // 探求度の上昇: 二段に昇る音と、ふわりと開く和音
+  levelUp: (ctx, out) => {
+    tone(ctx, out, { freq: 392, attack: 0.02, decay: 0.9, peak: 0.05 });
+    tone(ctx, out, { freq: 523.25, at: 0.16, attack: 0.02, decay: 1.2, peak: 0.05 });
+    [523.25, 659.25, 784].forEach((freq, i) => {
+      tone(ctx, out, { freq, at: 0.38 + i * 0.05, attack: 0.12, decay: 2, peak: 0.035 });
+    });
+  },
+  // 魔術階級の昇格: 深い礎の音がふくらみ、聖なる和音が重なって、最後に澄んだ鐘が残る
+  rankUp: (ctx, out) => {
+    tone(ctx, out, { freq: 130.8, toFreq: 261.6, attack: 0.6, decay: 3, peak: 0.09 });
+    whoosh(ctx, out, { from: 200, to: 800, duration: 1.8, peak: 0.025 });
+    [261.6, 329.6, 392, 523.25].forEach((freq, i) => {
+      tone(ctx, out, { freq, at: 0.6 + i * 0.16, attack: 0.3, decay: 3.2, peak: 0.045 });
+    });
+    tone(ctx, out, { freq: 784, at: 1.4, attack: 0.03, decay: 3, peak: 0.03 });
+    tone(ctx, out, { freq: 784 * 2.01, at: 1.4, attack: 0.03, decay: 1.4, peak: 0.004 });
+  },
 };
 
 const softChains = new WeakMap<AudioNode, AudioNode>();

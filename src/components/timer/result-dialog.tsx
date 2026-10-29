@@ -1,15 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Crown, MapPinned, Sparkles } from "lucide-react";
+import { ChevronRight, Crown, Gift, Hourglass, MapPinned, Sparkles } from "lucide-react";
 import { ItemArt, TreasureChest } from "@/components/item-art";
 import { MagicRadar } from "@/components/magic-radar";
+import { MpBar } from "@/components/mp-bar";
+import { RewardLabel, claimable } from "@/components/trials-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import type { Area } from "@/lib/areas";
-import { calcLevel, rankOf, stageProgress } from "@/lib/game";
+import { AREAS, boostLabel, isAreaUnlocked, stageOfArea, type Area } from "@/lib/areas";
+import { calcLevel, formatMinutes, levelProgress, rankOf } from "@/lib/game";
 import { type CatalystItem, type Item } from "@/lib/items";
+import { soundManager } from "@/lib/sound/sound-manager";
+import { TASKS } from "@/lib/tasks";
 import type { Subject, SubjectTotal } from "@/lib/types";
+import { getUserData, userActions, useUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 export type StudyResult = {
@@ -42,95 +47,294 @@ const RARITY_TONE = {
   S: "border-starlight/70 text-starlight text-glow-gold",
 } as const;
 
-/** リザルト（魔力獲得）: MP獲得 → 魔法陣が伸びる → レベルアップ/ステージ解放 → 宝箱 */
-export function ResultDialog({ result, onClose }: { result: StudyResult; onClose: () => void }) {
+/** 詠唱完了後のパネル。成長の物語に沿って 成果 → 探求度 → 魔術階級 → 新たな領域 の順に進む */
+type Step = "result" | "level" | "rank" | "unlock";
+
+/**
+ * リザルト: 「次へ」で1枚ずつ切り替える。成果と試練報酬は必ず、探求度の上昇・魔術階級の昇格・
+ * 新たな領域の解放は起きたときだけ挟む。試練報酬で得た MP も成長の判定に含める
+ */
+export function ResultDialog({ result, subjects, onClose }: { result: StudyResult; subjects: Subject[]; onClose: () => void }) {
+  const [claimedMp, setClaimedMp] = useState(0);
+  const [index, setIndex] = useState(0);
+
+  const beforeMp = result.beforeMp;
+  const afterMp = result.afterMp + claimedMp;
+  const beforeLevel = calcLevel(beforeMp);
+  const afterLevel = calcLevel(afterMp);
+  const rankUp = rankOf(afterLevel).numeral !== rankOf(beforeLevel).numeral;
+  const unlocked = AREAS.filter((a) => isAreaUnlocked(a, afterMp) && !isAreaUnlocked(a, beforeMp));
+
+  const steps: Step[] = [
+    "result",
+    ...(afterLevel > beforeLevel ? (["level"] as const) : []),
+    ...(rankUp ? (["rank"] as const) : []),
+    ...(unlocked.length > 0 ? (["unlock"] as const) : []),
+  ];
+  const step = steps[Math.min(index, steps.length - 1)];
+  const last = index >= steps.length - 1;
+
+  // 各パネルが開いた瞬間に、その出来事の音を鳴らす
+  useEffect(() => {
+    if (step === "level") soundManager.playSe("levelUp");
+    if (step === "rank") soundManager.playSe("rankUp");
+    if (step === "unlock") soundManager.playSe("begin");
+  }, [step]);
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent
+        className={cn(
+          "flex max-h-[calc(100dvh-1rem)] flex-col gap-4 scroll-area rounded-2xl p-6 ring-starlight/25 backdrop-blur-xl short:gap-3 short:p-4",
+          step === "result" ? "max-w-2xl! sm:max-w-2xl!" : "max-w-md! sm:max-w-md!",
+        )}
+      >
+        <div key={step} className="animate-in fade-in duration-700">
+          {step === "result" && <ResultPanel result={result} subjects={subjects} onClaimed={(mp) => setClaimedMp((v) => v + mp)} />}
+          {step === "level" && <LevelPanel beforeLevel={beforeLevel} afterMp={afterMp} />}
+          {step === "rank" && <RankPanel level={afterLevel} />}
+          {step === "unlock" && <UnlockPanel areas={unlocked} />}
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex gap-1.5" aria-label={`${index + 1} / ${steps.length}`}>
+            {steps.length > 1 &&
+              steps.map((s, i) => (
+                <span
+                  key={s}
+                  className={cn(
+                    "size-1.5 rounded-full transition-all duration-500",
+                    i === index ? "bg-starlight shadow-[0_0_6px_rgba(226,201,116,0.8)]" : i < index ? "bg-starlight/40" : "bg-white/15",
+                  )}
+                />
+              ))}
+          </div>
+          {last ? (
+            <Button onClick={onClose}>
+              <Sparkles /> 閉じる
+            </Button>
+          ) : (
+            <Button onClick={() => setIndex((i) => i + 1)}>
+              次へ <ChevronRight />
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Step 1: 詠唱成果（時間・獲得MP・魔法陣・宝箱）と、達成した試練の報酬受取 */
+function ResultPanel({ result, subjects, onClaimed }: { result: StudyResult; subjects: Subject[]; onClaimed: (mp: number) => void }) {
   const [radarData, setRadarData] = useState(result.beforeTotals);
-  const [showBonus, setShowBonus] = useState(false);
   const [chest, setChest] = useState<ChestStage>("hidden");
+  const capped = result.savedMinutes < result.requestedMinutes;
 
   useEffect(() => {
     const grow = setTimeout(() => setRadarData(result.afterTotals), 600);
-    const bonus = setTimeout(() => setShowBonus(true), 1800);
-    const appear = setTimeout(() => setChest("closed"), 2400);
-    const open = setTimeout(() => setChest("open"), 3800);
+    const appear = setTimeout(() => setChest("closed"), 1600);
+    const open = setTimeout(() => setChest("open"), 2800);
     return () => {
       clearTimeout(grow);
-      clearTimeout(bonus);
       clearTimeout(appear);
       clearTimeout(open);
     };
   }, [result]);
 
-  const beforeLevel = calcLevel(result.beforeMp);
-  const afterLevel = calcLevel(result.afterMp);
-  const beforeStage = stageProgress(result.beforeMp).current;
-  const afterStage = stageProgress(result.afterMp).current;
-  const capped = result.savedMinutes < result.requestedMinutes;
-
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-2xl! grid-cols-2 items-center gap-4 scroll-area rounded-2xl p-6 ring-starlight/25 backdrop-blur-xl short:p-4 sm:max-w-2xl!">
-        <div className="flex flex-col items-center gap-2 text-center">
-          <DialogTitle className="text-sm font-normal tracking-[0.4em] text-aqua/80">詠唱完了</DialogTitle>
-          <div className="relative flex flex-col items-center px-6 py-1">
-            {/* 獲得の瞬間に広がる光輪 */}
-            <span className="burst-ring size-16" />
-            <span className="burst-ring size-16 [animation-delay:300ms]" />
-            <p className="mp-glow font-display text-5xl text-starlight-gradient">+{result.gainedMp} MP</p>
-            <p className="animate-float-up text-lg tracking-[0.4em] text-glow-gold [animation-delay:200ms]">獲得！</p>
-          </div>
-          {(result.areaBoost > 1 || result.blessing > 1 || result.catalyst) && (
-            <p className="animate-in text-[11px] tracking-wider text-muted-foreground fade-in duration-700">
-              基礎 {result.savedMinutes}
-              {result.areaBoost > 1 && <span className="text-aqua"> × エリア {result.areaBoost}</span>}
-              {result.blessing > 1 && <span className="text-amethyst"> × 秘宝の加護 {Number(result.blessing.toFixed(2))}</span>}
-              {result.catalyst && <span className="text-starlight"> × {result.catalyst.name} {result.catalyst.multiplier}</span>}
-            </p>
-          )}
-          <DialogDescription>
-            <span className="text-foreground">{result.subject.name}{result.subSubject && ` ➔ ${result.subSubject}`}</span> の魔力が高まった
-          </DialogDescription>
-          {capped && (
-            <p className="text-xs text-destructive">一夜に刻める詠唱は12時間まで。超えた分は星に届きません</p>
-          )}
-
-          {showBonus && afterLevel > beforeLevel && (
-            <div className="flex animate-in items-center gap-2 rounded-xl border border-starlight/40 bg-starlight/[0.07] px-4 py-2 text-starlight shadow-[0_0_18px_-4px_rgba(226,201,116,0.5)] zoom-in-75 fade-in duration-700">
-              <Crown className="size-5" strokeWidth={1.25} />
-              <span className="tracking-[0.15em]">
-                探求度 <span className="font-display">{beforeLevel} → {afterLevel}</span>
-              </span>
-            </div>
-          )}
-          {showBonus && rankOf(afterLevel) !== rankOf(beforeLevel) && (
-            <div className="flex animate-in flex-col items-center gap-1 rounded-xl border border-starlight/40 bg-starlight/[0.05] px-4 py-2 text-starlight slide-in-from-bottom-4 fade-in duration-1000">
-              <span className="font-display text-xs tracking-[0.3em]">RANK {rankOf(afterLevel).numeral}</span>
-              <span className="text-lg tracking-[0.2em] text-foreground">「{rankOf(afterLevel).title}」へ昇格</span>
-            </div>
-          )}
-          {showBonus && afterStage.id !== beforeStage.id && (
-            <div className="flex animate-in flex-col items-center gap-1 rounded-xl border border-aqua/40 bg-aqua/[0.06] px-4 py-2 text-aqua shadow-[0_0_18px_-4px_rgba(113,226,239,0.5)] slide-in-from-bottom-4 fade-in duration-1000">
-              <span className="flex items-center gap-1 text-xs tracking-[0.3em]">
-                <MapPinned className="size-4" /> 新エリア解放
-              </span>
-              <span className="text-lg tracking-[0.2em] text-foreground">「{afterStage.name}」</span>
-            </div>
-          )}
-
-          {chest !== "hidden" && (
-            <DropReveal stage={chest} drop={result.drop} area={result.area} onOpen={() => setChest("open")} />
-          )}
-
-          <Button className="mt-2" onClick={onClose}>
-            <Sparkles /> 閉じる
-          </Button>
+    <div className="grid grid-cols-2 items-center gap-4">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <DialogTitle className="text-sm font-normal tracking-[0.4em] text-aqua/80">詠唱完了</DialogTitle>
+        <p className="flex items-center gap-1.5 text-xs tracking-[0.2em] text-muted-foreground">
+          <Hourglass className="size-3.5 text-aqua/80" strokeWidth={1.25} />
+          詠唱時間 <span className="text-foreground">{formatMinutes(result.savedMinutes)}</span>
+        </p>
+        <div className="relative flex flex-col items-center px-6 py-1">
+          {/* 獲得の瞬間に広がる光輪 */}
+          <span className="burst-ring size-16" />
+          <span className="burst-ring size-16 [animation-delay:300ms]" />
+          <p className="mp-glow font-display text-5xl text-starlight-gradient short:text-4xl">+{result.gainedMp} MP</p>
+          <p className="animate-float-up text-lg tracking-[0.4em] text-glow-gold [animation-delay:200ms]">獲得！</p>
         </div>
+        {(result.areaBoost > 1 || result.blessing > 1 || result.catalyst) && (
+          <p className="animate-in text-[11px] tracking-wider text-muted-foreground fade-in duration-700">
+            基礎 {result.savedMinutes}
+            {result.areaBoost > 1 && <span className="text-aqua"> × エリア {result.areaBoost}</span>}
+            {result.blessing > 1 && <span className="text-amethyst"> × 秘宝の加護 {Number(result.blessing.toFixed(2))}</span>}
+            {result.catalyst && <span className="text-starlight"> × {result.catalyst.name} {result.catalyst.multiplier}</span>}
+          </p>
+        )}
+        <DialogDescription>
+          <span className="text-foreground">
+            {result.subject.name}
+            {result.subSubject && ` ➔ ${result.subSubject}`}
+          </span>{" "}
+          の魔力が高まった
+        </DialogDescription>
+        {capped && <p className="text-xs text-destructive">一夜に刻める詠唱は12時間まで。超えた分は星に届きません</p>}
 
-        <div className="aspect-square w-full">
+        {chest !== "hidden" && (
+          <DropReveal stage={chest} drop={result.drop} area={result.area} onOpen={() => setChest("open")} />
+        )}
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="mx-auto aspect-square w-full max-w-64 short:max-w-44">
           <MagicRadar data={radarData} highlightSubjectId={result.subject.id} animationDuration={1200} />
         </div>
-      </DialogContent>
-    </Dialog>
+        <TrialRewards subjects={subjects} onClaimed={onClaimed} />
+      </div>
+    </div>
+  );
+}
+
+/** この詠唱で達成した（まだ受け取っていない）試練の報酬を、その場で受け取る */
+function TrialRewards({ subjects, onClaimed }: { subjects: Subject[]; onClaimed: (mp: number) => void }) {
+  const data = useUserData();
+  // 開いた時点で受け取れる試練を覚えておき、受け取った後も一覧に残す（進捗は詠唱の記録時に測り直してある）
+  const [defs] = useState(() => {
+    const { tasks } = getUserData();
+    return TASKS.filter((t) => claimable(tasks[t.scope].items[t.id]));
+  });
+  const [received, setReceived] = useState<string[]>([]);
+  if (defs.length === 0) return null;
+  const pending = defs.filter((t) => claimable(data.tasks[t.scope].items[t.id]));
+
+  function claimAll() {
+    let mp = 0;
+    const items: string[] = [];
+    for (const def of pending) {
+      const claim = userActions.claimTask(def.id, subjects);
+      if (!claim) continue;
+      mp += claim.mp;
+      if (claim.item) items.push(claim.item.name);
+    }
+    if (mp === 0 && items.length === 0) return;
+    soundManager.playSe("reward");
+    setReceived(items);
+    onClaimed(mp);
+  }
+
+  return (
+    <div className="rounded-xl border border-starlight/25 bg-starlight/[0.04] p-3">
+      <p className="mb-2 flex items-center gap-1.5 text-xs tracking-[0.25em] whitespace-nowrap text-starlight">
+        <Gift className="size-3.5 shrink-0" strokeWidth={1.25} />
+        試練の達成
+      </p>
+      <ul className="flex flex-col gap-1.5">
+        {defs.map((def) => {
+          const claimed = data.tasks[def.scope].items[def.id]?.isClaimed ?? false;
+          return (
+            <li key={def.id} className={cn("flex items-center gap-2 text-xs tracking-wider", claimed && "opacity-55")}>
+              <span className="min-w-0 truncate">{def.title}</span>
+              <span className="ml-auto shrink-0">
+                <RewardLabel def={def} />
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      {pending.length > 0 ? (
+        <Button size="sm" variant="secondary" className="claim-glow mt-2.5 w-full" onClick={claimAll}>
+          <Gift /> 報酬をすべて受け取る
+        </Button>
+      ) : (
+        <p className="mt-2 text-center text-[11px] tracking-wider text-aqua/80 [word-break:auto-phrase]">
+          報酬を受け取った{received.length > 0 && `（${received.join("・")}）`}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Step 2: 探求度（レベル）の上昇 */
+function LevelPanel({ beforeLevel, afterMp }: { beforeLevel: number; afterMp: number }) {
+  const progress = levelProgress(afterMp);
+  return (
+    <div className="flex flex-col items-center gap-3 py-2 text-center">
+      <DialogTitle className="font-display text-xs font-normal tracking-[0.5em] whitespace-nowrap text-starlight/80">
+        <span className="-mr-[0.5em]">LEVEL UP</span>
+      </DialogTitle>
+      <div className="relative flex items-center gap-4 py-2 whitespace-nowrap">
+        <span className="burst-ring size-20" />
+        <span className="font-display text-3xl text-muted-foreground">Lv.{beforeLevel}</span>
+        <ChevronRight className="size-5 text-starlight/70" strokeWidth={1.25} />
+        <span className="mp-glow font-display text-5xl text-starlight-gradient">Lv.{progress.level}</span>
+      </div>
+      <DialogDescription className="tracking-[0.2em]">探求度が高まった</DialogDescription>
+      <div className="w-full max-w-64">
+        <MpBar ratio={progress.ratio} />
+        <p className="mt-1.5 text-[11px] tracking-wider text-muted-foreground">
+          次なる感応まで <span className="font-display text-aqua">{progress.remaining}</span>
+          <span className="font-display"> MP</span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Step 3: 魔術階級の昇格。1px の光の線が静かに伸び、新たな階級の名を浮かび上がらせる */
+function RankPanel({ level }: { level: number }) {
+  const rank = rankOf(level);
+  return (
+    <div className="flex flex-col items-center gap-4 py-4 text-center">
+      <DialogTitle className="font-display text-xs font-normal tracking-[0.5em] whitespace-nowrap text-starlight/80">
+        <span className="-mr-[0.5em]">RANK UP</span>
+      </DialogTitle>
+      <div className="rank-line w-full" />
+      <div className="flex animate-in flex-col items-center gap-2 fade-in slide-in-from-bottom-2 duration-1000 [animation-delay:700ms] [animation-fill-mode:both]">
+        <Crown className="size-6 text-starlight" strokeWidth={1} />
+        <p className="font-display text-sm tracking-[0.4em] whitespace-nowrap text-starlight/80">
+          <span className="-mr-[0.4em]">RANK {rank.numeral}</span>
+        </p>
+        <p className="text-2xl tracking-[0.3em] whitespace-nowrap text-starlight-gradient">
+          <span className="-mr-[0.3em]">{rank.title}</span>
+        </p>
+        <DialogDescription className="tracking-[0.2em]">魔術階級が昇格した</DialogDescription>
+      </div>
+      <div className="rank-line w-full [animation-delay:300ms]" />
+    </div>
+  );
+}
+
+/** Step 4: 新たな領域（ステージ・エリア）の解放 */
+function UnlockPanel({ areas }: { areas: Area[] }) {
+  // 大ステージの入口が開いたら「新ステージ」、同じステージ内なら「新エリア」
+  const newStage = areas.some((a) => a.stageId > 1 && a.id.endsWith("-1"));
+  return (
+    <div className="flex flex-col items-center gap-3 py-2 text-center">
+      <DialogTitle className="flex items-center gap-1.5 font-display text-xs font-normal tracking-[0.4em] whitespace-nowrap text-aqua/90">
+        <MapPinned className="size-4" strokeWidth={1.25} />
+        <span className="-mr-[0.4em]">{newStage ? "STAGE UNLOCKED" : "AREA UNLOCKED"}</span>
+      </DialogTitle>
+      <DialogDescription className="tracking-[0.2em]">
+        {newStage ? "新たなステージへの道が開かれた" : "新たなエリアへ足を踏み入れられる"}
+      </DialogDescription>
+      <div className="flex w-full flex-col gap-2">
+        {areas.map((area) => {
+          const stage = stageOfArea(area);
+          return (
+            <div
+              key={area.id}
+              className="relative overflow-hidden rounded-xl border border-aqua/35 bg-white/[0.03] p-3 text-left shadow-[0_0_18px_-6px_rgba(113,226,239,0.5)]"
+            >
+              <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br", stage.gradient)} />
+              <p className="relative font-display text-[10px] tracking-[0.3em] text-starlight/70">
+                STAGE {stage.id} · AREA {area.id}
+                <span className="ml-2 font-serif tracking-wider text-muted-foreground">{stage.name}</span>
+              </p>
+              <p className="relative mt-1 truncate text-lg tracking-[0.15em] whitespace-nowrap">{area.name}</p>
+              <p className="relative mt-0.5 text-xs leading-relaxed text-muted-foreground [word-break:auto-phrase]">{area.description}</p>
+              <p className="relative mt-1.5 text-[11px] tracking-wider text-muted-foreground">
+                属性ブースト {boostLabel(area)}
+                <span className="ml-1 font-display text-aqua">MP ×{area.boost.multiplier}</span>
+              </p>
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[11px] tracking-wider text-muted-foreground">魔術書庫の「エリア選択」から移り住めます</p>
+    </div>
   );
 }
 

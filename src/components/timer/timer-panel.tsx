@@ -164,6 +164,8 @@ export function TimerPanel({
             dropId: drop?.id ?? null,
           });
         }
+        // リザルトで達成した試練をその場で受け取れるよう、この詠唱を含めて進捗を測り直す
+        userActions.syncTasks(subjects);
 
         setWeekTotals(afterTotals);
         setTotalMp(res.beforeMp + gainedMp);
@@ -563,7 +565,7 @@ export function TimerPanel({
         </DialogContent>
       </Dialog>
 
-      {result && <ResultDialog key={result.id} result={result} onClose={() => setResult(null)} />}
+      {result && <ResultDialog key={result.id} result={result} subjects={subjects} onClose={() => setResult(null)} />}
     </div>
   );
 }
