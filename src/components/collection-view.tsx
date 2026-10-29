@@ -44,7 +44,7 @@ export function CollectionView() {
   const visible = ALL_ITEMS.filter((i) => filter === "すべて" || i.type === filter);
 
   return (
-    <div className="scroll-area flex h-full flex-col gap-4 p-3 lg:p-5">
+    <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 p-3 lg:p-5">
       <header className="flex items-end justify-between gap-6">
         <div className="min-w-0">
           <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap">
@@ -185,7 +185,7 @@ function DecipherDialog({ item, data, onClose }: { item: Item; data: UserData; o
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-md! gap-3 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.04] p-5 ring-starlight/25 backdrop-blur-2xl sm:max-w-md!">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-md! gap-3 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-5 ring-starlight/25 backdrop-blur-2xl sm:max-w-md!">
         <div className="flex items-center justify-center gap-2">
           <span className={cn("rounded-full border px-2 font-display text-[10px] tracking-[0.2em]", RARITY_TONE[item.rarity])}>
             RARE {item.rarity} · {RARITY_LABEL[item.rarity]}
