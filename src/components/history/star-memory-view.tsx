@@ -51,23 +51,71 @@ function rand(seed: number) {
   return x - Math.floor(x);
 }
 
-/** 星座の中心: 左上から時計回りに週を並べる */
+/** 極座標（度。0° が右、時計回り）→ 直交座標 */
+function polar(r: number, deg: number) {
+  const rad = (deg * Math.PI) / 180;
+  return { x: Math.cos(rad) * r, y: Math.sin(rad) * r };
+}
+
+/** 星を並べる天球図盤の同心円軌道（内側から外側へ） */
+const ORBITS = [42, 56, 70];
+/** 星座（週）の中心が乗る軌道 */
+const ORBIT_MID = ORBITS[1];
+/** 各週が占める円弧の広がり（度）。7夜を等間隔に並べる */
+const WEEK_SPAN = 76;
+
+/** 星座の中心: 左上から時計回りに週を四象限へ並べる */
 const WEEK_CENTERS = Array.from({ length: MEMORY_WEEKS }, (_, w) => {
-  const angle = ((-135 + w * 90) * Math.PI) / 180;
-  return { x: Math.cos(angle) * 46, y: Math.sin(angle) * 46, angle };
+  const angle = -135 + w * 90;
+  return { ...polar(ORBIT_MID, angle), angle };
 });
 
+/** 夜ごとに乗る軌道。隣の軌道へ一段ずつ揺らぐので、星は円弧の上をうねるように進む */
+const WEEK_ORBITS = Array.from({ length: MEMORY_WEEKS }, (_, w) => {
+  let ring = Math.floor(rand(w * 31 + 7) * ORBITS.length);
+  return Array.from({ length: 7 }, (_, d) => {
+    if (d > 0) ring = Math.min(ORBITS.length - 1, Math.max(0, ring + Math.floor(rand(w * 7 + d + 11) * 3) - 1));
+    return ORBITS[ring];
+  });
+});
+
+function starPolar(week: number, weekday: number) {
+  return { r: WEEK_ORBITS[week][weekday], angle: WEEK_CENTERS[week].angle - WEEK_SPAN / 2 + (weekday * WEEK_SPAN) / 6 };
+}
+
 function starPosition(week: number, weekday: number) {
-  const center = WEEK_CENTERS[week];
-  const angle = ((-90 + weekday * (360 / 7) + week * 13) * Math.PI) / 180;
-  const r = 21 + (rand(week * 7 + weekday) - 0.5) * 7;
-  return { x: center.x + Math.cos(angle) * r, y: center.y + Math.sin(angle) * r };
+  const { r, angle } = starPolar(week, weekday);
+  return polar(r, angle);
+}
+
+/** 前夜から今夜へ時計回りの円弧で結ぶ。同じ軌道ならその軌道に沿い、軌道を跨ぐ夜は緩やかな弧で渡る */
+function tracePath(a: ObservedNight, b: ObservedNight) {
+  const pa = starPolar(a.week, a.weekday);
+  const pb = starPolar(b.week, b.weekday);
+  const from = polar(pa.r, pa.angle);
+  const to = polar(pb.r, pb.angle);
+  const radius = (pa.r + pb.r) / 2;
+  return `M ${from.x} ${from.y} A ${radius} ${radius} 0 0 1 ${to.x} ${to.y}`;
+}
+
+/** 内径 r1・外径 r2、角度 a1〜a2 の扇環 */
+function annularSector(r1: number, r2: number, a1: number, a2: number) {
+  const [p1, p2, p3, p4] = [polar(r2, a1), polar(r2, a2), polar(r1, a2), polar(r1, a1)];
+  return `M ${p1.x} ${p1.y} A ${r2} ${r2} 0 0 1 ${p2.x} ${p2.y} L ${p3.x} ${p3.y} A ${r1} ${r1} 0 0 0 ${p4.x} ${p4.y} Z`;
+}
+
+/** 正 n 角形（星座紋章の幾何学ライン用） */
+function polygon(n: number, r: number, offset = -90) {
+  return Array.from({ length: n }, (_, i) => {
+    const p = polar(r, offset + (i * 360) / n);
+    return `${p.x},${p.y}`;
+  }).join(" ");
 }
 
 /** 背景に散らばる淡い星 */
 const DUST = Array.from({ length: 70 }, (_, i) => {
   const angle = rand(i + 300) * Math.PI * 2;
-  const r = Math.sqrt(rand(i + 400)) * 88;
+  const r = Math.sqrt(rand(i + 400)) * 84;
   return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, r: 0.25 + rand(i + 500) * 0.45, o: 0.15 + rand(i + 600) * 0.4 };
 });
 
@@ -161,14 +209,22 @@ function StarMemory({ nights }: { nights: ObservedNight[] }) {
         </dl>
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-12 gap-3 lg:gap-4">
-        <section className="glass relative col-span-8 flex min-h-80 short:min-h-0 items-center justify-center overflow-hidden rounded-2xl [container-type:size]">
+      {/* 星図盤と詳細パネルを黄金比（1.618 : 1）で分け、パネルは星図盤の中心の高さに揃える */}
+      <div className="grid min-h-0 flex-1 grid-cols-[1.618fr_1fr] gap-4 lg:gap-8">
+        <section className="relative flex min-h-80 short:min-h-0 items-center justify-center [container-type:size]">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-1/2 size-[min(100cqw,100cqh)] -translate-1/2 rounded-full"
+            style={{ background: "radial-gradient(closest-side, rgba(226,201,116,0.08), rgba(127,232,220,0.03) 70%, transparent)" }}
+          />
           <CelestialChart nights={nights} completed={completed} selected={selected} onSelect={setSelected} />
         </section>
 
-        <aside className="col-span-4 flex min-h-0 scroll-area flex-col gap-3">
-          <NightDetail night={selected} />
-          <ConstellationList nights={nights} completed={completed} />
+        <aside className="flex min-h-0 scroll-area flex-col">
+          <div className="my-auto flex flex-col gap-3">
+            <NightDetail night={selected} />
+            <ConstellationList nights={nights} completed={completed} />
+          </div>
         </aside>
       </div>
     </div>
@@ -198,7 +254,7 @@ function CelestialChart({
   });
 
   return (
-    <svg viewBox="-100 -100 200 200" className="size-[min(96cqw,96cqh)] overflow-visible" role="img" aria-label="詠唱の星図">
+    <svg viewBox="-100 -100 200 200" className="size-[min(100cqw,100cqh)] overflow-visible" role="img" aria-label="詠唱の天球図盤">
       <defs>
         {/* 星は原点・尖端までの長さ 1 で描くので、グラデーションもその座標で定義する */}
         {Object.entries(ATTRIBUTES).map(([key, { stops }]) => (
@@ -216,65 +272,126 @@ function CelestialChart({
         </radialGradient>
       </defs>
 
-      {/* ゆっくり回る外周の目盛り */}
+      {/* 天球図盤の縁: 二重リングと分度目盛り（ゆっくり回る） */}
       <g className="animate-spin-slower" style={{ transformBox: "view-box", transformOrigin: "0 0" }}>
-        <circle r="97" stroke={GOLD} strokeOpacity="0.3" {...hairline} />
-        <circle r="93" stroke={GOLD} strokeOpacity="0.18" strokeDasharray="0.6 2.4" {...hairline} />
-        {Array.from({ length: 72 }, (_, i) => (
+        <circle r="98" stroke={GOLD} strokeOpacity="0.42" {...hairline} />
+        <circle r="95.5" stroke={GOLD} strokeOpacity="0.3" {...hairline} />
+        {Array.from({ length: 360 }, (_, i) => (
           <line
             key={i}
-            y1="-93"
-            y2={i % 6 === 0 ? -97 : -95}
+            y1="-95.5"
+            y2={i % 10 === 0 ? -91.5 : i % 5 === 0 ? -93 : -94.3}
             stroke={GOLD}
-            strokeOpacity={i % 6 === 0 ? 0.5 : 0.22}
-            transform={`rotate(${i * 5})`}
+            strokeOpacity={i % 10 === 0 ? 0.55 : i % 5 === 0 ? 0.32 : 0.16}
+            transform={`rotate(${i})`}
+            {...hairline}
+          />
+        ))}
+        {Array.from({ length: 12 }, (_, i) => (
+          <text
+            key={i}
+            y="-88.6"
+            textAnchor="middle"
+            dominantBaseline="central"
+            className="font-display"
+            fontSize="2.6"
+            fill={GOLD}
+            fillOpacity="0.5"
+            transform={`rotate(${i * 30})`}
+          >
+            {i * 30}
+          </text>
+        ))}
+        <circle r="86" stroke={GOLD} strokeOpacity="0.2" {...hairline} />
+      </g>
+
+      {/* 週の境: 四方の基点と区切りの子午線 */}
+      <g stroke={GOLD}>
+        {[-90, 0, 90, 180].map((deg) => {
+          const tip = polar(86, deg);
+          const inner = polar(32, deg);
+          const outer = polar(80, deg);
+          return (
+            <g key={deg}>
+              <line x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y} strokeOpacity="0.12" strokeDasharray="0.6 1.8" {...hairline} />
+              <polygon points={diamond(tip.x, tip.y, 1.6)} strokeOpacity="0.5" {...hairline} />
+            </g>
+          );
+        })}
+      </g>
+
+      {/* 星が乗る同心円の軌道 */}
+      <g stroke="#cfe9ff">
+        {ORBITS.map((r) => (
+          <circle
+            key={r}
+            r={r}
+            strokeOpacity={r === ORBIT_MID ? 0.1 : 0.07}
+            strokeDasharray={r === ORBIT_MID ? undefined : "1 2.5"}
             {...hairline}
           />
         ))}
       </g>
+      <g className="glimmer-slow">
+        <ellipse rx="82" ry="30" stroke="#71e2ef" strokeOpacity="0.1" transform="rotate(-18)" {...hairline} />
+        <ellipse rx="82" ry="26" stroke="#a882fb" strokeOpacity="0.1" transform="rotate(32)" {...hairline} />
+      </g>
 
-      {/* 魔導陣: ルーン環と七芒星（外周と逆向きにゆっくり回る） */}
+      {/* 中心の魔導陣: ルーン環と七芒星（縁と逆向きにゆっくり回る） */}
       <g className="animate-spin-slow" style={{ transformBox: "view-box", transformOrigin: "0 0", animationDirection: "reverse" }}>
-        <path id={`${gradientId}-runes`} d="M 0,-88 a 88,88 0 1,1 -0.01,0" fill="none" />
-        <circle r="90.5" stroke={GOLD} strokeOpacity="0.16" {...hairline} />
-        <text fill={GOLD} fillOpacity="0.32" fontSize="3.4">
-          <textPath href={`#${gradientId}-runes`} textLength={2 * Math.PI * 88 - 3} lengthAdjust="spacing">
-            {RUNES + RUNES + RUNES}
+        <path id={`${gradientId}-runes`} d="M 0,-25 a 25,25 0 1,1 -0.01,0" fill="none" />
+        <circle r="30" stroke={GOLD} strokeOpacity="0.18" {...hairline} />
+        <circle r="28" stroke={GOLD} strokeOpacity="0.1" {...hairline} />
+        <text fill={GOLD} fillOpacity="0.3" fontSize="2.4">
+          <textPath href={`#${gradientId}-runes`} textLength={2 * Math.PI * 25 - 2} lengthAdjust="spacing">
+            {RUNES}
           </textPath>
         </text>
-        <polygon points={heptagram(66)} stroke={GOLD} strokeOpacity="0.07" {...hairline} />
-        {Array.from({ length: 7 }, (_, i) => (
-          <circle key={i} cy="-66" r="1.6" stroke={GOLD} strokeOpacity="0.2" transform={`rotate(${(i * 360) / 7})`} {...hairline} />
-        ))}
-      </g>
-
-      {/* 天球の骨格 */}
-      <g stroke="#cfe9ff">
-        <circle r="86" strokeOpacity="0.14" {...hairline} />
-        <circle r="66" strokeOpacity="0.07" strokeDasharray="1 3" {...hairline} />
-        <circle r="26" strokeOpacity="0.08" {...hairline} />
-        <circle r="6" strokeOpacity="0.16" {...hairline} />
-        {[0, 45, 90, 135].map((deg) => (
-          <line key={deg} x1="-86" x2="86" strokeOpacity="0.05" transform={`rotate(${deg})`} {...hairline} />
-        ))}
-      </g>
-      <g className="glimmer-slow">
-        <ellipse rx="84" ry="30" stroke="#71e2ef" strokeOpacity="0.12" transform="rotate(-18)" {...hairline} />
-        <ellipse rx="84" ry="26" stroke="#a882fb" strokeOpacity="0.12" transform="rotate(32)" {...hairline} />
+        <circle r="22" stroke={GOLD} strokeOpacity="0.12" {...hairline} />
+        <polygon points={heptagram(20)} stroke={GOLD} strokeOpacity="0.14" {...hairline} />
+        <circle r="6" stroke="#cfe9ff" strokeOpacity="0.2" {...hairline} />
       </g>
       {DUST.map((d, i) => (
         <circle key={i} cx={d.x} cy={d.y} r={d.r} fill="#f4f1e6" opacity={d.o} />
       ))}
 
-      {/* 7夜が揃った週: 星座のシルエットが浮かび上がる */}
+      {/* 7夜が揃った週: 星座の象限に天体紋章が浮かび上がる */}
       {WEEK_CENTERS.map((c, w) => {
         if (!completed[w]) return null;
         const points = Array.from({ length: 7 }, (_, d) => starPosition(w, d));
         const lastIndex = order.get(nights[w * 7 + 6]) ?? 0;
+        const half = WEEK_SPAN / 2 + 6;
         return (
           <g key={w} className="memory-silhouette" style={{ "--delay": `${litAt(lastIndex) + 0.3}s` } as CSSProperties}>
-            <circle cx={c.x} cy={c.y} r="30" stroke={GOLD} strokeOpacity="0.28" {...hairline} fill={GOLD} fillOpacity="0.03" />
-            <circle cx={c.x} cy={c.y} r="33" stroke={GOLD} strokeOpacity="0.14" strokeDasharray="0.8 2.2" {...hairline} />
+            <path d={annularSector(33, 79, c.angle - half, c.angle + half)} stroke={GOLD} strokeOpacity="0.22" {...hairline} fill={GOLD} fillOpacity="0.03" />
+            {ORBITS.map((r) => {
+              const a = polar(r, c.angle - half);
+              const b = polar(r, c.angle + half);
+              return <path key={r} d={`M ${a.x} ${a.y} A ${r} ${r} 0 0 1 ${b.x} ${b.y}`} stroke={AQUA} strokeOpacity="0.2" {...hairline} />;
+            })}
+            <g transform={`translate(${c.x} ${c.y})`}>
+              <g className="animate-spin-slower" style={{ transformBox: "fill-box", transformOrigin: "center" }}>
+                <circle r="27.5" stroke={AQUA} strokeOpacity="0.22" strokeDasharray="0.6 1.6" {...hairline} />
+                <circle r="25" stroke={GOLD} strokeOpacity="0.34" {...hairline} />
+                {Array.from({ length: 28 }, (_, i) => (
+                  <line
+                    key={i}
+                    y1="-25"
+                    y2={i % 4 === 0 ? -22.6 : -23.8}
+                    stroke={GOLD}
+                    strokeOpacity="0.3"
+                    transform={`rotate(${(i * 360) / 28})`}
+                    {...hairline}
+                  />
+                ))}
+                <polygon points={heptagram(22)} stroke={GOLD} strokeOpacity="0.2" {...hairline} />
+                <circle r="15" stroke={AQUA} strokeOpacity="0.2" {...hairline} />
+                <polygon points={polygon(4, 15)} stroke={AQUA} strokeOpacity="0.2" {...hairline} />
+                <polygon points={polygon(4, 15, -45)} stroke={AQUA} strokeOpacity="0.2" {...hairline} />
+                <circle r="9" stroke={GOLD} strokeOpacity="0.26" {...hairline} />
+                <polygon points={diamond(0, 0, 2.4)} stroke={GOLD} strokeOpacity="0.4" {...hairline} fill={GOLD} fillOpacity="0.08" />
+              </g>
+            </g>
             {points.map((p, d) => (
               <polygon key={d} points={diamond(p.x, p.y, 2.2)} stroke={GOLD} strokeOpacity="0.22" {...hairline} />
             ))}
@@ -283,46 +400,50 @@ function CelestialChart({
       })}
 
       {/* 週の銘 */}
-      {WEEK_CENTERS.map((c, w) => (
-        <text
-          key={w}
-          x={Math.cos(c.angle) * 80}
-          y={Math.sin(c.angle) * 80}
-          textAnchor="middle"
-          dominantBaseline="central"
-          className="font-display"
-          fontSize="3.6"
-          letterSpacing="0.8"
-          fill={completed[w] ? GOLD : DIM}
-          fillOpacity={completed[w] ? 0.8 : 0.6}
-        >
-          WEEK {ROMAN[w]}
-        </text>
-      ))}
-
-      {/* 週の中を日付順に一本道で結ぶ 1px の魔力の軌跡。前夜の星を起点に伸縮させて描く */}
-      {segments.map(({ from: a, to: b }) => {
-        const from = starPosition(a.week, a.weekday);
-        const to = starPosition(b.week, b.weekday);
+      {WEEK_CENTERS.map((c, w) => {
+        const p = polar(81, c.angle);
         return (
-          <line
-            key={b.date.getTime()}
-            x1={from.x}
-            y1={from.y}
-            x2={to.x}
-            y2={to.y}
-            stroke="#cfe9ff"
-            strokeOpacity="0.6"
-            className="memory-trace"
-            style={
-              {
-                transformOrigin: `${from.x}px ${from.y}px`,
-                "--delay": `${litAt(order.get(b) ?? 0) - TRACE_DURATION}s`,
-                "--dur": `${TRACE_DURATION}s`,
-              } as CSSProperties
-            }
-            {...hairline}
-          />
+          <text
+            key={w}
+            x={p.x}
+            y={p.y}
+            textAnchor="middle"
+            dominantBaseline="central"
+            className="font-display"
+            fontSize="3.4"
+            letterSpacing="0.8"
+            fill={completed[w] ? GOLD : DIM}
+            fillOpacity={completed[w] ? 0.85 : 0.6}
+          >
+            WEEK {ROMAN[w]}
+          </text>
+        );
+      })}
+
+      {/* 週の中を日付順に一本道で結ぶ 1px の魔力の軌跡。前夜の星から円弧を描いて伸びる */}
+      {segments.map(({ from: a, to: b }) => {
+        const d = tracePath(a, b);
+        const maskId = `${gradientId}-trace-${b.date.getTime()}`;
+        return (
+          <g key={b.date.getTime()}>
+            <mask id={maskId} maskUnits="userSpaceOnUse" x="-100" y="-100" width="200" height="200">
+              <path
+                d={d}
+                pathLength={1}
+                stroke="#fff"
+                strokeWidth={4}
+                fill="none"
+                className="memory-trace"
+                style={
+                  {
+                    "--delay": `${litAt(order.get(b) ?? 0) - TRACE_DURATION}s`,
+                    "--dur": `${TRACE_DURATION}s`,
+                  } as CSSProperties
+                }
+              />
+            </mask>
+            <path d={d} mask={`url(#${maskId})`} stroke="#cfe9ff" strokeOpacity="0.6" {...hairline} />
+          </g>
         );
       })}
 

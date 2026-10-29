@@ -672,14 +672,14 @@
 
 /* ---------- 魔導の軌跡 ---------- */
 /* 星から星へ光の線が伸びる */
-/* non-scaling-stroke の 1px 線は dash で伸ばせないので、起点（transform-origin）から伸縮させる */
+/* non-scaling-stroke の 1px 線は dash で伸ばせないので、同じ弧を太く描いたマスクを dash で伸ばして露わにする */
 @keyframes memory-trace {
-  from { transform: scale(0); }
-  to { transform: scale(1); }
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
 }
 
 .memory-trace {
-  transform-box: view-box;
+  stroke-dasharray: 1;
   animation: memory-trace var(--dur, 0.45s) ease-out var(--delay, 0s) both;
 }
 
