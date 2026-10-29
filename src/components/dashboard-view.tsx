@@ -1,12 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { BookMarked, Moon, Sparkles, Sun, Wand2 } from "lucide-react";
+import { BookMarked, CalendarDays, Moon, Settings, Sparkles, Sun, Swords, Wand2 } from "lucide-react";
 import { AreaAmbience } from "@/components/area-ambience";
 import { MpBar } from "@/components/mp-bar";
 import { PageLoading } from "@/components/page-loading";
 import { RadarPanel } from "@/components/radar-panel";
 import { StageCard } from "@/components/stage-card";
+import { TrialsDialog, readyCount } from "@/components/trials-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { WizardAvatar } from "@/components/wizard-avatar";
@@ -15,7 +17,7 @@ import { dashboardSummary, type DashboardSummary } from "@/lib/aggregate";
 import { formatMinutes, levelProgress, rankOf } from "@/lib/game";
 import { activeSubjectsOf } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
-import { localProfile, localStudyLogs, useStoredUserData } from "@/lib/user-store";
+import { localProfile, localStudyLogs, useStoredUserData, useUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 const MODE_LABEL = { pomodoro: "律動の詠唱", stopwatch: "無窮の詠唱" } as const;
@@ -32,10 +34,10 @@ export function DashboardView({ summary, subjects, isDemo }: { summary: Dashboar
   const radar = Object.fromEntries(
     Object.entries(base.radar).map(([range, totals]) => [range, totals.filter((t) => activeIds.has(t.subjectId))]),
   ) as DashboardSummary["radar"];
-  return <Dashboard {...base} radar={radar} />;
+  return <Dashboard {...base} radar={radar} subjects={subjects} />;
 }
 
-function Dashboard({ profile, totals, radar, recentLogs }: DashboardSummary) {
+function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSummary & { subjects: Subject[] }) {
   const level = levelProgress(profile.total_study_time);
   const rank = rankOf(level.level);
 
@@ -96,6 +98,8 @@ function Dashboard({ profile, totals, radar, recentLogs }: DashboardSummary) {
               </Card>
             ))}
           </div>
+
+          <MenuTiles subjects={subjects} />
         </section>
 
         {/* 中央: 魔法陣レーダーチャート */}
@@ -154,5 +158,47 @@ function Dashboard({ profile, totals, radar, recentLogs }: DashboardSummary) {
         </section>
       </div>
     </>
+  );
+}
+
+const tileClass = cn(
+  buttonVariants({ variant: "outline" }),
+  "group relative h-full min-h-20 flex-col gap-1 rounded-2xl px-2 py-3 text-sm tracking-[0.2em] whitespace-nowrap",
+);
+
+function TileContent({ icon: Icon, label, sub }: { icon: typeof Swords; label: string; sub: string }) {
+  return (
+    <>
+      <Icon className="size-5! text-starlight transition-transform duration-500 group-hover:-rotate-6" strokeWidth={1.25} />
+      {label}
+      <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60">{sub}</span>
+    </>
+  );
+}
+
+/** 左下の空きに並べる、詠唱・図鑑以外の行き先（星の試練はこの場でダイアログを開く） */
+function MenuTiles({ subjects }: { subjects: Subject[] }) {
+  const data = useUserData();
+  const [trialsOpen, setTrialsOpen] = useState(false);
+  const ready = readyCount(data);
+
+  return (
+    <div className="grid min-h-0 flex-1 grid-cols-3 gap-2">
+      <button type="button" onClick={() => setTrialsOpen(true)} aria-haspopup="dialog" className={cn(tileClass, ready > 0 && "claim-glow border-starlight/45")}>
+        <TileContent icon={Swords} label="星の試練" sub="TRIALS" />
+        {ready > 0 && (
+          <span className="absolute top-2 right-2 rounded-full border border-starlight/50 bg-starlight/10 px-1.5 font-display text-[10px] tracking-normal text-starlight">
+            {ready}
+          </span>
+        )}
+      </button>
+      <Link href="/history" className={tileClass}>
+        <TileContent icon={CalendarDays} label="魔導の軌跡" sub="CHRONICLE" />
+      </Link>
+      <Link href="/settings" className={tileClass}>
+        <TileContent icon={Settings} label="設定" sub="SETTINGS" />
+      </Link>
+      {trialsOpen && <TrialsDialog subjects={subjects} onClose={() => setTrialsOpen(false)} />}
+    </div>
   );
 }

@@ -24,7 +24,7 @@ const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
 const claimable = (t: TaskState | undefined) => !!t && !t.isClaimed && t.progress >= t.maxProgress;
 
 /** 受け取れる報酬（日課では星天の導きを含む）の数 */
-function readyCount(data: UserData, scope?: TaskScope) {
+export function readyCount(data: UserData, scope?: TaskScope) {
   const tasks = TASKS.filter((t) => (!scope || t.scope === scope) && claimable(data.tasks[t.scope].items[t.id])).length;
   const guidance = scope !== "weekly" && data.dailyReward.lastClaimedDate !== jstDateKey(new Date()) ? 1 : 0;
   return tasks + guidance;
@@ -38,10 +38,10 @@ export function TrialsNavButton({ subjects }: { subjects: Subject[] | null }) {
   const data = useUserData();
   const [open, setOpen] = useState(false);
 
-  // 開いた時点の詠唱履歴・日付で進捗を測り直す（日付をまたいだら巡り直す）
+  // 受け取れる報酬の印を灯すため、表示した時点の進捗に測り直す
   useEffect(() => {
     if (subjects) userActions.syncTasks(subjects);
-  }, [subjects, open]);
+  }, [subjects]);
 
   const ready = subjects ? readyCount(data) : 0;
 
@@ -68,8 +68,14 @@ export function TrialsNavButton({ subjects }: { subjects: Subject[] | null }) {
   );
 }
 
-function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClose: () => void }) {
+/** 星の試練ダイアログ（ナビ・魔術書庫の両方から開く） */
+export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClose: () => void }) {
   const data = useUserData();
+
+  // 開いた時点の詠唱履歴・日付で進捗を測り直す（日付をまたいだら巡り直す）
+  useEffect(() => {
+    userActions.syncTasks(subjects);
+  }, [subjects]);
   const [scope, setScope] = useState<TaskScope>("daily");
   const [burst, setBurst] = useState<{ taskId: string; claim: TaskClaim; key: number } | null>(null);
   const totalMp = data.userProfile.totalMp;
