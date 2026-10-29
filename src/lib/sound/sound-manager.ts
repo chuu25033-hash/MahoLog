@@ -64,6 +64,15 @@ class SoundManager {
     void this.syncAmbience();
   }
 
+  /**
+   * 操作を待たずに鳴らせるか試す（ブラウザが自動再生を許していれば、そのまま環境音が流れ始める）。
+   * 許されていなければ、最初の操作で鳴り始める
+   */
+  tryStart() {
+    const bus = this.ensureBus();
+    if (bus?.ctx.state === "running") void this.syncAmbience();
+  }
+
   /** 詠唱中は環境音を控えめにする */
   setDucked(ducked: boolean) {
     if (this.ducked === ducked) return;

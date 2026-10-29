@@ -51,6 +51,8 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
     setBurst((b) => b + 1);
     setLeaving(true);
     soundManager.playSe("begin");
+    // 探求の始まりとともに、タイトルの曲を静かに消していく
+    soundManager.setAmbience(null);
     coverScreen();
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const href = pendingGuidance() ? GUIDANCE : DESTINATION;
