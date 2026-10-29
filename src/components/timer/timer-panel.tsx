@@ -17,7 +17,7 @@ import {
 import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
 import { CATALYSTS, rollDrop } from "@/lib/items";
-import { activeSkin, armedCatalyst, mockActions, useMockState } from "@/lib/mock-store";
+import { activeSkin, armedCatalyst, getUserData, todayChantMinutes, userActions, useUserData } from "@/lib/user-store";
 import type { StudyMode, Subject, SubjectTotal } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { ResultDialog, type StudyResult } from "./result-dialog";
@@ -72,10 +72,10 @@ export function TimerPanel({
   const [confirmBaseMs, setConfirmBaseMs] = useState(0);
   const checkpointRef = useRef(0);
 
-  const mock = useMockState();
-  const area = resolveArea(mock.areaId, totalMp);
-  const skin = activeSkin(mock);
-  const catalyst = armedCatalyst(mock);
+  const data = useUserData();
+  const area = resolveArea(data.userProfile.currentStageId, totalMp);
+  const skin = activeSkin(data);
+  const catalyst = armedCatalyst(data);
 
   const subject = subjects.find((s) => s.id === subjectId);
   const resting = phase === "break" || phase === "breakReady";
@@ -97,16 +97,35 @@ export function TimerPanel({
           setMessage(res.error);
           return;
         }
+        if (isDemo) {
+          // デモモードの1日上限はローカルの詠唱履歴で判定する
+          res.savedMinutes = Math.min(res.savedMinutes, DAILY_LIMIT_MINUTES - todayChantMinutes(getUserData()));
+          if (res.savedMinutes < 1) {
+            setMessage("本日の記録上限（12時間）に達しています");
+            return;
+          }
+        }
         const afterTotals = beforeTotals.map((t) =>
           t.subjectId === subject.id ? { ...t, minutes: t.minutes + res.savedMinutes } : t,
         );
         // 獲得MP = 勉強時間 × エリアの属性ブースト × 触媒
         // TODO: Supabase 接続時はボーナス分の MP も DB に保存する（現状はローカル表示のみ）
         const areaBoost = areaMultiplier(area, subject.name);
-        const usedCatalyst = mockActions.consumeCatalyst();
+        const usedCatalyst = userActions.consumeCatalyst();
         const gainedMp = Math.round(res.savedMinutes * areaBoost * (usedCatalyst?.multiplier ?? 1));
         const drop = rollDrop(area);
-        const isNew = drop ? mockActions.addItem(drop) : false;
+        const isNew = drop ? userActions.addItem(drop) : false;
+        if (isDemo) {
+          userActions.recordChant({
+            minutes: res.savedMinutes,
+            subjectId: subject.id,
+            mp: gainedMp,
+            stageId: area.id,
+            mode,
+            catalystId: usedCatalyst?.id ?? null,
+            dropId: drop?.id ?? null,
+          });
+        }
 
         setWeekTotals(afterTotals);
         setTotalMp(res.beforeMp + gainedMp);
@@ -128,7 +147,7 @@ export function TimerPanel({
         });
       });
     },
-    [area, mode, subject, totalMp, weekTotals],
+    [area, isDemo, mode, subject, totalMp, weekTotals],
   );
 
   // ポモドーロ: 勉強・休憩の終了判定
@@ -325,13 +344,13 @@ export function TimerPanel({
           <div>
             <p className="mb-1 text-[11px] text-muted-foreground">触媒（次回の詠唱に使用）</p>
             <div className="flex flex-wrap gap-1">
-              {CATALYSTS.filter((c) => (mock.inventory[c.id] ?? 0) > 0).map((c) => {
+              {CATALYSTS.filter((c) => (data.inventory[c.id] ?? 0) > 0).map((c) => {
                 const armed = catalyst?.id === c.id;
                 return (
                   <button
                     key={c.id}
                     disabled={locked}
-                    onClick={() => mockActions.armCatalyst(armed ? null : c.id)}
+                    onClick={() => userActions.armCatalyst(armed ? null : c.id)}
                     title={c.effect}
                     className={cn(
                       "flex items-center gap-1 rounded-full border py-0.5 pr-2 pl-0.5 text-[11px] transition-all duration-300 disabled:opacity-50",
@@ -342,11 +361,11 @@ export function TimerPanel({
                   >
                     <ItemArt glyph={c.glyph} rarity={c.rarity} color={c.color} seed={c.id} className="size-5" />
                     ×{c.multiplier}
-                    <span className="text-[10px] opacity-70">({mock.inventory[c.id]})</span>
+                    <span className="text-[10px] opacity-70">({data.inventory[c.id]})</span>
                   </button>
                 );
               })}
-              {CATALYSTS.every((c) => (mock.inventory[c.id] ?? 0) === 0) && (
+              {CATALYSTS.every((c) => (data.inventory[c.id] ?? 0) === 0) && (
                 <span className="text-[11px] text-muted-foreground/70">所持していません</span>
               )}
             </div>

@@ -1,7 +1,8 @@
-// 魔導の軌跡（詠唱履歴の星図）用のモック詠唱履歴。
-// 日付から決定的に生成するので、同じ日に何度開いても同じ星図になる。
+// 魔導の軌跡（詠唱履歴の星図）用の夜ごとの詠唱履歴。
+// サンプル（mockObservedNights）は日付から決定的に生成するので、同じ日に何度開いても同じ星図になる。
 import { startOfJstDay, startOfJstWeek } from "./date";
-import { CATALYSTS, LORES, SKINS, type CatalystItem, type Item } from "./items";
+import { CATALYSTS, LORES, SKINS, findItem, type CatalystItem, type Item } from "./items";
+import type { ChantRecord } from "./user-store";
 
 const DAY = 24 * 60 * 60 * 1000;
 const JST_OFFSET = 9 * 60 * 60 * 1000;
@@ -87,5 +88,33 @@ export function mockObservedNights(now = new Date()): ObservedNight[] {
     const week = Math.floor(i / 7);
     // 最初の週の土曜だけ休息日にして、星座が途切れた週も見せる
     return night(date, week, i % 7, date.getTime() > today, week === 0 && i % 7 === 5);
+  });
+}
+
+/** 保存した詠唱履歴を、直近 MEMORY_WEEKS 週分の夜ごとにまとめる */
+export function observedNightsFrom(history: ChantRecord[], now = new Date()): ObservedNight[] {
+  const today = startOfJstDay(now).getTime();
+  const first = startOfJstWeek(now).getTime() - (MEMORY_WEEKS - 1) * 7 * DAY;
+  const byDay = new Map<number, ChantRecord[]>();
+  for (const r of history) {
+    const day = startOfJstDay(new Date(r.date)).getTime();
+    byDay.set(day, [...(byDay.get(day) ?? []), r]);
+  }
+
+  return Array.from({ length: MEMORY_WEEKS * 7 }, (_, i) => {
+    const date = new Date(first + i * DAY);
+    const records = byDay.get(date.getTime()) ?? [];
+    const catalyst = records.map((r) => findItem(r.catalystId)).find((item) => item?.kind === "catalyst");
+    return {
+      date,
+      week: Math.floor(i / 7),
+      weekday: i % 7,
+      future: date.getTime() > today,
+      sessions: records.map((r) => ({ subjectId: r.subjectId, minutes: r.minutes })),
+      minutes: records.reduce((acc, r) => acc + r.minutes, 0),
+      mp: records.reduce((acc, r) => acc + r.mp, 0),
+      catalyst: catalyst?.kind === "catalyst" ? catalyst : null,
+      drops: records.map((r) => findItem(r.dropId)).filter((d): d is Item => d !== undefined),
+    };
   });
 }

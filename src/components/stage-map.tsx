@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { AREAS, boostLabel, isAreaUnlocked, ORIGIN_AREA, type Area } from "@/lib/areas";
 import { formatMinutes, STAGES, type Stage } from "@/lib/game";
 import { RARITY_LABEL } from "@/lib/items";
-import { mockActions } from "@/lib/mock-store";
+import { userActions } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 /** 大ステージごとのマップの雰囲気（背景の深い色・灯の色・粒子の色） */
@@ -404,7 +404,7 @@ function AreaPanel({ area, totalMp, current }: { area: Area; totalMp: number; cu
       <Button
         size="sm"
         disabled={!unlocked || current}
-        onClick={() => mockActions.setArea(area.id)}
+        onClick={() => userActions.setCurrentStage(area.id)}
         className="w-full font-serif tracking-wider"
       >
         {current ? (

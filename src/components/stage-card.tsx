@@ -9,14 +9,14 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { boostLabel, resolveArea } from "@/lib/areas";
 import { formatMinutes, STAGES, stageProgress } from "@/lib/game";
-import { useMockState } from "@/lib/mock-store";
+import { useUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 /** ホームのステージ表示 + 滞在エリア（小ステージ）の選択 */
 export function StageCard({ totalMp }: { totalMp: number }) {
-  const mock = useMockState();
+  const data = useUserData();
   const [open, setOpen] = useState(false);
-  const area = resolveArea(mock.areaId, totalMp);
+  const area = resolveArea(data.userProfile.currentStageId, totalMp);
   const stage = stageProgress(totalMp);
   const areaStage = STAGES.find((s) => s.id === area.stageId)!;
 

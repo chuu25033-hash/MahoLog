@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { resolveArea, type AmbienceKind } from "@/lib/areas";
-import { activeSkin, useMockState } from "@/lib/mock-store";
+import { activeSkin, useUserData } from "@/lib/user-store";
 
 // 決定的な疑似乱数（SSR とクライアントで同じ配置にする）
 function rand(seed: number) {
@@ -31,9 +31,9 @@ const KIND_STYLE: Record<AmbienceKind, { animation: string; size: number; blur: 
 
 /** 滞在エリアに応じた背景の淡いグラデーションと漂う粒子 */
 export function AreaAmbience({ totalMp }: { totalMp: number }) {
-  const mock = useMockState();
-  const area = resolveArea(mock.areaId, totalMp);
-  const skin = activeSkin(mock);
+  const data = useUserData();
+  const area = resolveArea(data.userProfile.currentStageId, totalMp);
+  const skin = activeSkin(data);
   const [c1, c2] = area.ambience.colors;
   const kind = KIND_STYLE[area.ambience.kind];
 

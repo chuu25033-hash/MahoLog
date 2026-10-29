@@ -18,3 +18,8 @@ export function startOfJstMonth(date = new Date()): Date {
   const jst = new Date(date.getTime() + JST_OFFSET);
   return new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), 1) - JST_OFFSET);
 }
+
+/** JST の日付キー（YYYY-MM-DD） */
+export function jstDateKey(date = new Date()): string {
+  return new Date(date.getTime() + JST_OFFSET).toISOString().slice(0, 10);
+}

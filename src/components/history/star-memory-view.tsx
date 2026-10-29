@@ -1,13 +1,14 @@
 "use client";
 
-import { useId, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { useId, useState, type CSSProperties } from "react";
 import { Moon, Sparkles, Star } from "lucide-react";
 import { ItemArt } from "@/components/item-art";
 import { PageLoading } from "@/components/page-loading";
 import { demoSubjects } from "@/lib/demo";
 import { formatMinutes } from "@/lib/game";
 import { RARITY_LABEL } from "@/lib/items";
-import { MEMORY_WEEKS, mockObservedNights, type ObservedNight } from "@/lib/star-memory";
+import { MEMORY_WEEKS, observedNightsFrom, type ObservedNight } from "@/lib/star-memory";
+import { useStoredUserData, type ChantRecord } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 /** 拡大縮小しても 1px を保つ光の線 */
@@ -163,19 +164,18 @@ function diamond(x: number, y: number, r: number) {
   return `${x},${y - r} ${x + r},${y} ${x},${y + r} ${x - r},${y}`;
 }
 
-// 日付が変わるまでは同じ履歴を使い回す（getSnapshot は同じ参照を返す必要がある）
-let cache: { key: string; nights: ObservedNight[] } | null = null;
-function snapshot() {
-  const key = new Date().toDateString();
-  if (cache?.key !== key) cache = { key, nights: mockObservedNights() };
+// 履歴か日付が変わるまでは同じ星図を使い回す（getSnapshot は同じ参照を返す必要がある）
+let cache: { history: ChantRecord[]; day: string; nights: ObservedNight[] } | null = null;
+function nightsOf(history: ChantRecord[]) {
+  const day = new Date().toDateString();
+  if (cache?.history !== history || cache.day !== day) cache = { history, day, nights: observedNightsFrom(history) };
   return cache.nights;
 }
-const noopSubscribe = () => () => {};
 
 export function StarMemoryView() {
-  const nights = useSyncExternalStore(noopSubscribe, snapshot, () => null);
-  if (!nights) return <PageLoading />;
-  return <StarMemory nights={nights} />;
+  const stored = useStoredUserData();
+  if (!stored) return <PageLoading />;
+  return <StarMemory nights={nightsOf(stored.chantHistory)} />;
 }
 
 function StarMemory({ nights }: { nights: ObservedNight[] }) {

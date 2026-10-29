@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { findArea, type Rarity } from "@/lib/areas";
 import { ALL_ITEMS, RARITY_LABEL, type Item } from "@/lib/items";
-import { armedCatalyst, mockActions, useMockState, type MockState } from "@/lib/mock-store";
+import { armedCatalyst, isDiscovered, userActions, useUserData, type UserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 const SECTIONS: { rarity: Rarity; caption: string }[] = [
@@ -18,9 +18,9 @@ const SECTIONS: { rarity: Rarity; caption: string }[] = [
 
 /** 魔導図鑑: 獲得したアイテムをカードで並べる（未獲得はグレーアウト） */
 export function CollectionView() {
-  const mock = useMockState();
+  const data = useUserData();
   const [selected, setSelected] = useState<Item | null>(null);
-  const found = ALL_ITEMS.filter((i) => mock.discovered.includes(i.id)).length;
+  const found = ALL_ITEMS.filter((i) => isDiscovered(data, i.id)).length;
 
   return (
     <div className="scroll-area flex h-full flex-col gap-4 p-3 lg:p-5">
@@ -48,13 +48,13 @@ export function CollectionView() {
               {RARITY_LABEL[rarity]}
               <span className="min-w-0 truncate text-[11px] tracking-wider text-muted-foreground">{caption}</span>
               <span className="ml-auto font-display text-xs text-muted-foreground">
-                {items.filter((i) => mock.discovered.includes(i.id)).length} / {items.length}
+                {items.filter((i) => isDiscovered(data, i.id)).length} / {items.length}
               </span>
             </h2>
             <ul className="grid grid-cols-6 gap-2 lg:grid-cols-8">
               {items.map((item) => (
                 <li key={item.id}>
-                  <ItemCard item={item} mock={mock} onSelect={() => setSelected(item)} />
+                  <ItemCard item={item} data={data} onSelect={() => setSelected(item)} />
                 </li>
               ))}
             </ul>
@@ -62,15 +62,15 @@ export function CollectionView() {
         );
       })}
 
-      {selected && <ItemDialog item={selected} mock={mock} onClose={() => setSelected(null)} />}
+      {selected && <ItemDialog item={selected} data={data} onClose={() => setSelected(null)} />}
     </div>
   );
 }
 
-function ItemCard({ item, mock, onSelect }: { item: Item; mock: MockState; onSelect: () => void }) {
-  const owned = mock.discovered.includes(item.id);
-  const count = mock.inventory[item.id] ?? 0;
-  const equipped = (item.kind === "skin" && mock.skinId === item.id) || (item.kind === "catalyst" && armedCatalyst(mock)?.id === item.id);
+function ItemCard({ item, data, onSelect }: { item: Item; data: UserData; onSelect: () => void }) {
+  const owned = isDiscovered(data, item.id);
+  const count = data.inventory[item.id] ?? 0;
+  const equipped = (item.kind === "skin" && data.equipment.skinId === item.id) || (item.kind === "catalyst" && armedCatalyst(data)?.id === item.id);
 
   return (
     <button
@@ -106,10 +106,10 @@ function ItemCard({ item, mock, onSelect }: { item: Item; mock: MockState; onSel
   );
 }
 
-function ItemDialog({ item, mock, onClose }: { item: Item; mock: MockState; onClose: () => void }) {
+function ItemDialog({ item, data, onClose }: { item: Item; data: UserData; onClose: () => void }) {
   const area = item.kind === "lore" ? findArea(item.areaId) : undefined;
-  const count = mock.inventory[item.id] ?? 0;
-  const armed = armedCatalyst(mock)?.id === item.id;
+  const count = data.inventory[item.id] ?? 0;
+  const armed = armedCatalyst(data)?.id === item.id;
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -128,10 +128,10 @@ function ItemDialog({ item, mock, onClose }: { item: Item; mock: MockState; onCl
           {item.kind === "skin" && (
             <Button
               size="sm"
-              variant={mock.skinId === item.id ? "outline" : "default"}
-              onClick={() => mockActions.setSkin(mock.skinId === item.id ? null : item.id)}
+              variant={data.equipment.skinId === item.id ? "outline" : "default"}
+              onClick={() => userActions.setSkin(data.equipment.skinId === item.id ? null : item.id)}
             >
-              <Paintbrush /> {mock.skinId === item.id ? "標準に戻す" : "このスキンを適用"}
+              <Paintbrush /> {data.equipment.skinId === item.id ? "標準に戻す" : "このスキンを適用"}
             </Button>
           )}
           {item.kind === "catalyst" && (
@@ -139,7 +139,7 @@ function ItemDialog({ item, mock, onClose }: { item: Item; mock: MockState; onCl
               size="sm"
               variant={armed ? "outline" : "default"}
               disabled={count === 0}
-              onClick={() => mockActions.armCatalyst(armed ? null : item.id)}
+              onClick={() => userActions.armCatalyst(armed ? null : item.id)}
             >
               <Sparkles /> {count === 0 ? "所持していません" : armed ? "装備を外す" : `次回の詠唱に使う（残り${count}）`}
             </Button>

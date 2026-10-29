@@ -1,11 +1,12 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
-import { startOfJstDay, startOfJstMonth, startOfJstWeek } from "./date";
+import { dashboardSummary, timerSummary } from "./aggregate";
+import { startOfJstMonth, startOfJstWeek } from "./date";
 import { demoLogs, demoProfile, demoSubjects } from "./demo";
 import { isSupabaseConfigured } from "./supabase/config";
 import { createClient } from "./supabase/server";
-import type { Profile, StudyLog, Subject, SubjectTotal } from "./types";
+import type { Profile, StudyLog, Subject } from "./types";
 
 async function loadUserData(since: Date): Promise<{
   profile: Profile;
@@ -51,65 +52,20 @@ async function loadUserData(since: Date): Promise<{
   return { profile: profile.data, subjects: subjects.data, logs: logs.data as StudyLog[] };
 }
 
-function sumSince(logs: StudyLog[], since: Date) {
-  return logs
-    .filter((l) => new Date(l.created_at) >= since)
-    .reduce((acc, l) => acc + l.duration_minutes, 0);
-}
-
-function totalsBySubject(subjects: Subject[], logs: StudyLog[], since: Date): SubjectTotal[] {
-  return subjects.map((s) => ({
-    subjectId: s.id,
-    name: s.name,
-    color: s.color,
-    minutes: logs
-      .filter((l) => l.subject_id === s.id && new Date(l.created_at) >= since)
-      .reduce((acc, l) => acc + l.duration_minutes, 0),
-  }));
-}
-
 export async function getDashboardData() {
   await connection(); // 現在時刻で集計するため常にリクエスト時に描画
   const now = new Date();
-  const today = startOfJstDay(now);
   const week = startOfJstWeek(now);
   const month = startOfJstMonth(now);
-  const since = week < month ? week : month;
+  const { profile, subjects, logs } = await loadUserData(week < month ? week : month);
 
-  const { profile, subjects, logs } = await loadUserData(since);
-  const active = subjects.filter((s) => s.is_active);
-
-  return {
-    profile,
-    totals: {
-      today: sumSince(logs, today),
-      week: sumSince(logs, week),
-      month: sumSince(logs, month),
-    },
-    radar: {
-      week: totalsBySubject(active, logs, week),
-      month: totalsBySubject(active, logs, month),
-    },
-    recentLogs: logs.slice(0, 5).map((l) => ({
-      ...l,
-      subject: subjects.find((s) => s.id === l.subject_id),
-    })),
-    isDemo: !isSupabaseConfigured,
-  };
+  return { ...dashboardSummary(profile, subjects, logs, now), subjects, isDemo: !isSupabaseConfigured };
 }
 
 export async function getTimerData() {
   await connection();
   const now = new Date();
-  const week = startOfJstWeek(now);
-  const { profile, subjects, logs } = await loadUserData(week);
-  const active = subjects.filter((s) => s.is_active);
+  const { profile, subjects, logs } = await loadUserData(startOfJstWeek(now));
 
-  return {
-    profile,
-    subjects: active,
-    weekTotals: totalsBySubject(active, logs, week),
-    todayMinutes: sumSince(logs, startOfJstDay(now)),
-    isDemo: !isSupabaseConfigured,
-  };
+  return { profile, ...timerSummary(subjects, logs, now), isDemo: !isSupabaseConfigured };
 }
