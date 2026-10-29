@@ -26,6 +26,8 @@ export type UserProfile = {
   subject: string | null;
   /** 詳細科目（カスタムは自由記述） */
   subSubject: string | null;
+  /** 詠唱に使う科目 ID（3つ以上）。null ならすべての科目 */
+  activeSubjects: string[] | null;
 };
 
 export type ChantRecord = {
@@ -83,7 +85,7 @@ const unlockedAt = (totalMp: number) => AREAS.filter((a) => isAreaUnlocked(a, to
 /** 初回起動時の状態: Rank I「門前の解読者」、はじまりの小屋から */
 export function initialUserData(): UserData {
   return {
-    userProfile: { username: demoProfile.username, rank: rankOf(calcLevel(0)).numeral, totalMp: 0, currentStageId: "1-1", subject: null, subSubject: null },
+    userProfile: { username: demoProfile.username, rank: rankOf(calcLevel(0)).numeral, totalMp: 0, currentStageId: "1-1", subject: null, subSubject: null, activeSubjects: null },
     chantHistory: [],
     dailyReward: { lastClaimedDate: null, streak: 0 },
     inventory: {},
@@ -340,6 +342,21 @@ export const userActions = {
   /** 主軸カテゴリと詳細科目 */
   setSubject(subject: string | null, subSubject: string | null) {
     update((s) => ({ ...s, userProfile: { ...s.userProfile, subject, subSubject } }));
+  },
+
+  /** 詠唱に使う科目。主軸カテゴリが外れたら主軸の指定も外す */
+  setActiveSubjects(ids: string[]) {
+    update((s) => {
+      const keepMain = s.userProfile.subject !== null && ids.includes(s.userProfile.subject);
+      return {
+        ...s,
+        userProfile: {
+          ...s.userProfile,
+          activeSubjects: ids,
+          ...(keepMain ? {} : { subject: null, subSubject: null }),
+        },
+      };
+    });
   },
 
   updateSettings(patch: Partial<UserSettings>) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import { Bell, Download, Feather, RotateCcw, ScrollText, Upload, UserRound } from "lucide-react";
+import { Bell, Check, Download, Feather, Hexagon, RotateCcw, ScrollText, Upload, UserRound } from "lucide-react";
 import { PageLoading } from "@/components/page-loading";
 import { SubjectPicker } from "@/components/subject-picker";
 import { SubjectRuneChip } from "@/components/subject-rune-chip";
@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { jstDateKey } from "@/lib/date";
-import { resolveSubSubject } from "@/lib/subjects";
+import { MIN_ACTIVE_SUBJECTS, activeSubjectsOf, resolveSubSubject } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
 import { FOCUS_MINUTE_OPTIONS, initialUserData, userActions, useStoredUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,8 @@ export function SettingsView({ subjects, isDemo }: { subjects: Subject[]; isDemo
   const data = useStoredUserData();
   if (!data) return <PageLoading />;
   const { userProfile, settings } = data;
-  const mainSubject = subjects.find((s) => s.id === userProfile.subject);
+  const activeSubjects = activeSubjectsOf(subjects, userProfile.activeSubjects);
+  const mainSubject = activeSubjects.find((s) => s.id === userProfile.subject);
 
   return (
     <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 p-3 animate-in fade-in duration-700 lg:p-5">
@@ -43,7 +44,7 @@ export function SettingsView({ subjects, isDemo }: { subjects: Subject[]; isDemo
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-3 gap-3 lg:gap-4">
-        <Panel icon={UserRound} title="探究者と詠唱" label="SCHOLAR">
+        <Panel icon={UserRound} title="探究者と演出" label="SCHOLAR">
           <Field label="探究者名" hint={`${userProfile.username.length} / ${USERNAME_MAX}`}>
             <input
               value={userProfile.username}
@@ -53,24 +54,6 @@ export function SettingsView({ subjects, isDemo }: { subjects: Subject[]; isDemo
               className="h-9 w-full rounded-xl border border-white/15 bg-white/[0.03] px-3 text-sm tracking-wider outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-starlight/55 focus-visible:shadow-[0_0_12px_-3px_rgba(226,201,116,0.45)]"
               aria-label="探究者名"
             />
-          </Field>
-
-          <Field label="主軸カテゴリ ➔ 詳細科目" hint="詠唱画面で最初に選ばれます">
-            <SubjectPicker
-              subjects={subjects}
-              subjectId={mainSubject?.id ?? null}
-              subSubject={mainSubject ? userProfile.subSubject : null}
-              onChange={(subject, subSubject) => userActions.setSubject(subject, subSubject)}
-              allowNone
-            />
-            {mainSubject && (
-              <SubjectRuneChip
-                name={mainSubject.name}
-                subSubject={resolveSubSubject(mainSubject, userProfile.subSubject)}
-                color={mainSubject.color}
-                className="mt-3"
-              />
-            )}
           </Field>
 
           <Field label="デフォルト詠唱時間" hint="律動の詠唱の初期集中時間">
@@ -93,23 +76,47 @@ export function SettingsView({ subjects, isDemo }: { subjects: Subject[]; isDemo
               ))}
             </div>
           </Field>
+
+          <Field label="環境と演出">
+            <div className="flex flex-col gap-2">
+              <ToggleRow
+                icon={Feather}
+                label="演出の軽量化"
+                description="星屑や粒子を間引き、常に動くアニメーションを止めて軽くします"
+                checked={settings.liteMode}
+                onChange={(liteMode) => userActions.updateSettings({ liteMode })}
+              />
+              <ToggleRow
+                icon={Bell}
+                label="詠唱完了の報せ"
+                description="詠唱や静息を終えたとき、静かなベルの音と振動で知らせます"
+                checked={settings.chime}
+                onChange={(chime) => userActions.updateSettings({ chime })}
+              />
+            </div>
+          </Field>
         </Panel>
 
-        <Panel icon={Feather} title="環境と演出" label="AMBIENCE">
-          <ToggleRow
-            icon={Feather}
-            label="演出の軽量化"
-            description="背景の星屑や漂う粒子を間引き、常に動き続けるアニメーションを止めて動作を軽くします"
-            checked={settings.liteMode}
-            onChange={(liteMode) => userActions.updateSettings({ liteMode })}
-          />
-          <ToggleRow
-            icon={Bell}
-            label="詠唱完了の報せ"
-            description="詠唱や静息を終えたとき、静かなベルの音と振動で知らせます"
-            checked={settings.chime}
-            onChange={(chime) => userActions.updateSettings({ chime })}
-          />
+        <Panel icon={Hexagon} title="詠唱の領域" label="DOMAINS">
+          <ActiveSubjectsField subjects={subjects} activeIds={activeSubjects.map((s) => s.id)} />
+
+          <Field label="主軸カテゴリ ➔ 詳細科目" hint="詠唱画面で最初に選ばれます">
+            <SubjectPicker
+              subjects={activeSubjects}
+              subjectId={mainSubject?.id ?? null}
+              subSubject={mainSubject ? userProfile.subSubject : null}
+              onChange={(subject, subSubject) => userActions.setSubject(subject, subSubject)}
+              allowNone
+            />
+            {mainSubject && (
+              <SubjectRuneChip
+                name={mainSubject.name}
+                subSubject={resolveSubSubject(mainSubject, userProfile.subSubject)}
+                color={mainSubject.color}
+                className="mt-3"
+              />
+            )}
+          </Field>
         </Panel>
 
         <Panel icon={ScrollText} title="探求データの管理" label="ARCHIVE">
@@ -117,6 +124,67 @@ export function SettingsView({ subjects, isDemo }: { subjects: Subject[]; isDemo
         </Panel>
       </div>
     </div>
+  );
+}
+
+/** 詠唱に使う科目の複数選択。魔法陣を組めるよう3科目未満には減らせない */
+function ActiveSubjectsField({ subjects, activeIds }: { subjects: Subject[]; activeIds: string[] }) {
+  const [warning, setWarning] = useState(false);
+
+  function toggle(id: string) {
+    if (!activeIds.includes(id)) {
+      setWarning(false);
+      userActions.setActiveSubjects(subjects.filter((s) => s.id === id || activeIds.includes(s.id)).map((s) => s.id));
+      return;
+    }
+    if (activeIds.length <= MIN_ACTIVE_SUBJECTS) {
+      setWarning(true);
+      return;
+    }
+    setWarning(false);
+    userActions.setActiveSubjects(activeIds.filter((a) => a !== id));
+  }
+
+  return (
+    <Field label="詠唱に使う科目" hint={`${activeIds.length} 領域 ・ 正${activeIds.length}角形の魔法陣`}>
+      <div className="grid grid-cols-2 gap-1.5">
+        {subjects.map((s) => {
+          const checked = activeIds.includes(s.id);
+          return (
+            <button
+              key={s.id}
+              role="checkbox"
+              aria-checked={checked}
+              onClick={() => toggle(s.id)}
+              className={cn(
+                "flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs tracking-wider whitespace-nowrap transition-all duration-300",
+                checked
+                  ? "border-white/25 bg-white/[0.05] text-foreground"
+                  : "border-white/10 text-muted-foreground hover:border-white/25",
+              )}
+              style={checked ? { boxShadow: `0 0 10px -4px ${s.color}` } : undefined}
+            >
+              <span
+                className="flex size-3.5 shrink-0 items-center justify-center rounded-[3px] border"
+                style={{ borderColor: checked ? s.color : "rgba(255,255,255,0.25)", background: checked ? `${s.color}26` : undefined }}
+              >
+                {checked && <Check className="size-2.5" strokeWidth={2} style={{ color: s.color }} />}
+              </span>
+              <span className="truncate">{s.name}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p
+        role="status"
+        className={cn(
+          "mt-2 text-[11px] leading-relaxed tracking-wider text-starlight/80 transition-opacity duration-500 [word-break:auto-phrase]",
+          warning ? "opacity-100" : "opacity-0",
+        )}
+      >
+        秘術を構築するには最低3つの領域（科目）の選択が必要です
+      </p>
+    </Field>
   );
 }
 
@@ -169,7 +237,7 @@ function ToggleRow({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+    <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-2.5">
       <Icon className={cn("mt-0.5 size-4 shrink-0", checked ? "text-aqua" : "text-muted-foreground")} strokeWidth={1.25} />
       <div className="min-w-0 flex-1">
         <p className="text-sm tracking-wider whitespace-nowrap">{label}</p>

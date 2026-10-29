@@ -22,6 +22,21 @@ const INNER_RUNE_RADIUS = 42;
 /** 拡大縮小しても 1px 以下を保つ光の線 */
 const hairline = { vectorEffect: "non-scaling-stroke", fill: "none" } as const;
 
+/** 魔法陣の頂点（科目ノード）を置く半径 */
+const NODE_RADIUS = 80;
+/** 頂点に灯す極細の四芒星 ✦（中心 (0, -NODE_RADIUS)） */
+const SPARKLE_PATH = `M0,${-NODE_RADIUS - 3.6} L0.6,${-NODE_RADIUS - 0.6} L3.6,${-NODE_RADIUS} L0.6,${-NODE_RADIUS + 0.6} L0,${-NODE_RADIUS + 3.6} L-0.6,${-NODE_RADIUS + 0.6} L-3.6,${-NODE_RADIUS} L-0.6,${-NODE_RADIUS - 0.6} Z`;
+
+export type MagicCircleNode = { color: string; active: boolean };
+
+/** 真上から時計回りに並ぶ正N角形の頂点 */
+function polygonPoints(n: number, r = NODE_RADIUS) {
+  return Array.from({ length: n }, (_, i) => {
+    const rad = ((-90 + (360 * i) / n) * Math.PI) / 180;
+    return [Math.cos(rad) * r, Math.sin(rad) * r] as const;
+  });
+}
+
 /** 天球儀のリング: [rotateX, rotateY, 不透明度] */
 const ARMILLARY_RINGS = [
   [0, 0, 0.55],
@@ -34,6 +49,7 @@ const ARMILLARY_RINGS = [
  * タイマー背景の魔法陣。running=false で回転・明滅・粒子・発光が停止する。
  * 線は繊細なアクアの光（スキンで変化）、color（科目色）は中央の天球儀と淡い光に使う。
  * スターライトゴールドの粒子が中央へ集束し、intensity(0〜1) の経過に応じて量と発光が増す。
+ * nodes（科目）が3つ以上あれば、六芒星の代わりに科目数 N の正N角形を描き、各頂点に科目色の ✦ を灯す。
  */
 export function MagicCircle({
   color,
@@ -41,6 +57,7 @@ export function MagicCircle({
   intensity,
   lineColor = "#71e2ef",
   particleColor = "#e2c974",
+  nodes,
   className,
 }: {
   color: string;
@@ -48,8 +65,10 @@ export function MagicCircle({
   intensity: number;
   lineColor?: string;
   particleColor?: string;
+  nodes?: MagicCircleNode[];
   className?: string;
 }) {
+  const polygon = nodes && nodes.length >= 3 ? nodes : null;
   const visibleParticles = Math.round(6 + intensity * (PARTICLES.length - 6));
   const glow = running ? 0.1 + intensity * 0.25 : 0.04;
 
@@ -102,9 +121,15 @@ export function MagicCircle({
           </textPath>
         </text>
         <circle r="80" stroke={lineColor} strokeOpacity="0.55" strokeWidth="0.8" {...hairline} />
-        {/* 六芒星 */}
-        <polygon points="0,-80 69.3,40 -69.3,40" stroke={lineColor} strokeOpacity="0.5" strokeWidth="0.7" {...hairline} />
-        <polygon points="0,80 69.3,-40 -69.3,-40" stroke={lineColor} strokeOpacity="0.5" strokeWidth="0.7" {...hairline} />
+        {polygon ? (
+          <SubjectPolygon nodes={polygon} lineColor={lineColor} />
+        ) : (
+          <>
+            {/* 六芒星 */}
+            <polygon points="0,-80 69.3,40 -69.3,40" stroke={lineColor} strokeOpacity="0.5" strokeWidth="0.7" {...hairline} />
+            <polygon points="0,80 69.3,-40 -69.3,-40" stroke={lineColor} strokeOpacity="0.5" strokeWidth="0.7" {...hairline} />
+          </>
+        )}
         {/* 六芒星の交点を通る円と、その内側のルーン環 */}
         <circle r="46.2" stroke={lineColor} strokeOpacity="0.45" strokeWidth="0.6" {...hairline} />
         <circle r="40.6" stroke={lineColor} strokeOpacity="0.25" strokeWidth="0.6" {...hairline} />
@@ -113,17 +138,21 @@ export function MagicCircle({
             {[...RUNES].reverse().join("")}
           </textPath>
         </text>
-        {/* 頂点の印章: 小さな二重円にルーンを刻み、中心に星を灯す */}
-        {[0, 60, 120, 180, 240, 300].map((deg, i) => (
-          <g key={deg} transform={`rotate(${deg})`}>
-            <circle cy="-80" r="5.5" stroke={lineColor} strokeOpacity="0.5" strokeWidth="0.6" {...hairline} />
-            <circle cy="-80" r="4" stroke={lineColor} strokeOpacity="0.25" strokeWidth="0.6" {...hairline} />
-            <text y="-84.6" textAnchor="middle" dominantBaseline="central" fill={lineColor} fillOpacity="0.7" fontSize="2.4">
-              {RUNES[i * 4]}
-            </text>
-            <circle cy="-80" r="1.1" fill="#f4f1e6" className="glimmer" style={{ animationDelay: `${deg / 90}s` }} />
-          </g>
-        ))}
+        {!polygon && (
+          <>
+            {/* 頂点の印章: 小さな二重円にルーンを刻み、中心に星を灯す */}
+            {[0, 60, 120, 180, 240, 300].map((deg, i) => (
+              <g key={deg} transform={`rotate(${deg})`}>
+                <circle cy="-80" r="5.5" stroke={lineColor} strokeOpacity="0.5" strokeWidth="0.6" {...hairline} />
+                <circle cy="-80" r="4" stroke={lineColor} strokeOpacity="0.25" strokeWidth="0.6" {...hairline} />
+                <text y="-84.6" textAnchor="middle" dominantBaseline="central" fill={lineColor} fillOpacity="0.7" fontSize="2.4">
+                  {RUNES[i * 4]}
+                </text>
+                <circle cy="-80" r="1.1" fill="#f4f1e6" className="glimmer" style={{ animationDelay: `${deg / 90}s` }} />
+              </g>
+            ))}
+          </>
+        )}
       </svg>
 
       {/* 内周: 天体軌道（逆回転・明滅） */}
@@ -179,5 +208,49 @@ export function MagicCircle({
           />
         ))}
     </div>
+  );
+}
+
+/** 科目数 N の正N角形（1px の光線）。5角形以上は一つ飛ばしの星形を淡く重ね、各頂点に ✦ とルーンを置く */
+function SubjectPolygon({ nodes, lineColor }: { nodes: MagicCircleNode[]; lineColor: string }) {
+  const n = nodes.length;
+  const points = polygonPoints(n);
+  return (
+    <g>
+      <polygon
+        points={points.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ")}
+        stroke={lineColor}
+        strokeOpacity="0.6"
+        strokeWidth="1"
+        {...hairline}
+      />
+      {n >= 5 &&
+        points.map(([x, y], i) => {
+          const [x2, y2] = points[(i + 2) % n];
+          return <line key={i} x1={x} y1={y} x2={x2} y2={y2} stroke={lineColor} strokeOpacity="0.3" strokeWidth="1" {...hairline} />;
+        })}
+      {nodes.map((node, i) => (
+        <g key={i} transform={`rotate(${(360 * i) / n})`}>
+          <circle cy={-NODE_RADIUS} r="5.5" stroke={node.color} strokeOpacity={node.active ? 0.8 : 0.4} strokeWidth="1" {...hairline} />
+          <circle cy={-NODE_RADIUS} r="4" stroke={lineColor} strokeOpacity="0.25" strokeWidth="1" {...hairline} />
+          <text
+            y={-NODE_RADIUS + 8.2}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill={node.color}
+            fillOpacity={node.active ? 0.9 : 0.55}
+            fontSize="2.6"
+          >
+            {RUNES[(i * 5) % RUNES.length]}
+          </text>
+          <path
+            d={SPARKLE_PATH}
+            fill={node.active ? "#fff8dc" : node.color}
+            fillOpacity={node.active ? 1 : 0.75}
+            style={{ filter: `drop-shadow(0 0 ${node.active ? 2.5 : 1.2}px ${node.color})` }}
+          />
+        </g>
+      ))}
+    </g>
   );
 }

@@ -412,6 +412,7 @@ export function TimerPanel({
             color={color}
             lineColor={lineColor}
             particleColor={skin.particleColor}
+            nodes={subjects.map((s) => ({ color: s.color, active: s.id === subjectId }))}
             running={running}
             intensity={intensity}
             className="absolute inset-0 h-full w-full"

@@ -29,3 +29,13 @@ export function resolveSubSubject(subject: Pick<Subject, "name"> | undefined, su
   if (isCustomSubject(subject)) return subSubject.trim().slice(0, CUSTOM_SUB_SUBJECT_MAX) || null;
   return subSubjectsOf(subject).includes(subSubject) ? subSubject : null;
 }
+
+/** 魔法陣（N角形）を組むのに必要な最小の科目数 */
+export const MIN_ACTIVE_SUBJECTS = 3;
+
+/** 設定画面で選んだ「詠唱に使う科目」。未設定・足りない場合はすべての科目を使う */
+export function activeSubjectsOf<T extends Pick<Subject, "id">>(subjects: T[], activeIds: string[] | null | undefined): T[] {
+  if (!activeIds) return subjects;
+  const active = subjects.filter((s) => activeIds.includes(s.id));
+  return active.length >= MIN_ACTIVE_SUBJECTS ? active : subjects;
+}
