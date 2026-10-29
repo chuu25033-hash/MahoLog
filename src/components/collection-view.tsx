@@ -2,6 +2,7 @@
 
 import { useState, type CSSProperties } from "react";
 import { Check, Paintbrush, Sparkles } from "lucide-react";
+import { BackToLibrary } from "@/components/back-to-library";
 import { ItemArt } from "@/components/item-art";
 import { MpBar } from "@/components/mp-bar";
 import { Button } from "@/components/ui/button";
@@ -46,14 +47,17 @@ export function CollectionView() {
   return (
     <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 p-3 lg:p-5">
       <header className="flex items-end justify-between gap-6">
-        <div className="min-w-0">
-          <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap">
-            古代の秘術図鑑
-            <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">ARCANE CODEX</span>
-          </h1>
-          <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase]">
-            宝箱や星天の導きで見つけた遺物を解読し、その来歴と秘めた力を書き留めます
-          </p>
+        <div className="flex min-w-0 items-center gap-4">
+          <BackToLibrary />
+          <div className="min-w-0">
+            <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap">
+              古代の秘術図鑑
+              <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">ARCANE CODEX</span>
+            </h1>
+            <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase]">
+              宝箱や星天の導きで見つけた遺物を解読し、その来歴と秘めた力を書き留めます
+            </p>
+          </div>
         </div>
         <div className="w-52 shrink-0">
           <p className="flex items-baseline justify-between text-[11px] tracking-[0.2em] whitespace-nowrap text-muted-foreground">

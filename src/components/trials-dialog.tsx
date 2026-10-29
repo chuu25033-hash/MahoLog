@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Gem, Sparkles, Swords } from "lucide-react";
+import { Check, Gem, Sparkles } from "lucide-react";
 import { ItemArt } from "@/components/item-art";
-import { navItemClass } from "@/components/nav-rail";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { GUIDANCE_CYCLE, claimGuidance, pendingGuidance } from "@/lib/celestial-guidance";
 import { jstDateKey } from "@/lib/date";
@@ -30,45 +29,7 @@ export function readyCount(data: UserData, scope?: TaskScope) {
   return tasks + guidance;
 }
 
-/**
- * ナビの「星の試練」。星天の導き・日課の儀式・週間の誓約をひとつのダイアログで扱う。
- * subjects は進捗の判定（詠唱に使う科目）に使い、読み込み中は null で押せない
- */
-export function TrialsNavButton({ subjects }: { subjects: Subject[] | null }) {
-  const data = useUserData();
-  const [open, setOpen] = useState(false);
-
-  // 受け取れる報酬の印を灯すため、表示した時点の進捗に測り直す
-  useEffect(() => {
-    if (subjects) userActions.syncTasks(subjects);
-  }, [subjects]);
-
-  const ready = subjects ? readyCount(data) : 0;
-
-  return (
-    <>
-      <button
-        type="button"
-        disabled={!subjects}
-        onClick={() => setOpen(true)}
-        aria-haspopup="dialog"
-        className={cn(navItemClass(open), "disabled:opacity-35")}
-      >
-        <Swords className="size-5" strokeWidth={1.25} />
-        星の試練
-        {ready > 0 && (
-          <span
-            className="absolute top-1.5 right-2.5 size-1.5 rounded-full bg-starlight shadow-[0_0_6px_#e2c974] lg:right-3.5"
-            aria-label={`受け取れる報酬 ${ready}`}
-          />
-        )}
-      </button>
-      {open && subjects && <TrialsDialog subjects={subjects} onClose={() => setOpen(false)} />}
-    </>
-  );
-}
-
-/** 星の試練ダイアログ（ナビ・魔術書庫の両方から開く） */
+/** 星の試練: 星天の導き・日課の儀式・週間の誓約をひとつのダイアログで扱う（魔術書庫から開く） */
 export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClose: () => void }) {
   const data = useUserData();
 

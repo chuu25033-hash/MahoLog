@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BookMarked, CalendarDays, Moon, Settings, Sparkles, Sun, Swords, Wand2 } from "lucide-react";
 import { AreaAmbience } from "@/components/area-ambience";
@@ -17,7 +17,7 @@ import { dashboardSummary, type DashboardSummary } from "@/lib/aggregate";
 import { formatMinutes, levelProgress, rankOf } from "@/lib/game";
 import { activeSubjectsOf } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
-import { localProfile, localStudyLogs, useStoredUserData, useUserData } from "@/lib/user-store";
+import { localProfile, localStudyLogs, useStoredUserData, userActions, useUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 const MODE_LABEL = { pomodoro: "律動の詠唱", stopwatch: "無窮の詠唱" } as const;
@@ -181,6 +181,11 @@ function MenuTiles({ subjects }: { subjects: Subject[] }) {
   const data = useUserData();
   const [trialsOpen, setTrialsOpen] = useState(false);
   const ready = readyCount(data);
+
+  // 受け取れる報酬の印を灯すため、表示した時点の進捗に測り直す
+  useEffect(() => {
+    userActions.syncTasks(subjects);
+  }, [subjects]);
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-3 gap-2">

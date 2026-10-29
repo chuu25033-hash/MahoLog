@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { FastForward, Hourglass, MapPin, Moon, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
 import { saveStudyLog } from "@/app/actions/study";
+import { BackToLibrary } from "@/components/back-to-library";
 import { ItemArt } from "@/components/item-art";
 import { MagicCircle } from "@/components/magic-circle";
 import { SubjectPicker } from "@/components/subject-picker";
@@ -416,6 +417,7 @@ export function TimerPanel({
 
       {/* 中央: 魔法陣 + タイマー */}
       <section className="relative col-span-8 flex min-h-0 flex-col items-center justify-center">
+        <BackToLibrary guard={locked} className="absolute top-0 left-0 z-20" />
         <div className="relative flex aspect-square h-full max-h-[calc(100dvh-4rem)] max-w-full items-center justify-center">
           <MagicCircle
             color={color}

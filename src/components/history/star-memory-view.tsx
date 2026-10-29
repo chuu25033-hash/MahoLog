@@ -2,6 +2,7 @@
 
 import { useId, useState, type CSSProperties } from "react";
 import { Moon, Sparkles, Star } from "lucide-react";
+import { BackToLibrary } from "@/components/back-to-library";
 import { ItemArt } from "@/components/item-art";
 import { PageLoading } from "@/components/page-loading";
 import { demoSubjects } from "@/lib/demo";
@@ -187,12 +188,15 @@ function StarMemory({ nights }: { nights: ObservedNight[] }) {
   return (
     <div className="flex h-full flex-col gap-3 p-3 animate-in fade-in duration-700 lg:gap-4 lg:p-5">
       <header className="flex items-end justify-between gap-4">
-        <div className="min-w-0">
-          <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap">
-            魔導の軌跡
-            <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">ARCANE TRACES</span>
-          </h1>
-          <p className="text-xs tracking-wider text-muted-foreground">詠唱した夜は星となり、日々の学びが夜空に自分だけの星座を描きます</p>
+        <div className="flex min-w-0 items-center gap-4">
+          <BackToLibrary />
+          <div className="min-w-0">
+            <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap">
+              魔導の軌跡
+              <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">ARCANE TRACES</span>
+            </h1>
+            <p className="text-xs tracking-wider text-muted-foreground">詠唱した夜は星となり、日々の学びが夜空に自分だけの星座を描きます</p>
+          </div>
         </div>
         <dl className="flex shrink-0 gap-4 text-right text-[11px] tracking-wider whitespace-nowrap text-muted-foreground">
           {[

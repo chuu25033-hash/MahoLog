@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import { Bell, Check, Download, Feather, Hexagon, RotateCcw, ScrollText, Upload, UserRound } from "lucide-react";
+import { Bell, Check, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Upload, UserRound } from "lucide-react";
+import { BackToLibrary } from "@/components/back-to-library";
 import { PageLoading } from "@/components/page-loading";
 import { SubjectPicker } from "@/components/subject-picker";
 import { SubjectRuneChip } from "@/components/subject-rune-chip";
@@ -22,8 +23,16 @@ import { cn } from "@/lib/utils";
 
 const USERNAME_MAX = 16;
 
-/** 設定画面: 探究者の情報・学習設定・演出・探求データの管理 */
-export function SettingsView({ subjects, isDemo }: { subjects: Subject[]; isDemo: boolean }) {
+/** 設定画面: 探究者の情報・学習設定・演出・探求データの管理。Supabase 接続時はログアウトもここから */
+export function SettingsView({
+  subjects,
+  isDemo,
+  signOutAction,
+}: {
+  subjects: Subject[];
+  isDemo: boolean;
+  signOutAction?: () => Promise<void>;
+}) {
   const data = useStoredUserData();
   if (!data) return <PageLoading />;
   const { userProfile, settings } = data;
@@ -32,15 +41,25 @@ export function SettingsView({ subjects, isDemo }: { subjects: Subject[]; isDemo
 
   return (
     <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 p-3 animate-in fade-in duration-700 lg:p-5">
-      <header className="min-w-0">
-        <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap">
-          秘術探究者の書斎
-          <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">SETTINGS</span>
-        </h1>
-        <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase]">
-          探究者の名と詠唱の作法を定め、これまでの探求の記録を守ります
-          {!isDemo && "（ここでの設定はこの端末に保存されます）"}
-        </p>
+      <header className="flex items-center gap-4">
+        <BackToLibrary />
+        <div className="min-w-0 flex-1">
+          <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap">
+            秘術探究者の書斎
+            <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">SETTINGS</span>
+          </h1>
+          <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase]">
+            探究者の名と詠唱の作法を定め、これまでの探求の記録を守ります
+            {!isDemo && "（ここでの設定はこの端末に保存されます）"}
+          </p>
+        </div>
+        {signOutAction && (
+          <form action={signOutAction} className="shrink-0">
+            <Button type="submit" variant="outline" size="sm">
+              <LogOut /> ログアウト
+            </Button>
+          </form>
+        )}
       </header>
 
       <div className="grid min-h-0 flex-1 grid-cols-3 gap-3 lg:gap-4">
