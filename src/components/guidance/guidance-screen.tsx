@@ -46,7 +46,7 @@ export function GuidanceScreen() {
 
   useEffect(() => {
     router.prefetch(DESTINATION);
-    // 本日分を受け取り済みなら、そのまま観測所へ
+    // 本日分を受け取り済みなら、そのまま魔術書庫へ
     if (guidance === null) router.replace(DESTINATION);
   }, [guidance, router]);
 

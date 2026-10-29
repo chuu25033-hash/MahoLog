@@ -644,15 +644,16 @@
   .guidance-mote { display: none; }
 }
 
-/* ---------- 星図の記憶 ---------- */
+/* ---------- 魔導の軌跡 ---------- */
 /* 星から星へ光の線が伸びる */
+/* non-scaling-stroke の 1px 線は dash で伸ばせないので、起点（transform-origin）から伸縮させる */
 @keyframes memory-trace {
-  from { stroke-dashoffset: 1; }
-  to { stroke-dashoffset: 0; }
+  from { transform: scale(0); }
+  to { transform: scale(1); }
 }
 
 .memory-trace {
-  stroke-dasharray: 1;
+  transform-box: view-box;
   animation: memory-trace var(--dur, 0.45s) ease-out var(--delay, 0s) both;
 }
 

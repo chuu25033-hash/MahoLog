@@ -6,24 +6,24 @@ import { BookMarked, BookOpen, CalendarDays, Home, LogOut, Settings, Sparkles, S
 import { cn } from "@/lib/utils";
 
 const ITEMS = [
-  { href: "/dashboard", label: "観測所", icon: Home, ready: true },
+  { href: "/dashboard", label: "魔術書庫", icon: Home, ready: true },
   { href: "/timer", label: "詠唱", icon: Sparkles, ready: true },
   { href: "/collection", label: "図鑑", icon: BookMarked, ready: true },
   { href: "/trials", label: "星の試練", icon: Swords, ready: false },
-  { href: "/history", label: "観測記録", icon: CalendarDays, ready: true },
+  { href: "/history", label: "魔導の軌跡", icon: CalendarDays, ready: true },
   { href: "/ranking", label: "ランキング", icon: Trophy, ready: false },
   { href: "/settings", label: "設定", icon: Settings, ready: false },
 ] as const;
 
 const itemBase =
-  "relative flex w-14 flex-col items-center gap-1 rounded-xl py-2 text-[10px] tracking-wider transition-all duration-300 lg:w-16 lg:text-[11px]";
+  "relative flex w-14 flex-col items-center gap-1 rounded-xl py-2 text-[10px] tracking-wider whitespace-nowrap transition-all duration-300 lg:w-16 lg:text-[11px]";
 
 export function NavRail({ signOutAction }: { signOutAction?: () => Promise<void> }) {
   const pathname = usePathname();
 
   return (
     <nav className="glass flex h-full w-16 shrink-0 flex-col items-center gap-1 rounded-none py-3 lg:w-20">
-      <Link href="/dashboard" className="mb-3 flex flex-col items-center gap-0.5 text-starlight" aria-label="マホログ 観測所">
+      <Link href="/dashboard" className="mb-3 flex flex-col items-center gap-0.5 text-starlight" aria-label="マホログ 魔術書庫">
         <BookOpen className="size-6" strokeWidth={1.25} />
         <span className="text-[10px] tracking-[0.2em] text-glow-gold">マホログ</span>
       </Link>

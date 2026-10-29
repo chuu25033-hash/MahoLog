@@ -8,7 +8,7 @@ import { pendingGuidance } from "@/lib/celestial-guidance";
 import { CelestialSphere } from "./celestial-sphere";
 
 const DESTINATION = "/dashboard";
-/** その日初めての観測では、星天の導きを挟んでから観測所へ向かう */
+/** その日初めての詠唱では、星天の導きを挟んでから魔術書庫へ向かう */
 const GUIDANCE = "/guidance";
 /** ホバー中の集光ループ 1 周の長さ（s）。粒子ごとの開始をこの範囲に散らす */
 const GATHER_S = 3.2;
@@ -172,7 +172,7 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
               </span>
             )}
             <span className="relative block text-base tracking-[0.4em] text-[#f6e9bd] short:text-sm">
-              観測を開始する
+              詠唱を始める
             </span>
             <span className="relative mt-1 block font-display text-[10px] tracking-[0.5em] text-starlight/70">
               PRESS TO START
@@ -190,7 +190,7 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
             </Link>
           ) : (
             <button type="button" onClick={() => start()} className="transition-colors hover:text-starlight">
-              デモモードで観測する（サンプルデータ）
+              デモモードで詠唱する（サンプルデータ）
             </button>
           )}
         </div>

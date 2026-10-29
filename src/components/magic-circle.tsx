@@ -16,6 +16,8 @@ const PARTICLES = Array.from({ length: 24 }, (_, i) => {
 const RUNES = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ";
 const RUNE_PATH_LENGTH = 2 * Math.PI * 87 - 6; // 継ぎ目で文字が重ならないよう少し短く
 const TICKS = Array.from({ length: 120 }, (_, i) => i * 3);
+/** 六芒星の交点を結ぶ円の内側に刻む、小さなルーン環の半径（中央の天球儀より外側） */
+const INNER_RUNE_RADIUS = 42;
 
 /** 拡大縮小しても 1px 以下を保つ光の線 */
 const hairline = { vectorEffect: "non-scaling-stroke", fill: "none" } as const;
@@ -75,6 +77,7 @@ export function MagicCircle({
       >
         <defs>
           <path id="rune-path" d="M 0,-87 a 87,87 0 1,1 -0.01,0" />
+          <path id="inner-rune-path" d={`M 0,-${INNER_RUNE_RADIUS} a ${INNER_RUNE_RADIUS},${INNER_RUNE_RADIUS} 0 1,1 -0.01,0`} />
         </defs>
         <circle r="97" stroke={lineColor} strokeOpacity="0.35" strokeWidth="0.6" {...hairline} />
         <circle r="93" stroke={lineColor} strokeOpacity="0.6" strokeWidth="0.8" {...hairline} />
@@ -102,9 +105,24 @@ export function MagicCircle({
         {/* 六芒星 */}
         <polygon points="0,-80 69.3,40 -69.3,40" stroke={lineColor} strokeOpacity="0.5" strokeWidth="0.7" {...hairline} />
         <polygon points="0,80 69.3,-40 -69.3,-40" stroke={lineColor} strokeOpacity="0.5" strokeWidth="0.7" {...hairline} />
-        {/* 頂点の小さな星 */}
-        {[0, 60, 120, 180, 240, 300].map((deg) => (
-          <circle key={deg} cy="-80" r="1.1" fill="#f4f1e6" transform={`rotate(${deg})`} className="glimmer" style={{ animationDelay: `${deg / 90}s` }} />
+        {/* 六芒星の交点を通る円と、その内側のルーン環 */}
+        <circle r="46.2" stroke={lineColor} strokeOpacity="0.45" strokeWidth="0.6" {...hairline} />
+        <circle r="40.6" stroke={lineColor} strokeOpacity="0.25" strokeWidth="0.6" {...hairline} />
+        <text fill={lineColor} fillOpacity="0.6" fontSize="3.6">
+          <textPath href="#inner-rune-path" textLength={2 * Math.PI * INNER_RUNE_RADIUS - 3} lengthAdjust="spacing">
+            {[...RUNES].reverse().join("")}
+          </textPath>
+        </text>
+        {/* 頂点の印章: 小さな二重円にルーンを刻み、中心に星を灯す */}
+        {[0, 60, 120, 180, 240, 300].map((deg, i) => (
+          <g key={deg} transform={`rotate(${deg})`}>
+            <circle cy="-80" r="5.5" stroke={lineColor} strokeOpacity="0.5" strokeWidth="0.6" {...hairline} />
+            <circle cy="-80" r="4" stroke={lineColor} strokeOpacity="0.25" strokeWidth="0.6" {...hairline} />
+            <text y="-84.6" textAnchor="middle" dominantBaseline="central" fill={lineColor} fillOpacity="0.7" fontSize="2.4">
+              {RUNES[i * 4]}
+            </text>
+            <circle cy="-80" r="1.1" fill="#f4f1e6" className="glimmer" style={{ animationDelay: `${deg / 90}s` }} />
+          </g>
         ))}
       </svg>
 

@@ -99,11 +99,11 @@ export function MagicRadar({
     );
   }
 
-  // 最大科目を外周ちょうどに合わせる。自動目盛りだと外周が最大値より内側に丸められて突き出たり、
-  // 期間ごとに線の本数が変わったりするので、4 本の同心多角形を固定で引く
-  const maxHours = Math.max(60, ...data.map((d) => d.minutes)) / 60;
-  const ringTicks = [0, 0.25, 0.5, 0.75, 1].map((r) => r * maxHours);
-  const chartData = data.map((d) => ({ ...d, hours: d.minutes / 60 }));
+  // 最大科目を外周ちょうどに合わせる。実時間のままだと目盛りが切りの良い値に丸められ、
+  // 期間ごとに魔法陣の大きさが変わるので、最大科目を 1 とした比率で描き 4 本の同心多角形を固定で引く
+  const maxMinutes = Math.max(60, ...data.map((d) => d.minutes));
+  const ringTicks = [0, 0.25, 0.5, 0.75, 1];
+  const chartData = data.map((d) => ({ ...d, ratio: d.minutes / maxMinutes }));
 
   return (
     <div className="relative h-full w-full">
@@ -144,9 +144,9 @@ export function MagicRadar({
               );
             }}
           />
-          <PolarRadiusAxis domain={[0, maxHours]} ticks={ringTicks} allowDataOverflow tick={false} axisLine={false} />
+          <PolarRadiusAxis domain={[0, 1]} ticks={ringTicks} allowDataOverflow tick={false} axisLine={false} />
           <Radar
-            dataKey="hours"
+            dataKey="ratio"
             stroke={`url(#stroke-${gradientId})`}
             strokeWidth={1}
             fill={`url(#fill-${gradientId})`}

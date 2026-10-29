@@ -17,6 +17,15 @@ const GOLD = "#e2c974";
 const AQUA = "#7fe8dc";
 const DIM = "#64748b";
 const ROMAN = ["I", "II", "III", "IV"];
+const RUNES = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ";
+
+/** 一週間の7夜にちなむ七芒星 {7/3} */
+function heptagram(r: number) {
+  return Array.from({ length: 7 }, (_, i) => {
+    const angle = ((-90 + ((i * 3) % 7) * (360 / 7)) * Math.PI) / 180;
+    return `${Math.cos(angle) * r},${Math.sin(angle) * r}`;
+  }).join(" ");
+}
 
 /** 週ごとに浮かび上がる星座 */
 const CONSTELLATIONS = ["暁の竪琴座", "蒼銀の白鳥座", "紫晶の天秤座", "星冠座"];
@@ -133,14 +142,14 @@ function StarMemory({ nights }: { nights: ObservedNight[] }) {
       <header className="flex items-end justify-between gap-4">
         <div className="min-w-0">
           <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap">
-            星図の記憶
-            <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">CELESTIAL ASTROLOGY</span>
+            魔導の軌跡
+            <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">ARCANE TRACES</span>
           </h1>
           <p className="text-xs tracking-wider text-muted-foreground">詠唱した夜は星となり、日々の学びが夜空に自分だけの星座を描きます</p>
         </div>
         <dl className="flex shrink-0 gap-4 text-right text-[11px] tracking-wider whitespace-nowrap text-muted-foreground">
           {[
-            { label: "観測した夜", value: `${observed.length}` },
+            { label: "詠唱した夜", value: `${observed.length}` },
             { label: "総詠唱", value: formatMinutes(totalMinutes) },
             { label: "完成した星座", value: `${completed.filter(Boolean).length}` },
           ].map(({ label, value }) => (
@@ -179,10 +188,10 @@ function CelestialChart({
 }) {
   const gradientId = useId().replace(/:/g, "");
   const observed = nights.filter((n) => n.minutes > 0);
-  // 観測した夜は日付順に灯る。前夜から線が伸びてくる星は、線が届いた瞬間に灯る
+  // 詠唱した夜は日付順に灯る。前夜から線が伸びてくる星は、線が届いた瞬間に灯る
   const order = new Map(observed.map((n, i) => [n, i]));
   const litAt = (i: number) => TRACE_START + i * TRACE_STEP;
-  // 同じ週の中で前夜と今夜をともに観測できた場合だけ結ぶ。休息の夜で線は途切れる
+  // 同じ週の中で前夜と今夜をともに詠唱できた場合だけ結ぶ。未詠唱の夜で軌跡は途切れる
   const segments = nights.flatMap((n, j) => {
     const prev = nights[j - 1];
     return j > 0 && prev.week === n.week && prev.minutes > 0 && n.minutes > 0 ? [{ from: prev, to: n }] : [];
@@ -221,6 +230,21 @@ function CelestialChart({
             transform={`rotate(${i * 5})`}
             {...hairline}
           />
+        ))}
+      </g>
+
+      {/* 魔導陣: ルーン環と七芒星（外周と逆向きにゆっくり回る） */}
+      <g className="animate-spin-slow" style={{ transformBox: "view-box", transformOrigin: "0 0", animationDirection: "reverse" }}>
+        <path id={`${gradientId}-runes`} d="M 0,-88 a 88,88 0 1,1 -0.01,0" fill="none" />
+        <circle r="90.5" stroke={GOLD} strokeOpacity="0.16" {...hairline} />
+        <text fill={GOLD} fillOpacity="0.32" fontSize="3.4">
+          <textPath href={`#${gradientId}-runes`} textLength={2 * Math.PI * 88 - 3} lengthAdjust="spacing">
+            {RUNES + RUNES + RUNES}
+          </textPath>
+        </text>
+        <polygon points={heptagram(66)} stroke={GOLD} strokeOpacity="0.07" {...hairline} />
+        {Array.from({ length: 7 }, (_, i) => (
+          <circle key={i} cy="-66" r="1.6" stroke={GOLD} strokeOpacity="0.2" transform={`rotate(${(i * 360) / 7})`} {...hairline} />
         ))}
       </g>
 
@@ -276,7 +300,7 @@ function CelestialChart({
         </text>
       ))}
 
-      {/* 週の中を日付順に一本道で結ぶ光の線 */}
+      {/* 週の中を日付順に一本道で結ぶ 1px の魔力の軌跡。前夜の星を起点に伸縮させて描く */}
       {segments.map(({ from: a, to: b }) => {
         const from = starPosition(a.week, a.weekday);
         const to = starPosition(b.week, b.weekday);
@@ -287,22 +311,27 @@ function CelestialChart({
             y1={from.y}
             x2={to.x}
             y2={to.y}
-            pathLength={1}
             stroke="#cfe9ff"
             strokeOpacity="0.6"
             className="memory-trace"
-            style={{ "--delay": `${litAt(order.get(b) ?? 0) - TRACE_DURATION}s`, "--dur": `${TRACE_DURATION}s` } as CSSProperties}
+            style={
+              {
+                transformOrigin: `${from.x}px ${from.y}px`,
+                "--delay": `${litAt(order.get(b) ?? 0) - TRACE_DURATION}s`,
+                "--dur": `${TRACE_DURATION}s`,
+              } as CSSProperties
+            }
             {...hairline}
           />
         );
       })}
 
-      {/* 観測点 */}
+      {/* 詠唱の星 */}
       {nights.map((n) => {
         const p = starPosition(n.week, n.weekday);
         const isSelected = n === selected;
         const select = () => onSelect(n);
-        const label = `${dateLabel.format(n.date)} ${n.minutes > 0 ? formatMinutes(n.minutes) : n.future ? "未観測" : "休息"}`;
+        const label = `${dateLabel.format(n.date)} ${n.minutes > 0 ? formatMinutes(n.minutes) : n.future ? "未詠唱" : "休息"}`;
 
         if (n.minutes === 0) {
           return (
@@ -496,7 +525,7 @@ function ConstellationList({ nights, completed }: { nights: ObservedNight[]; com
               )}
               <span className="font-display text-[10px] text-muted-foreground">{ROMAN[w]}</span>
               <span className={cn("min-w-0 truncate tracking-wider", completed[w] ? "text-starlight" : "text-muted-foreground")}>
-                {completed[w] ? name : inProgress ? "観測中の星座" : "途切れた星座"}
+                {completed[w] ? name : inProgress ? "紡がれている星座" : "途切れた星座"}
               </span>
               <span className="ml-auto font-display whitespace-nowrap text-muted-foreground">{lit} / 7</span>
             </li>

@@ -1,4 +1,4 @@
-// 星図の記憶（観測記録）用のモック詠唱履歴。
+// 魔導の軌跡（詠唱履歴の星図）用のモック詠唱履歴。
 // 日付から決定的に生成するので、同じ日に何度開いても同じ星図になる。
 import { startOfJstDay, startOfJstWeek } from "./date";
 import { CATALYSTS, LORES, SKINS, type CatalystItem, type Item } from "./items";
@@ -77,7 +77,7 @@ function night(date: Date, week: number, weekday: number, future: boolean, rest:
   return { ...empty, sessions, minutes, mp: Math.round(minutes * (catalyst?.multiplier ?? 1)), catalyst, drops };
 }
 
-/** 直近 MEMORY_WEEKS 週分（今週の残りの日は未観測）の詠唱履歴 */
+/** 直近 MEMORY_WEEKS 週分（今週の残りの日は未詠唱）の詠唱履歴 */
 export function mockObservedNights(now = new Date()): ObservedNight[] {
   const today = startOfJstDay(now).getTime();
   const first = startOfJstWeek(now).getTime() - (MEMORY_WEEKS - 1) * 7 * DAY;

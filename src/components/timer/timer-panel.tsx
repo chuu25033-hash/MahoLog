@@ -480,7 +480,7 @@ export function TimerPanel({
           <DialogHeader>
             <DialogTitle className="tracking-wider">まだ詠唱を続けていますか？</DialogTitle>
             <DialogDescription>
-              2時間、途切れず詠唱が続いています。5分以内に応答がなければ、ここまでの詠唱を観測記録に刻んで中断します。
+              2時間、途切れず詠唱が続いています。5分以内に応答がなければ、ここまでの詠唱を魔導の軌跡に刻んで中断します。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
