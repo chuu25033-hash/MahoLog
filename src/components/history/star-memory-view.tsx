@@ -219,7 +219,7 @@ function StarMemory({ nights }: { nights: ObservedNight[] }) {
           <CelestialChart nights={nights} completed={completed} selected={selected} onSelect={setSelected} />
         </section>
 
-        <aside className="flex min-h-0 scroll-area flex-col">
+        <aside className="flex min-h-0 scroll-area scrollbar-none flex-col">
           <div className="my-auto flex flex-col gap-3">
             <NightDetail night={selected} />
             <ConstellationList nights={nights} completed={completed} />
