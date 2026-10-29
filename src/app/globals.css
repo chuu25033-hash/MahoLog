@@ -698,3 +698,69 @@
   .memory-star,
   .memory-silhouette { animation: none; }
 }
+
+/* ---------- 原点の記憶（灯火の机）: 質素な蝋燭の灯 ---------- */
+@keyframes candle-flicker {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  18% { opacity: 0.7; transform: scale(0.97); }
+  42% { opacity: 0.95; transform: scale(1.02); }
+  64% { opacity: 0.76; transform: scale(0.99); }
+  82% { opacity: 0.9; transform: scale(1.01); }
+}
+
+.candle-glow {
+  transform-origin: 50% 100%;
+  animation: candle-flicker 6s ease-in-out infinite;
+}
+
+.candle-flame {
+  transform-origin: 50% 100%;
+  animation: candle-flicker 3.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px rgba(244, 217, 160, 0.6));
+}
+
+@keyframes origin-epigraph-in {
+  from { opacity: 0; letter-spacing: 0.35em; filter: blur(2px); }
+  to { opacity: 1; filter: blur(0); }
+}
+
+.origin-epigraph { animation: origin-epigraph-in 2.4s ease-out both; }
+
+/* ---------- 遠い世界線の残光（他の探究者の気配） ---------- */
+@keyframes worldline-pulse {
+  0% { opacity: 0; transform: scale(0.4); }
+  20% { opacity: 0.85; transform: scale(1); }
+  38% { opacity: 0.3; }
+  56% { opacity: 0.7; }
+  100% { opacity: 0; transform: scale(0.6); }
+}
+
+@keyframes worldline-ripple {
+  0% { opacity: 0.5; transform: scale(0.5); }
+  100% { opacity: 0; transform: scale(4); }
+}
+
+.worldline-dot {
+  animation: worldline-pulse var(--life) ease-in-out forwards;
+}
+
+.worldline-dot::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 9999px;
+  border: 1px solid currentColor;
+  opacity: 0;
+  animation: worldline-ripple 3.2s ease-out 0.4s;
+}
+
+/* 見つめている間は消えずに留まる */
+.worldline:hover .worldline-dot,
+.worldline:hover .worldline-dot::after { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .candle-glow,
+  .candle-flame,
+  .origin-epigraph { animation: none; }
+  .worldline { display: none; }
+}

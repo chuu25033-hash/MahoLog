@@ -21,6 +21,12 @@ export type Area = {
   /** 属性魔力ブースト（科目名で指定） */
   boost: { subjects: string[]; multiplier: number };
   drops: DropRates;
+  /** 原点のエリア。全属性にブースト（原点回帰）がかかり、蝋燭の灯の背景になる */
+  origin?: boolean;
+  /** 通り名（例: はじまりの小屋） */
+  alias?: string;
+  /** 滞在時に添える一節 */
+  epigraph?: string;
   ambience: {
     kind: AmbienceKind;
     /** 粒子と背景グラデーションの色 */
@@ -51,7 +57,12 @@ const a = (
 });
 
 export const AREAS: Area[] = [
-  a("1-1", "灯火の机", "蝋燭の明かりだけが頼りの小さな机", 0, ["国語"], 1.1, { kind: "dust", colors: ["#e2c974", "#f4d9a0"] }),
+  {
+    ...a("1-1", "灯火の机", "蝋燭の明かりだけが頼りの、質素な小屋の机", 0, [], 1.1, { kind: "dust", colors: ["#e8b86a", "#f4d9a0"] }),
+    origin: true,
+    alias: "はじまりの小屋",
+    epigraph: "ここから探求の旅が始まった",
+  },
   a("1-2", "埃かぶりの書架", "誰も読まなくなった語学書が並ぶ棚", 3, ["国語", "英語"], 1.2, { kind: "dust", colors: ["#e7c48f", "#cfa877"] }),
   a("1-3", "秘密の地下書庫", "封じられた古文書が眠る地下の一室", 6, ["社会"], 1.2, { kind: "dust", colors: ["#b9a2f7", "#e2c974"] }, { B: 25 }),
 
@@ -76,8 +87,11 @@ export const AREAS: Area[] = [
 
   a("6-1", "雲海の参道", "雲の上に続く白亜の参道", 200, ["国語", "社会"], 1.4, { kind: "halo", colors: ["#f4f1e6", "#e2c974"] }),
   a("6-2", "聖歌の身廊", "天上の聖歌が響き渡る身廊", 250, ["英語", "国語"], 1.45, { kind: "halo", colors: ["#fbf3d4", "#b9a2f7"] }, { B: 25 }),
-  a("6-3", "星冠の祭壇", "大魔法使いの証が授けられる祭壇", 300, ["数学", "理科", "社会"], 1.5, { kind: "halo", colors: ["#e2c974", "#71e2ef"] }, { A: 12 }),
+  a("6-3", "星冠の祭壇", "世界の奥地に眠る秘術の深奥が明かされる祭壇", 300, ["数学", "理科", "社会"], 1.5, { kind: "halo", colors: ["#e2c974", "#71e2ef"] }, { A: 12 }),
 ];
+
+/** どれだけ先へ進んでも帰還できる原点「灯火の机（はじまりの小屋）」 */
+export const ORIGIN_AREA = AREAS.find((area) => area.origin)!;
 
 export function areasOfStage(stageId: number) {
   return AREAS.filter((area) => area.stageId === stageId);
@@ -104,5 +118,10 @@ export function resolveArea(selectedId: string | null | undefined, totalMp: numb
 
 /** 科目に対するエリアの属性ブースト倍率 */
 export function areaMultiplier(area: Area, subjectName: string) {
-  return area.boost.subjects.includes(subjectName) ? area.boost.multiplier : 1;
+  return area.origin || area.boost.subjects.includes(subjectName) ? area.boost.multiplier : 1;
+}
+
+/** ブースト対象の表示名 */
+export function boostLabel(area: Area) {
+  return area.origin ? "原点回帰・全属性" : area.boost.subjects.join("・");
 }

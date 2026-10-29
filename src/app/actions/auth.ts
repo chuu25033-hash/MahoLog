@@ -17,7 +17,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const username = String(formData.get("username") ?? "").trim();
-  if (!username) return { error: "魔法使いの名前を入力してください" };
+  if (!username) return { error: "探究者の名前を入力してください" };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({

@@ -130,7 +130,7 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
           className="title-rise mt-2 text-xs tracking-[0.25em] text-muted-foreground"
           style={{ "--rise-delay": "1.4s" } as CSSProperties}
         >
-          積み重ねた時間を魔力に変えて、あなただけの星図を描こう
+          孤独な世界の奥地に眠る秘術を解き明かし、己の実力を高める旅へ
         </p>
 
         <div className="title-rise mt-10 short:mt-5" style={{ "--rise-delay": "1.8s" } as CSSProperties}>

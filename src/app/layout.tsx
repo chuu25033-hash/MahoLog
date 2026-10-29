@@ -25,7 +25,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "マホログ",
-  description: "詠唱時間を魔力に変えて、大魔法使いを目指す魔導の記録",
+  description: "孤独な世界の奥地に眠る秘術を解き明かし、己の実力を高める旅の記録",
 };
 
 export const viewport: Viewport = {

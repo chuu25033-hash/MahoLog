@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { areaMultiplier, resolveArea } from "@/lib/areas";
+import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
 import { CATALYSTS, rollDrop } from "@/lib/items";
 import { activeSkin, armedCatalyst, mockActions, useMockState } from "@/lib/mock-store";
@@ -318,7 +318,7 @@ export function TimerPanel({
             <span className="truncate text-foreground">{area.name}</span>
           </p>
           <p className="text-[11px] text-muted-foreground">
-            属性ブースト {area.boost.subjects.join("・")}
+            属性ブースト {boostLabel(area)}
             <span className="ml-1 font-display text-aqua">×{area.boost.multiplier}</span>
             {boost > 1 && <span className="ml-1 text-starlight text-glow-gold">適用中</span>}
           </p>

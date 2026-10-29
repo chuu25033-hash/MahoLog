@@ -44,7 +44,7 @@ export function AuthForm() {
       <form key={tab} action={isSignUp ? signUpAction : signInAction} className="flex flex-col gap-3">
         {isSignUp && (
           <div className="grid gap-1.5">
-            <Label htmlFor="username">魔法使いの名前</Label>
+            <Label htmlFor="username">探究者の名前</Label>
             <Input id="username" name="username" maxLength={30} required />
           </div>
         )}
@@ -66,7 +66,7 @@ export function AuthForm() {
         {state.error && <p className="text-xs text-destructive">{state.error}</p>}
         {state.message && <p className="text-xs text-aqua">{state.message}</p>}
         <Button type="submit" size="lg" disabled={pending}>
-          {isSignUp ? "見習い魔法使いとして登録" : "ログイン"}
+          {isSignUp ? "秘術探究者として旅立つ" : "ログイン"}
         </Button>
       </form>
     </Card>

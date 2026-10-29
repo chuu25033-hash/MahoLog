@@ -10,6 +10,7 @@ import { StageCard } from "@/components/stage-card";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { WizardAvatar } from "@/components/wizard-avatar";
+import { WorldlineEchoes } from "@/components/worldline-echoes";
 import { getDashboardData } from "@/lib/data";
 import { formatMinutes, levelProgress } from "@/lib/game";
 import { cn } from "@/lib/utils";
@@ -23,7 +24,9 @@ async function HomeContent() {
   return (
     <>
       <AreaAmbience totalMp={profile.total_study_time} />
-      <div className="grid min-h-full grid-cols-12 gap-3 p-3 animate-in fade-in duration-700 lg:gap-4 lg:p-5">
+      <WorldlineEchoes />
+      {/* 隙間は背景の世界線の残光へホバーを通す */}
+      <div data-open-sky className="grid min-h-full grid-cols-12 gap-3 p-3 animate-in fade-in duration-700 lg:gap-4 lg:p-5">
         {/* 左: プロフィール・ステージ・合計 */}
         <section className="col-span-4 flex flex-col gap-3">
           <Card className="gap-3 px-4">
@@ -31,7 +34,10 @@ async function HomeContent() {
               <WizardAvatar avatar={profile.avatar_url} />
               <div className="min-w-0">
                 <p className="truncate text-base tracking-wider">{profile.username}</p>
-                <p className="text-[11px] tracking-[0.2em] text-muted-foreground">見習い魔法使い</p>
+                <p className="truncate text-[11px] tracking-[0.2em] whitespace-nowrap text-muted-foreground">
+                  秘術探究者
+                  <span className="ml-1.5 font-display text-[9px] tracking-[0.2em] text-starlight/60">ARCANE SEEKER</span>
+                </p>
               </div>
               <div className="ml-auto text-right">
                 <p className="font-display text-[10px] tracking-[0.3em] text-muted-foreground">LEVEL</p>

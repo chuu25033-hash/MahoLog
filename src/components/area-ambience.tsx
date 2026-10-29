@@ -46,6 +46,16 @@ export function AreaAmbience({ totalMp }: { totalMp: number }) {
           background: `radial-gradient(70% 55% at 15% 0%, ${c1}1a, transparent 70%), radial-gradient(60% 50% at 90% 100%, ${c2}14, transparent 70%), radial-gradient(50% 40% at 50% 50%, ${skin.aura}, transparent 75%)`,
         }}
       />
+      {area.origin && (
+        // 原点回帰: 外の夜を沈め、机の上の蝋燭ひとつ分の灯だけを残す
+        <div key="origin" className="absolute inset-0 animate-in fade-in duration-[2000ms]">
+          <div className="absolute inset-0 bg-[radial-gradient(75%_70%_at_50%_80%,transparent_35%,rgba(5,7,12,0.55))]" />
+          <div
+            className="candle-glow absolute bottom-[-20%] left-1/2 h-[75%] w-[60%] -translate-x-1/2"
+            style={{ background: `radial-gradient(closest-side, ${c1}40, ${c2}12 55%, transparent)` }}
+          />
+        </div>
+      )}
       {MOTES.map((m, i) => {
         const color = area.ambience.colors[m.colorIndex];
         return (
