@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { formatMinutes } from "@/lib/game";
 import type { SubjectTotal } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,8 @@ const RANGES = [
 
 type RangeKey = (typeof RANGES)[number]["key"];
 
-export function RadarPanel({ data }: { data: Record<RangeKey, SubjectTotal[]> }) {
+/** action: 期間の切り替えの横に置くボタン（共有など） */
+export function RadarPanel({ data, action }: { data: Record<RangeKey, SubjectTotal[]>; action?: ReactNode }) {
   const [range, setRange] = useState<RangeKey>("week");
   const current = data[range];
   const top = [...current].sort((a, b) => b.minutes - a.minutes)[0];
@@ -26,23 +27,26 @@ export function RadarPanel({ data }: { data: Record<RangeKey, SubjectTotal[]> })
           魔法陣
           <span className="font-display text-[9px] tracking-[0.25em] text-starlight/70">ARCANE CIRCLE</span>
         </h2>
-        <div className="flex rounded-full border border-white/10 bg-white/[0.03] p-0.5 text-xs" role="tablist">
-          {RANGES.map((r) => (
-            <button
-              key={r.key}
-              role="tab"
-              aria-selected={range === r.key}
-              onClick={() => setRange(r.key)}
-              className={cn(
-                "rounded-full px-3 py-1 tracking-wider whitespace-nowrap transition-all duration-300",
-                range === r.key
-                  ? "bg-starlight/10 text-starlight ring-1 ring-starlight/45 shadow-[0_0_10px_-2px_rgba(226,201,116,0.4)]"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {r.label}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="flex rounded-full border border-white/10 bg-white/[0.03] p-0.5 text-xs" role="tablist">
+            {RANGES.map((r) => (
+              <button
+                key={r.key}
+                role="tab"
+                aria-selected={range === r.key}
+                onClick={() => setRange(r.key)}
+                className={cn(
+                  "rounded-full px-3 py-1 tracking-wider whitespace-nowrap transition-all duration-300",
+                  range === r.key
+                    ? "bg-starlight/10 text-starlight ring-1 ring-starlight/45 shadow-[0_0_10px_-2px_rgba(226,201,116,0.4)]"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+          {action}
         </div>
       </div>
       <div className="relative min-h-0 flex-1">

@@ -38,6 +38,10 @@ type Meta = {
   force?: boolean;
   /** ログインしたばかりで、まだアカウントの記録と突き合わせていない */
   linking?: boolean;
+  /** いまの復元キーを本人が控えたか（コピー・画像で保存・「控えました」） */
+  keySaved?: boolean;
+  /** 控えていなければ、詠唱の記録がこの数に達したら保存を促す（「あとで」で先へ延ばす） */
+  keyReminderAt?: number;
 };
 
 /**
@@ -54,6 +58,10 @@ export type ObserverState = {
   syncedAt: string | null;
   /** ログイン中のアカウント（ログインしていなければ null） */
   account: { email: string | null } | null;
+  /** いまの復元キーを控えたか */
+  keySaved: boolean;
+  /** 詠唱の記録がこの数に達したら、復元キーの保存を促す */
+  keyReminderAt: number;
 };
 
 /** 記録の大きさの目安（どちらで続けるかを選ぶときに見せる） */
@@ -83,9 +91,9 @@ export function normalizeRecoveryKey(input: string) {
   return body.match(/.{4}/g)!.join("-");
 }
 
-/** 新しい観測者ID と復元キーの組 */
+/** 新しい観測者ID と復元キーの組（まだ控えていないので、最初の詠唱のあとに保存を促す） */
 function newObserver() {
-  return { id: generateObserverId(), key: generateRecoveryKey() };
+  return { id: generateObserverId(), key: generateRecoveryKey(), keySaved: false, keyReminderAt: 1 };
 }
 
 /** 入力された観測者IDを ML-XXXX-XXXX の形に整える（小文字・区切りや空白の有無は問わない）。読めなければ null */
@@ -122,6 +130,8 @@ function loadMeta(): Meta {
         dirty: saved.dirty ?? true,
         force: saved.force ?? false,
         linking: saved.linking ?? false,
+        keySaved: saved.keySaved ?? false,
+        keyReminderAt: saved.keyReminderAt ?? 1,
       };
       return meta;
     }
@@ -154,7 +164,15 @@ function emit() {
 function getSnapshot(): ObserverState {
   if (!snapshot) {
     const m = loadMeta();
-    snapshot = { id: m.id, key: m.key, status, syncedAt: m.syncedAt, account: m.account ? { email: m.account.email } : null };
+    snapshot = {
+      id: m.id,
+      key: m.key,
+      status,
+      syncedAt: m.syncedAt,
+      account: m.account ? { email: m.account.email } : null,
+      keySaved: m.keySaved ?? false,
+      keyReminderAt: m.keyReminderAt ?? 1,
+    };
   }
   return snapshot;
 }
@@ -362,7 +380,8 @@ export async function restoreFromObserverId(
     const remote = await pull({ ...loadMeta(), id: code, key });
     if (!remote) return "not-found";
     if (!replaceUserData(remote.data)) return "error";
-    saveMeta({ ...loadMeta(), id: code, key, syncedAt: remote.updatedAt, dirty: false });
+    // 入力できた復元キーは、本人が控えているもの
+    saveMeta({ ...loadMeta(), id: code, key, syncedAt: remote.updatedAt, dirty: false, keySaved: true });
     setStatus("synced");
     return "ok";
   } catch (error) {
@@ -384,11 +403,22 @@ export async function rotateRecoveryKey(): Promise<"ok" | "unsynced" | "limited"
     const { data, error } = await createClient().rpc("observer_rotate_key", { code: m.id, secret: loadMeta().key, new_secret: next });
     if (error) throw error;
     if (data !== true) return "error";
-    saveMeta({ ...loadMeta(), key: next });
+    saveMeta({ ...loadMeta(), key: next, keySaved: false });
     return "ok";
   } catch (error) {
     return isRateLimited(error) ? "limited" : "error";
   }
+}
+
+/** 本人がいまの復元キーを控えた（コピー・画像で保存・「控えました」） */
+export function markKeySaved() {
+  const m = loadMeta();
+  if (!m.keySaved) saveMeta({ ...m, keySaved: true });
+}
+
+/** 「あとで」: 詠唱を重ねたころにもう一度促す（1 → 4 → 8 → 16 …回目） */
+export function snoozeKeyReminder(chants: number) {
+  saveMeta({ ...loadMeta(), keyReminderAt: Math.max(chants + 3, chants * 2) });
 }
 
 /** バックアップの読み込みなど、意図して記録を書き換えたとき: 次の同期でクラウドもこの端末の記録で上書きする */

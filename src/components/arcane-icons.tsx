@@ -1,6 +1,6 @@
 // マホログの記号体系: 1px の幾何学ラインアートで描くインライン SVG。
 // 線は vector-effect: non-scaling-stroke で、どの大きさでも 1px の細さを保つ。色は currentColor を受け継ぐ。
-import type { CSSProperties, ReactNode, SVGProps } from "react";
+import type { CSSProperties, ReactNode, Ref, SVGProps } from "react";
 import { RANKS } from "@/lib/game";
 import { cn } from "@/lib/utils";
 
@@ -16,9 +16,10 @@ const line = {
   vectorEffect: "non-scaling-stroke",
 } satisfies SVGProps<SVGElement>;
 
-function Svg({ viewBox, className, title, children }: IconProps & { viewBox: string; children: ReactNode }) {
+function Svg({ viewBox, className, title, children, ref }: IconProps & { viewBox: string; children: ReactNode; ref?: Ref<SVGSVGElement> }) {
   return (
     <svg
+      ref={ref}
       viewBox={viewBox}
       className={className}
       role={title ? "img" : undefined}
@@ -197,9 +198,9 @@ const AVATAR_GLYPHS: Record<string, ReactNode> = {
   ),
 };
 
-export function AvatarGlyph({ avatar, className }: { avatar: string; className?: string }) {
+export function AvatarGlyph({ avatar, className, ref }: { avatar: string; className?: string; ref?: Ref<SVGSVGElement> }) {
   return (
-    <Svg viewBox="0 0 24 24" className={className}>
+    <Svg viewBox="0 0 24 24" className={className} ref={ref}>
       {AVATAR_GLYPHS[avatar] ?? AVATAR_GLYPHS["wizard-1"]}
     </Svg>
   );

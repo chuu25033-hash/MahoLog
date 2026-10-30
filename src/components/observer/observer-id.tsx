@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, CloudOff, Copy, Eye, EyeOff, KeyRound, LockKeyhole, LogOut, RefreshCw, UserRound } from "lucide-react";
+import { Check, CloudOff, Copy, Eye, EyeOff, KeyRound, LockKeyhole, LogOut, RefreshCw, TriangleAlert, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
+  markKeySaved,
   normalizeObserverId,
   normalizeRecoveryKey,
   restoreFromObserverId,
@@ -19,6 +20,7 @@ import {
 import { isCloudSyncEnabled } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
 import { GoogleSignInButton } from "./google-sign-in";
+import { KeyBackupActions } from "./key-backup";
 
 const STATUS_LABEL: Record<SyncStatus, { text: string; tone: string }> = {
   disabled: { text: "クラウド未接続（この端末にのみ保存）", tone: "text-muted-foreground" },
@@ -48,11 +50,12 @@ function SyncStatusLine({ status }: { status: SyncStatus }) {
 }
 
 /** 押すとクリップボードに写し、少しのあいだ印を灯すコピーボタン */
-function CopyButton({ text, label }: { text: string; label: string }) {
+function CopyButton({ text, label, onCopied }: { text: string; label: string; onCopied?: () => void }) {
   const [copied, setCopied] = useState(false);
   async function copy() {
     try {
       await navigator.clipboard.writeText(text);
+      onCopied?.();
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
     } catch {}
@@ -108,8 +111,15 @@ export function ObserverIdField() {
         <Button variant="outline" size="icon-sm" onClick={() => setShowKey((v) => !v)} aria-label={showKey ? "復元キーを隠す" : "復元キーを表示"}>
           {showKey ? <EyeOff /> : <Eye />}
         </Button>
-        <CopyButton text={observer.key} label="復元キーをコピー" />
+        <CopyButton text={observer.key} label="復元キーをコピー" onCopied={markKeySaved} />
       </div>
+      {isCloudSyncEnabled && !observer.keySaved && (
+        <p className="mt-2 flex items-center gap-1.5 rounded-lg border border-starlight/40 bg-starlight/[0.06] px-2.5 py-1.5 text-[11px] tracking-wider text-starlight [word-break:auto-phrase]">
+          <TriangleAlert className="size-3.5 shrink-0" strokeWidth={1.5} />
+          復元キーをまだ控えていません。なくすと記録を戻せなくなります
+        </p>
+      )}
+      {isCloudSyncEnabled && <KeyBackupActions id={observer.id} secret={observer.key} className="mt-2" />}
       <SyncStatusLine status={observer.status} />
       <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
         別の端末やブラウザで観測者IDと復元キーを入力すると、探求の記録をそのまま引き継げます。観測者IDは見られても大丈夫ですが、復元キーは誰にも教えず、スクショやメモで大切に保管してください。
@@ -164,7 +174,7 @@ function RotateKeyDialog({ onClose }: { onClose: () => void }) {
           <DialogTitle className="tracking-[0.2em]">{done ? "復元キーを作り直しました" : "復元キーを作り直しますか？"}</DialogTitle>
           <DialogDescription className="[word-break:auto-phrase]">
             {done
-              ? "新しい復元キーは設定画面で確かめられます。忘れずに保管し直してください。"
+              ? "古い画像やメモは使えなくなりました。設定画面の「画像で保存」か「まとめてコピー」で、新しい復元キーを控え直してください。"
               : "復元キーを誰かに見られたかもしれないときに使います。いまの復元キーは使えなくなり、同じ観測者IDを使っている他の端末では、新しい復元キーで復元し直す必要があります。"}
           </DialogDescription>
         </DialogHeader>

@@ -7,8 +7,10 @@ import { AreaAmbience } from "@/components/area-ambience";
 import { BoundWorldlinesDialog } from "@/components/bound-worldlines-dialog";
 import { CycleRings } from "@/components/cycle/cycle-rings";
 import { MpBar } from "@/components/mp-bar";
+import { KeyBackupReminder } from "@/components/observer/key-backup";
 import { PageLoading } from "@/components/page-loading";
 import { RadarPanel } from "@/components/radar-panel";
+import { ShareRecordButton } from "@/components/share-record";
 import { StageCard } from "@/components/stage-card";
 import { TrialsDialog, readyCount } from "@/components/trials-dialog";
 import { buttonVariants } from "@/components/ui/button";
@@ -40,7 +42,13 @@ export function DashboardView({ summary, subjects, isDemo }: { summary: Dashboar
   const radar = Object.fromEntries(
     Object.entries(base.radar).map(([range, totals]) => [range, totals.filter((t) => activeIds.has(t.subjectId))]),
   ) as DashboardSummary["radar"];
-  return <Dashboard {...base} radar={radar} subjects={subjects} />;
+  return (
+    <>
+      <Dashboard {...base} radar={radar} subjects={subjects} />
+      {/* 詠唱を終えて書庫に戻ったとき、復元キーをまだ控えていなければ保存を促す */}
+      <KeyBackupReminder />
+    </>
+  );
 }
 
 function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSummary & { subjects: Subject[] }) {
@@ -121,7 +129,24 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
 
   const radarCard = (
     <Card className="col-span-5 h-full min-h-0 px-4 short:py-3">
-      <RadarPanel data={radar} />
+      <RadarPanel
+        data={radar}
+        action={
+          <ShareRecordButton
+            record={{
+              avatar: profile.avatar_url,
+              username: profile.username,
+              title: title?.name ?? null,
+              rankNumeral: rank.numeral,
+              rankTitle: rank.title,
+              phase: level.level,
+              totalMp: profile.total_study_time,
+              weekMinutes: radar.week.reduce((acc, t) => acc + t.minutes, 0),
+              radar: radar.week,
+            }}
+          />
+        }
+      />
     </Card>
   );
 
