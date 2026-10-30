@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import { Bell, BookOpen, Check, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
+import { Bell, BookOpen, Check, FlaskConical, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { ObserverIdField } from "@/components/observer/observer-id";
 import { BackToLibrary } from "@/components/back-to-library";
@@ -441,13 +441,13 @@ function VolumeRow({
   );
 }
 
-/** 開発者ツール: いまのデータを退避して全解放し、いつでも元に戻せる（開発サーバーでのみ表示） */
+/** 開発者ツール: いまのデータを退避して全解放・サンプルに切り替え、いつでも元に戻せる（開発サーバーでのみ表示） */
 function DevTools() {
   const [backedUp] = useState(hasDevBackup);
 
   // 各画面が保存データを読み直すよう、切り替えたら再読み込みする
-  function unlockAll() {
-    userActions.unlockAll();
+  function apply(action: () => void) {
+    action();
     overrideCloud();
     window.location.reload();
   }
@@ -469,14 +469,17 @@ function DevTools() {
       </p>
       <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
         {backedUp
-          ? "全解放中です。退避しておいた元のデータにいつでも戻せます"
-          : "いまのデータをこの端末に退避してから、全ステージ・最高階級・図鑑の全遺物・全文書の復元・錬成素材を解放します"}
+          ? "全解放・サンプルに切り替え中です。退避しておいた元のデータにいつでも戻せます"
+          : "いまのデータをこの端末に退避してから、全解放（全ステージ・最高階級・全遺物・全文書・錬成素材）か、直近4週間の詠唱を重ねたサンプルに切り替えます"}
       </p>
       <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-        <Button variant="secondary" size="sm" onClick={unlockAll}>
+        <Button variant="secondary" size="sm" onClick={() => apply(userActions.unlockAll)}>
           <Unlock /> 全解放する
         </Button>
-        <Button variant="outline" size="sm" disabled={!backedUp} onClick={restore}>
+        <Button variant="secondary" size="sm" onClick={() => apply(userActions.loadSample)}>
+          <FlaskConical /> サンプルを読み込む
+        </Button>
+        <Button variant="outline" size="sm" className="col-span-2" disabled={!backedUp} onClick={restore}>
           <Undo2 /> 元のデータに戻す
         </Button>
       </div>

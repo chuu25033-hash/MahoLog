@@ -552,13 +552,14 @@ export function TimerPanel({
           </>
         )}
       </div>
-      {isDemo && phase === "focus" && (
+      {/* 動作確認用。本番では出さない */}
+      {process.env.NODE_ENV === "development" && isDemo && phase === "focus" && (
         <button
           onClick={skipToFinish}
           disabled={saving}
-          className="flex items-center gap-1 text-[11px] tracking-wider text-muted-foreground underline-offset-4 hover:text-starlight hover:underline"
+          className="flex items-center gap-1 text-[11px] tracking-wider text-amethyst/80 underline-offset-4 hover:text-amethyst hover:underline"
         >
-          <FastForward className="size-3" /> デモ: 計測を省略して完了
+          <FastForward className="size-3" /> 開発: 計測を省略して完了
         </button>
       )}
       {saving && <p className="text-xs tracking-wider text-aqua/70 glimmer">魔力を記録中…</p>}

@@ -7,7 +7,7 @@ import { AreaAmbience } from "@/components/area-ambience";
 import { BoundWorldlinesDialog } from "@/components/bound-worldlines-dialog";
 import { CycleRings } from "@/components/cycle/cycle-rings";
 import { MpBar } from "@/components/mp-bar";
-import { KeyBackupReminder } from "@/components/observer/key-backup";
+import { FirstVisitKeyGuide, KeyBackupReminder } from "@/components/observer/key-backup";
 import { PageLoading } from "@/components/page-loading";
 import { RadarPanel } from "@/components/radar-panel";
 import { ShareRecordButton } from "@/components/share-record";
@@ -47,6 +47,8 @@ export function DashboardView({ summary, subjects, isDemo }: { summary: Dashboar
       <Dashboard {...base} radar={radar} subjects={subjects} />
       {/* 詠唱を終えて書庫に戻ったとき、復元キーをまだ控えていなければ保存を促す */}
       <KeyBackupReminder />
+      {/* 初めて書庫に入ったときは、まず書斎で観測者IDと復元キーを確かめるよう案内する */}
+      <FirstVisitKeyGuide />
     </>
   );
 }

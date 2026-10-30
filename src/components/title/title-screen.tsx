@@ -211,11 +211,7 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
                 </button>
               </div>
             )
-          ) : (
-            <button type="button" onClick={() => start()} className="transition-colors hover:text-starlight">
-              デモモードで詠唱する（サンプルデータ）
-            </button>
-          )}
+          ) : null}
         </div>
         {restoreOpen && <RestoreDialog onClose={() => setRestoreOpen(false)} onRestored={() => window.location.assign(DESTINATION)} />}
       </main>

@@ -654,8 +654,9 @@ export const userActions = {
     update(() => initialUserData());
   },
 
-  /** 動作確認用のサンプルデータを読み込む */
+  /** 開発者ツール: いまのデータを退避してから、動作確認用のサンプルデータに切り替える */
   loadSample() {
+    backupForDev(load());
     update(() => sampleUserData());
   },
 
@@ -665,13 +666,11 @@ export const userActions = {
    */
   unlockAll() {
     const current = load();
-    try {
-      if (!window.localStorage.getItem(DEV_BACKUP_KEY)) window.localStorage.setItem(DEV_BACKUP_KEY, JSON.stringify(current));
-    } catch {}
+    backupForDev(current);
     update(() => fullyUnlockedData(current));
   },
 
-  /** 開発者ツール: 全解放の前に退避したデータへ戻す。退避が無ければ false */
+  /** 開発者ツール: 全解放・サンプル読み込みの前に退避したデータへ戻す。退避が無ければ false */
   restoreDevBackup(): boolean {
     try {
       const raw = window.localStorage.getItem(DEV_BACKUP_KEY);
@@ -685,8 +684,15 @@ export const userActions = {
   },
 };
 
-/** 開発者ツールで全解放する前のデータの退避先 */
+/** 開発者ツールで全解放・サンプル読み込みをする前のデータの退避先 */
 const DEV_BACKUP_KEY = "maholog_user_data_dev_backup";
+
+/** 元のデータを退避する。既に退避があれば（切り替え中に押し直した場合）上書きしない */
+function backupForDev(current: UserData) {
+  try {
+    if (!window.localStorage.getItem(DEV_BACKUP_KEY)) window.localStorage.setItem(DEV_BACKUP_KEY, JSON.stringify(current));
+  } catch {}
+}
 
 /** 全解放の前に退避したデータがあるか */
 export function hasDevBackup() {

@@ -83,7 +83,7 @@ export function ObserverIdField() {
   if (observer.account) return <AccountField observer={observer} />;
 
   return (
-    <div className="rounded-xl border border-starlight/25 bg-starlight/[0.03] p-3">
+    <div id="observer-id" className="scroll-mt-4 rounded-xl border border-starlight/25 bg-starlight/[0.03] p-3">
       <p className="flex items-center gap-1.5 text-sm tracking-wider whitespace-nowrap">
         <KeyRound className="size-4 shrink-0 text-starlight" strokeWidth={1.25} />
         <span className="flex flex-col leading-tight">
@@ -217,7 +217,7 @@ function AccountField({ observer }: { observer: ObserverState }) {
   }
 
   return (
-    <div className="rounded-xl border border-starlight/25 bg-starlight/[0.03] p-3">
+    <div id="observer-id" className="scroll-mt-4 rounded-xl border border-starlight/25 bg-starlight/[0.03] p-3">
       <p className="flex items-center gap-1.5 text-sm tracking-wider whitespace-nowrap">
         <UserRound className="size-4 shrink-0 text-starlight" strokeWidth={1.25} />
         <span className="flex flex-col leading-tight">
