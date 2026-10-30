@@ -41,6 +41,8 @@ import {
 } from "@/lib/user-store";
 import type { StudyMode, Subject, SubjectTotal } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { usePortraitPhone } from "@/lib/use-portrait-phone";
+import { PortraitTimer } from "./portrait-timer";
 import { ResultDialog, type StudyResult } from "./result-dialog";
 import { notifyFinish, useClock } from "./use-clock";
 
@@ -107,6 +109,7 @@ export function TimerPanel({
   const area = resolveArea(data.userProfile.currentStageId, cycleMp(data, totalMp), isZenithOpen(data, totalMp));
   const skin = activeSkin(data);
   const catalyst = armedCatalyst(data);
+  const portrait = usePortraitPhone();
 
   // 設定で選択中の科目が外されたら、詠唱に使う科目の先頭に切り替える
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0];
@@ -333,232 +336,238 @@ export function TimerPanel({
     );
   }
 
-  return (
-    <div className="grid h-full grid-cols-12 gap-3 p-3 lg:gap-4 lg:p-5">
-      {/* 左: 設定パネル */}
-      {/* 枠線（glass の ::before）が中身と一緒に流れないよう、スクロールは内側の領域だけで行う */}
-      <section className="glass col-span-4 flex min-h-0 flex-col overflow-hidden rounded-2xl">
-        <div className="flex min-h-0 flex-1 flex-col gap-3 scroll-area scrollbar-none p-3 short:gap-2 lg:p-4">
-          <div className="grid grid-cols-2 gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm">
-            {(
-              [
-                { key: "pomodoro", label: "律動の詠唱", icon: Hourglass },
-                { key: "stopwatch", label: "無窮の詠唱", icon: TimerIcon },
-              ] as const
-            ).map(({ key, label, icon: Icon }) => (
+  const modeToggle = (
+    <div className="grid grid-cols-2 gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm">
+      {(
+        [
+          { key: "pomodoro", label: "律動の詠唱", icon: Hourglass },
+          { key: "stopwatch", label: "無窮の詠唱", icon: TimerIcon },
+        ] as const
+      ).map(({ key, label, icon: Icon }) => (
+        <button
+          key={key}
+          disabled={phase !== "idle"}
+          onClick={() => setMode(key)}
+          className={cn(
+            "flex items-center justify-center gap-1 rounded-full py-1.5 text-xs tracking-wider whitespace-nowrap transition-all duration-300 disabled:opacity-50 short:text-[11px]",
+            mode === key
+              ? "bg-starlight/10 text-starlight ring-1 ring-starlight/45 shadow-[0_0_10px_-2px_rgba(226,201,116,0.4)]"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Icon className="size-3.5" strokeWidth={1.5} />
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const subjectSection = (
+    <div>
+      <p className="mb-1.5 text-xs tracking-[0.2em] text-muted-foreground">属性（科目 <ArrowGlyph /> 詳細）</p>
+      <SubjectPicker
+        subjects={subjects}
+        subjectId={subject?.id ?? null}
+        subSubject={subSubjectInput}
+        onChange={(id, sub) => {
+          setSubjectId(id ?? subjectId);
+          setSubSubjectInput(sub);
+        }}
+        disabled={locked}
+      />
+    </div>
+  );
+
+  const durationRows = (
+    <>
+      {mode === "pomodoro" && (
+        <div className="space-y-1.5">
+          <OptionRow label="詠唱時間" unit="分" options={FOCUS_MINUTE_OPTIONS} value={focusMin} onChange={setFocusMin} disabled={phase !== "idle"} />
+          <OptionRow label="静息時間" unit="分" options={BREAK_OPTIONS} value={breakMin} onChange={setBreakMin} disabled={phase !== "idle"} />
+        </div>
+      )}
+      {mode === "stopwatch" && (
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          果てなく詠唱を続けます。2時間途切れずに続くと、星が詠唱の継続を確かめに訪れます。
+        </p>
+      )}
+    </>
+  );
+
+  const areaBox = (
+    <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-2.5 text-xs tracking-wider">
+      <p className="flex items-center gap-1.5 text-muted-foreground">
+        <MapPin className="size-3.5 text-aqua/80" strokeWidth={1.25} />
+        滞在中 <span className="font-display text-[10px] text-starlight/80">{area.zenith ? "ASTRA ZENITH" : `AREA ${area.id}`}</span>
+        <span className="truncate text-foreground">{area.name}</span>
+      </p>
+      <p className="text-[11px] text-muted-foreground">
+        属性ブースト {boostLabel(area)}
+        <span className="ml-1 font-display text-aqua">×{area.boost.multiplier}</span>
+        {boost > 1 && <span className="ml-1 text-starlight text-glow-gold">適用中</span>}
+      </p>
+      <div>
+        <p className="mb-1 text-[11px] text-muted-foreground">触媒（次回の詠唱に使用）</p>
+        <div className="flex flex-wrap gap-1">
+          {CATALYSTS.filter((c) => (data.inventory[c.id] ?? 0) > 0).map((c) => {
+            const armed = catalyst?.id === c.id;
+            return (
               <button
-                key={key}
-                disabled={phase !== "idle"}
-                onClick={() => setMode(key)}
+                key={c.id}
+                disabled={locked}
+                onClick={() => userActions.armCatalyst(armed ? null : c.id)}
+                title={c.effect}
                 className={cn(
-                  "flex items-center justify-center gap-1 rounded-full py-1.5 text-xs tracking-wider whitespace-nowrap transition-all duration-300 disabled:opacity-50 short:text-[11px]",
-                  mode === key
-                    ? "bg-starlight/10 text-starlight ring-1 ring-starlight/45 shadow-[0_0_10px_-2px_rgba(226,201,116,0.4)]"
-                    : "text-muted-foreground hover:text-foreground",
+                  "flex items-center gap-1 rounded-full border py-0.5 pr-2 pl-0.5 text-[11px] transition-all duration-300 disabled:opacity-50",
+                  armed
+                    ? "border-starlight/55 bg-starlight/[0.08] text-starlight shadow-[0_0_10px_-3px_rgba(226,201,116,0.5)]"
+                    : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
                 )}
               >
-                <Icon className="size-3.5" strokeWidth={1.5} />
-                {label}
+                <ItemArt icon={c.svgIcon} rarity={c.rarity} color={c.color} seed={c.id} className="size-5" />
+                ×{c.multiplier}
+                <span className="text-[10px] opacity-70">({data.inventory[c.id]})</span>
               </button>
-            ))}
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-xs tracking-[0.2em] text-muted-foreground">属性（科目 <ArrowGlyph /> 詳細）</p>
-            <SubjectPicker
-              subjects={subjects}
-              subjectId={subject?.id ?? null}
-              subSubject={subSubjectInput}
-              onChange={(id, sub) => {
-                setSubjectId(id ?? subjectId);
-                setSubSubjectInput(sub);
-              }}
-              disabled={locked}
-            />
-          </div>
-
-          {mode === "pomodoro" && (
-            <div className="space-y-1.5">
-              <OptionRow label="詠唱時間" unit="分" options={FOCUS_MINUTE_OPTIONS} value={focusMin} onChange={setFocusMin} disabled={phase !== "idle"} />
-              <OptionRow label="静息時間" unit="分" options={BREAK_OPTIONS} value={breakMin} onChange={setBreakMin} disabled={phase !== "idle"} />
-            </div>
+            );
+          })}
+          {CATALYSTS.every((c) => (data.inventory[c.id] ?? 0) === 0) && (
+            <span className="text-[11px] text-muted-foreground/70">所持していません</span>
           )}
-          {mode === "stopwatch" && (
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              果てなく詠唱を続けます。2時間途切れずに続くと、星が詠唱の継続を確かめに訪れます。
-            </p>
-          )}
-
-          <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-2.5 text-xs tracking-wider">
-            <p className="flex items-center gap-1.5 text-muted-foreground">
-              <MapPin className="size-3.5 text-aqua/80" strokeWidth={1.25} />
-              滞在中 <span className="font-display text-[10px] text-starlight/80">{area.zenith ? "ASTRA ZENITH" : `AREA ${area.id}`}</span>
-              <span className="truncate text-foreground">{area.name}</span>
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              属性ブースト {boostLabel(area)}
-              <span className="ml-1 font-display text-aqua">×{area.boost.multiplier}</span>
-              {boost > 1 && <span className="ml-1 text-starlight text-glow-gold">適用中</span>}
-            </p>
-            <div>
-              <p className="mb-1 text-[11px] text-muted-foreground">触媒（次回の詠唱に使用）</p>
-              <div className="flex flex-wrap gap-1">
-                {CATALYSTS.filter((c) => (data.inventory[c.id] ?? 0) > 0).map((c) => {
-                  const armed = catalyst?.id === c.id;
-                  return (
-                    <button
-                      key={c.id}
-                      disabled={locked}
-                      onClick={() => userActions.armCatalyst(armed ? null : c.id)}
-                      title={c.effect}
-                      className={cn(
-                        "flex items-center gap-1 rounded-full border py-0.5 pr-2 pl-0.5 text-[11px] transition-all duration-300 disabled:opacity-50",
-                        armed
-                          ? "border-starlight/55 bg-starlight/[0.08] text-starlight shadow-[0_0_10px_-3px_rgba(226,201,116,0.5)]"
-                          : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
-                      )}
-                    >
-                      <ItemArt icon={c.svgIcon} rarity={c.rarity} color={c.color} seed={c.id} className="size-5" />
-                      ×{c.multiplier}
-                      <span className="text-[10px] opacity-70">({data.inventory[c.id]})</span>
-                    </button>
-                  );
-                })}
-                {CATALYSTS.every((c) => (data.inventory[c.id] ?? 0) === 0) && (
-                  <span className="text-[11px] text-muted-foreground/70">所持していません</span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-auto space-y-0.5 border-t border-white/10 pt-2 text-xs tracking-wider text-muted-foreground">
-            <p className="flex items-baseline justify-between gap-2">
-              本日の獲得魔力
-              <span>
-                <span className="font-display text-sm text-foreground">{todayMp}</span>
-                <span className="font-display text-[10px]"> MP</span>
-                <span className="ml-1 text-[10px]">／ 上限 {formatMinutes(DAILY_LIMIT_MINUTES)}</span>
-              </span>
-            </p>
-            <p className="flex items-baseline justify-between gap-2">
-              累積魔力
-              <span className="font-display text-sm text-starlight text-glow-gold">
-                {totalMp.toLocaleString()} <span className="text-[10px]">MP</span>
-              </span>
-            </p>
-          </div>
         </div>
-      </section>
+      </div>
+    </div>
+  );
 
-      {/* 中央: 魔法陣 + タイマー */}
-      <section className="relative col-span-8 flex min-h-0 flex-col items-center justify-center">
-        <BackToLibrary guard={locked} className="absolute top-0 left-0 z-20" />
-        <div className="relative flex aspect-square h-full max-h-[calc(100dvh-4rem)] max-w-full items-center justify-center">
-          <MagicCircle
-            color={color}
-            lineColor={lineColor}
-            particleColor={skin.particleColor}
-            nodes={subjects.map((s) => ({ color: s.color, active: s.id === subject?.id }))}
-            running={running}
-            intensity={intensity}
-            className="absolute inset-0 h-full w-full"
-          />
-          <div className="relative z-10 flex flex-col items-center gap-2 text-center">
-            <p className="text-xs tracking-[0.35em] text-aqua/70">{statusLabel}</p>
-            <p
-              className="font-display text-5xl font-normal text-[#e8fbfd] text-glow-aqua short:text-4xl lg:text-7xl"
-              aria-label={formatClock(displayMs)}
-            >
-              {/* セリフ体は数字幅が揃わないので1文字ずつ固定幅で並べる */}
-              {formatClock(displayMs)
-                .split("")
-                .map((ch, i) => (
-                  <span key={i} className={cn("inline-block text-center", ch === ":" ? "w-[0.4em] -translate-y-[0.06em]" : "w-[0.72em]")}>
-                    {ch}
-                  </span>
-                ))}
-            </p>
-            {resting || !subject ? (
-              <p className="flex items-center gap-2 text-sm tracking-[0.3em]">
-                <span className="h-px w-6 bg-gradient-to-r from-transparent to-white/40" />
-                <span style={{ color, textShadow: `0 0 10px ${color}80` }}>静息</span>
-                <span className="h-px w-6 bg-gradient-to-l from-transparent to-white/40" />
-              </p>
+  const mpSummary = (
+    <div className="mt-auto space-y-0.5 border-t border-white/10 pt-2 text-xs tracking-wider text-muted-foreground">
+      <p className="flex items-baseline justify-between gap-2">
+        本日の獲得魔力
+        <span>
+          <span className="font-display text-sm text-foreground">{todayMp}</span>
+          <span className="font-display text-[10px]"> MP</span>
+          <span className="ml-1 text-[10px]">／ 上限 {formatMinutes(DAILY_LIMIT_MINUTES)}</span>
+        </span>
+      </p>
+      <p className="flex items-baseline justify-between gap-2">
+        累積魔力
+        <span className="font-display text-sm text-starlight text-glow-gold">
+          {totalMp.toLocaleString()} <span className="text-[10px]">MP</span>
+        </span>
+      </p>
+    </div>
+  );
+
+  const magicCircle = (
+    <MagicCircle
+      color={color}
+      lineColor={lineColor}
+      particleColor={skin.particleColor}
+      nodes={subjects.map((s) => ({ color: s.color, active: s.id === subject?.id }))}
+      running={running}
+      intensity={intensity}
+      className="absolute inset-0 h-full w-full"
+    />
+  );
+
+  // 魔法陣の中央に重ねる、状態・時刻・属性・操作
+  const clockFace = (
+    <div className="relative z-10 flex flex-col items-center gap-2 text-center">
+      <p className="text-xs tracking-[0.35em] text-aqua/70">{statusLabel}</p>
+      <p
+        className="font-display text-5xl font-normal text-[#e8fbfd] text-glow-aqua short:text-4xl lg:text-7xl"
+        aria-label={formatClock(displayMs)}
+      >
+        {/* セリフ体は数字幅が揃わないので1文字ずつ固定幅で並べる */}
+        {formatClock(displayMs)
+          .split("")
+          .map((ch, i) => (
+            <span key={i} className={cn("inline-block text-center", ch === ":" ? "w-[0.4em] -translate-y-[0.06em]" : "w-[0.72em]")}>
+              {ch}
+            </span>
+          ))}
+      </p>
+      {resting || !subject ? (
+        <p className="flex items-center gap-2 text-sm tracking-[0.3em]">
+          <span className="h-px w-6 bg-gradient-to-r from-transparent to-white/40" />
+          <span style={{ color, textShadow: `0 0 10px ${color}80` }}>静息</span>
+          <span className="h-px w-6 bg-gradient-to-l from-transparent to-white/40" />
+        </p>
+      ) : (
+        <SubjectRuneChip name={subject.name} subSubject={subSubject} color={subject.color} />
+      )}
+
+      <div className="mt-2 flex gap-2">
+        {phase === "idle" && (
+          <Button size="lg" onClick={startFocus} disabled={saving}>
+            <Play /> 詠唱開始
+          </Button>
+        )}
+        {phase === "focus" && (
+          <>
+            {running ? (
+              <Button size="lg" variant="secondary" onClick={pause}>
+                <Pause /> 一時停止
+              </Button>
             ) : (
-              <SubjectRuneChip name={subject.name} subSubject={subSubject} color={subject.color} />
+              <Button size="lg" variant="secondary" onClick={resume}>
+                <Play /> 再開
+              </Button>
             )}
-
-            <div className="mt-2 flex gap-2">
-              {phase === "idle" && (
-                <Button size="lg" onClick={startFocus} disabled={saving}>
-                  <Play /> 詠唱開始
-                </Button>
-              )}
-              {phase === "focus" && (
-                <>
-                  {running ? (
-                    <Button size="lg" variant="secondary" onClick={pause}>
-                      <Pause /> 一時停止
-                    </Button>
-                  ) : (
-                    <Button size="lg" variant="secondary" onClick={resume}>
-                      <Play /> 再開
-                    </Button>
-                  )}
-                  <Button size="lg" onClick={finish}>
-                    <Square /> 終了して記録
-                  </Button>
-                </>
-              )}
-              {phase === "breakReady" && (
-                <>
-                  <Button size="lg" onClick={startBreak}>
-                    <Moon /> 静息に入る
-                  </Button>
-                  <Button size="lg" variant="secondary" onClick={() => setPhase("idle")}>
-                    スキップ
-                  </Button>
-                </>
-              )}
-              {phase === "break" && (
-                <>
-                  {running ? (
-                    <Button size="lg" variant="secondary" onClick={pause}>
-                      <Pause /> 一時停止
-                    </Button>
-                  ) : (
-                    <Button size="lg" variant="secondary" onClick={resume}>
-                      <Play /> 再開
-                    </Button>
-                  )}
-                  <Button
-                    size="lg"
-                    variant="outline"
-                    onClick={() => {
-                      reset();
-                      setPhase("idle");
-                    }}
-                  >
-                    静息を終える
-                  </Button>
-                </>
-              )}
-            </div>
-            {isDemo && phase === "focus" && (
-              <button
-                onClick={skipToFinish}
-                disabled={saving}
-                className="flex items-center gap-1 text-[11px] tracking-wider text-muted-foreground underline-offset-4 hover:text-starlight hover:underline"
-              >
-                <FastForward className="size-3" /> デモ: 計測を省略して完了
-              </button>
+            <Button size="lg" onClick={finish}>
+              <Square /> 終了して記録
+            </Button>
+          </>
+        )}
+        {phase === "breakReady" && (
+          <>
+            <Button size="lg" onClick={startBreak}>
+              <Moon /> 静息に入る
+            </Button>
+            <Button size="lg" variant="secondary" onClick={() => setPhase("idle")}>
+              スキップ
+            </Button>
+          </>
+        )}
+        {phase === "break" && (
+          <>
+            {running ? (
+              <Button size="lg" variant="secondary" onClick={pause}>
+                <Pause /> 一時停止
+              </Button>
+            ) : (
+              <Button size="lg" variant="secondary" onClick={resume}>
+                <Play /> 再開
+              </Button>
             )}
-            {saving && <p className="text-xs tracking-wider text-aqua/70 glimmer">魔力を記録中…</p>}
-            {message && <p className="text-xs text-destructive">{message}</p>}
-          </div>
-        </div>
-      </section>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => {
+                reset();
+                setPhase("idle");
+              }}
+            >
+              静息を終える
+            </Button>
+          </>
+        )}
+      </div>
+      {isDemo && phase === "focus" && (
+        <button
+          onClick={skipToFinish}
+          disabled={saving}
+          className="flex items-center gap-1 text-[11px] tracking-wider text-muted-foreground underline-offset-4 hover:text-starlight hover:underline"
+        >
+          <FastForward className="size-3" /> デモ: 計測を省略して完了
+        </button>
+      )}
+      {saving && <p className="text-xs tracking-wider text-aqua/70 glimmer">魔力を記録中…</p>}
+      {message && <p className="text-xs text-destructive">{message}</p>}
+    </div>
+  );
 
+  const overlays = (
+    <>
       {/* 放置確認ダイアログ */}
       <Dialog open={confirmOpen} onOpenChange={(open) => !open && continueFocus()}>
         <DialogContent showCloseButton={false}>
@@ -578,6 +587,52 @@ export function TimerPanel({
       </Dialog>
 
       {result && <ResultDialog key={result.id} result={result} subjects={subjects} onClose={() => setResult(null)} />}
+    </>
+  );
+
+  if (portrait) {
+    return (
+      <PortraitTimer
+        locked={locked}
+        phase={phase}
+        subject={subject}
+        subSubject={subSubject}
+        modeToggle={modeToggle}
+        subjectSection={subjectSection}
+        durationRows={durationRows}
+        areaBox={areaBox}
+        mpSummary={mpSummary}
+        magicCircle={magicCircle}
+        clockFace={clockFace}
+        overlays={overlays}
+      />
+    );
+  }
+
+  return (
+    <div className="grid h-full grid-cols-12 gap-3 p-3 lg:gap-4 lg:p-5">
+      {/* 左: 設定パネル */}
+      {/* 枠線（glass の ::before）が中身と一緒に流れないよう、スクロールは内側の領域だけで行う */}
+      <section className="glass col-span-4 flex min-h-0 flex-col overflow-hidden rounded-2xl">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 scroll-area scrollbar-none p-3 short:gap-2 lg:p-4">
+          {modeToggle}
+          {subjectSection}
+          {durationRows}
+          {areaBox}
+          {mpSummary}
+        </div>
+      </section>
+
+      {/* 中央: 魔法陣 + タイマー */}
+      <section className="relative col-span-8 flex min-h-0 flex-col items-center justify-center">
+        <BackToLibrary guard={locked} className="absolute top-0 left-0 z-20" />
+        <div className="relative flex aspect-square h-full max-h-[calc(100dvh-4rem)] max-w-full items-center justify-center">
+          {magicCircle}
+          {clockFace}
+        </div>
+      </section>
+
+      {overlays}
     </div>
   );
 }

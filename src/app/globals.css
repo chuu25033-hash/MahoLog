@@ -367,6 +367,8 @@ html[data-chapter="azure"] {
 .rotate-hint { display: none; }
 @media (orientation: portrait) and (max-width: 1024px) {
   .rotate-hint { display: flex; }
+  /* 縦持ち用の作りがある画面（詠唱画面）では出さない */
+  body:has([data-portrait-ready]) .rotate-hint { display: none; }
 }
 
 /*
