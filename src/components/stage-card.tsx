@@ -88,7 +88,7 @@ export function StageCard({ totalMp, className }: { totalMp: number; className?:
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="flex h-[calc(100dvh-1rem)] max-h-[44rem] max-w-3xl! flex-col gap-3 rounded-2xl p-4 ring-starlight/25 backdrop-blur-xl sm:max-w-3xl!">
+        <DialogContent className="flex h-[calc(100dvh-1rem)] max-h-[44rem] max-w-[min(48rem,calc(100%-2rem))]! flex-col gap-3 rounded-2xl p-4 ring-starlight/25 backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="tracking-[0.3em]">魔導の軌跡</DialogTitle>
             <DialogDescription>ノードをタップすると詳細が開きます。歩みは原点から上へと続いていきます。</DialogDescription>

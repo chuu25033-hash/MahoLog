@@ -236,7 +236,7 @@ function CycleRite({ data, totalMp }: { data: UserData; totalMp: number }) {
       </div>
       {open && (
         <Dialog open onOpenChange={setOpen}>
-          <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-md! scroll-area rounded-2xl p-6 ring-starlight/25 backdrop-blur-xl sm:max-w-md!">
+          <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[min(28rem,calc(100%-2rem))]! scroll-area rounded-2xl p-6 ring-starlight/25 backdrop-blur-xl">
             <EndingPanel totalMp={totalMp} onStay={() => setOpen(false)} />
           </DialogContent>
         </Dialog>

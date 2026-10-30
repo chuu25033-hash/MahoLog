@@ -103,7 +103,7 @@ export function RestoreDialog({ onClose, onRestored }: { onClose: () => void; on
 
   return (
     <Dialog open onOpenChange={(open) => !open && !busy && onClose()}>
-      <DialogContent className="max-w-md! sm:max-w-md!">
+      <DialogContent className="max-w-[min(28rem,calc(100%-2rem))]!">
         <DialogHeader>
           <DialogTitle className="tracking-[0.2em]">世界線の復元</DialogTitle>
           <DialogDescription className="[word-break:auto-phrase]">

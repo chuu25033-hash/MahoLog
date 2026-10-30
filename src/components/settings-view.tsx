@@ -45,7 +45,7 @@ export function SettingsView({
   const mainSubject = activeSubjects.find((s) => s.id === userProfile.subject);
 
   return (
-    <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 animate-in fade-in duration-700 lg:p-5">
+    <div data-portrait-ready className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 animate-in fade-in duration-700 portrait:px-4 portrait:pb-8 lg:p-5">
       <header className="flex items-center gap-4">
         <BackToLibrary />
         <div className="min-w-0 flex-1">
@@ -67,7 +67,8 @@ export function SettingsView({
         )}
       </header>
 
-      <div className="grid min-h-0 flex-1 grid-cols-3 gap-3 lg:gap-4">
+      {/* 縦持ちでは3枚を縦に積み、枠ごとではなく画面全体をスクロールする */}
+      <div className="grid min-h-0 flex-1 grid-cols-3 gap-3 portrait:flex-none portrait:grid-cols-1 lg:gap-4">
         <Panel icon={UserRound} title="探究者と演出" label="SCHOLAR">
           <Field label="探究者名" hint={`${userProfile.username.length} / ${USERNAME_MAX}`}>
             <input

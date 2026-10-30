@@ -7,6 +7,8 @@
 @custom-variant short (@media (max-height: 500px));
 /* 魔術書庫を1画面に収めるため、詰めて表示する高さ */
 @custom-variant compact (@media (max-height: 720px));
+/* スマホ・タブレットの縦持ち（.rotate-hint と同じ条件） */
+@custom-variant portrait (@media (orientation: portrait) and (max-width: 1024px));
 
 @theme inline {
   --color-background: var(--background);

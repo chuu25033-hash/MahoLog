@@ -35,8 +35,8 @@ export function CraftPanel({ data }: { data: UserData }) {
   }
 
   return (
-    <div className="grid grid-cols-5 gap-3 lg:gap-4">
-      <section className="glass col-span-3 rounded-2xl p-3 lg:p-4">
+    <div className="grid grid-cols-5 gap-3 portrait:grid-cols-1 lg:gap-4">
+      <section className="glass col-span-3 rounded-2xl portrait:col-span-1 p-3 lg:p-4">
         <h2 className="mb-1 flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
           <Hexagon className="size-4 shrink-0 self-center text-starlight" strokeWidth={1.25} />
           錬成陣
@@ -45,7 +45,7 @@ export function CraftPanel({ data }: { data: UserData }) {
         <p className="mb-3 text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
           星屑の原石と指定の秘宝を捧げ、宝箱からは決して見つからない神話遺物（SS）を錬成します。捧げた秘宝の加護は、神話遺物の加護へと受け継がれます
         </p>
-        <ul className="grid grid-cols-2 gap-2">
+        <ul className="grid grid-cols-2 gap-2 portrait:grid-cols-1">
           {MYTHICS.map((mythic) => (
             <li key={mythic.id}>
               <RecipeCard mythic={mythic} data={data} onCraft={() => setConfirm(mythic)} />
@@ -54,7 +54,7 @@ export function CraftPanel({ data }: { data: UserData }) {
         </ul>
       </section>
 
-      <section className="glass col-span-2 flex flex-col rounded-2xl p-3 lg:p-4">
+      <section className="glass col-span-2 flex flex-col rounded-2xl portrait:col-span-1 p-3 lg:p-4">
         <h2 className="mb-1 flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
           <Flame className="size-4 shrink-0 self-center text-starlight" strokeWidth={1.25} />
           還元
@@ -194,7 +194,7 @@ function CraftRitual({ mythic, onClose }: { mythic: RelicItem; onClose: () => vo
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-md! gap-3 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-6 ring-starlight/25 backdrop-blur-2xl short:p-4 sm:max-w-md!">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[min(28rem,calc(100%-2rem))]! gap-3 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-6 ring-starlight/25 backdrop-blur-2xl short:p-4">
         <p className="text-center font-display text-[10px] tracking-[0.5em] whitespace-nowrap text-starlight/70">
           <span className="-mr-[0.5em]">TRANSMUTATION</span>
         </p>

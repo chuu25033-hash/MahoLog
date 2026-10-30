@@ -76,8 +76,8 @@ export function CollectionView() {
   const captions = zenithKnown ? { ...RARITY_CAPTION, ...ZENITH_CAPTION } : RARITY_CAPTION;
 
   return (
-    <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 lg:p-5">
-      <header className="flex items-end justify-between gap-6 short:items-center">
+    <div data-portrait-ready className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 portrait:px-4 portrait:pb-8 lg:p-5">
+      <header className="flex items-end justify-between gap-6 short:items-center portrait:flex-col portrait:items-stretch portrait:gap-3">
         <div className="flex min-w-0 items-center gap-4">
           <BackToLibrary />
           <div className="min-w-0">
@@ -90,7 +90,7 @@ export function CollectionView() {
             </p>
           </div>
         </div>
-        <div className="w-52 shrink-0">
+        <div className="w-52 shrink-0 portrait:w-full">
           <p className="flex items-baseline justify-between text-[11px] tracking-[0.2em] whitespace-nowrap text-muted-foreground">
             秘術解読率
             <span>
@@ -106,7 +106,7 @@ export function CollectionView() {
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div role="tablist" aria-label="分類" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs">
+        <div role="tablist" aria-label="分類" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs portrait:max-w-full portrait:overflow-x-auto portrait:scrollbar-none">
           {FILTERS.map((f) => {
             const items = codex.filter((i) => f === "すべて" || i.type === f);
             const active = f === filter;
@@ -117,7 +117,7 @@ export function CollectionView() {
                 aria-selected={active}
                 onClick={() => setFilter(f)}
                 className={cn(
-                  "flex items-baseline gap-1.5 rounded-full px-4 py-1.5 tracking-[0.2em] whitespace-nowrap transition-all duration-300",
+                  "flex items-baseline gap-1.5 rounded-full px-4 py-1.5 tracking-[0.2em] portrait:px-3 whitespace-nowrap transition-all duration-300",
                   active
                     ? "bg-gradient-to-b from-starlight/15 to-aqua/5 text-starlight ring-1 ring-starlight/35"
                     : "text-muted-foreground hover:text-foreground",
@@ -131,7 +131,7 @@ export function CollectionView() {
             );
           })}
         </div>
-        <div role="tablist" aria-label="古代文書と錬成" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs">
+        <div role="tablist" aria-label="古代文書と錬成" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs portrait:max-w-full portrait:overflow-x-auto portrait:scrollbar-none">
           {(
             [
               { key: "星脈の記憶", count: `${restoredCount(data)}/${DOCUMENTS.length}` },
@@ -144,7 +144,7 @@ export function CollectionView() {
               aria-selected={filter === key}
               onClick={() => setFilter(key)}
               className={cn(
-                "flex items-baseline gap-1.5 rounded-full px-4 py-1.5 tracking-[0.2em] whitespace-nowrap transition-all duration-300",
+                "flex items-baseline gap-1.5 rounded-full px-4 py-1.5 tracking-[0.2em] portrait:px-3 whitespace-nowrap transition-all duration-300",
                 filter === key
                   ? "bg-gradient-to-b from-starlight/15 to-aqua/5 text-starlight ring-1 ring-starlight/35"
                   : "text-muted-foreground hover:text-foreground",
@@ -173,7 +173,7 @@ export function CollectionView() {
                 {items.filter((i) => isDiscovered(data, i.id)).length} / {items.length}
               </span>
             </h2>
-            <ul className="grid grid-cols-6 gap-2 lg:grid-cols-8">
+            <ul className="grid grid-cols-6 gap-2 portrait:grid-cols-4 lg:grid-cols-8">
               {items.map((item) => (
                 <li key={item.id}>
                   <ItemCard item={item} data={data} onSelect={() => setSelected(item)} />
@@ -269,7 +269,7 @@ function DecipherDialog({ item, data, onClose }: { item: Item; data: UserData; o
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-md! gap-3 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-5 ring-starlight/25 backdrop-blur-2xl sm:max-w-md!">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[min(28rem,calc(100%-2rem))]! gap-3 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-5 ring-starlight/25 backdrop-blur-2xl">
         <div className="flex items-center justify-center gap-2">
           <span className={cn("rounded-full border px-2 font-display text-[10px] tracking-[0.2em]", RARITY_TONE[item.rarity])}>
             RARE {item.rarity} · {RARITY_LABEL[item.rarity]}

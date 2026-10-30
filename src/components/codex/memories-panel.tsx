@@ -146,7 +146,7 @@ function DocumentCard({
 function MemoryDialog({ memory, onClose }: { memory: MemoryItem; onClose: () => void }) {
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-lg! gap-4 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-6 ring-starlight/25 backdrop-blur-2xl short:p-4 sm:max-w-lg!">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[min(32rem,calc(100%-2rem))]! gap-4 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-6 ring-starlight/25 backdrop-blur-2xl short:p-4">
         <div className="flex flex-col items-center gap-1 text-center">
           <p className="font-display text-[10px] tracking-[0.5em] whitespace-nowrap text-starlight/70">
             <span className="-mr-[0.5em]">STELLAR MEMORY</span>

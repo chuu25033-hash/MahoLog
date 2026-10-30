@@ -186,8 +186,8 @@ function StarMemory({ nights }: { nights: ObservedNight[] }) {
   const totalMinutes = observed.reduce((acc, n) => acc + n.minutes, 0);
 
   return (
-    <div className="flex h-full flex-col gap-3 short:gap-2 p-3 animate-in fade-in duration-700 lg:gap-4 lg:p-5">
-      <header className="flex items-end justify-between gap-4">
+    <div data-portrait-ready className="flex h-full flex-col gap-3 short:gap-2 p-3 animate-in fade-in duration-700 portrait:scroll-area portrait:scrollbar-none portrait:px-4 portrait:pb-8 lg:gap-4 lg:p-5">
+      <header className="flex items-end justify-between gap-4 portrait:flex-col portrait:items-stretch">
         <div className="flex min-w-0 items-center gap-4">
           <BackToLibrary />
           <div className="min-w-0">
@@ -198,7 +198,7 @@ function StarMemory({ nights }: { nights: ObservedNight[] }) {
             <p className="text-xs tracking-wider text-muted-foreground short:hidden">詠唱した夜は星となり、日々の学びが夜空に自分だけの星座を描きます</p>
           </div>
         </div>
-        <dl className="flex shrink-0 gap-4 text-right text-[11px] tracking-wider whitespace-nowrap text-muted-foreground">
+        <dl className="flex shrink-0 gap-4 text-right portrait:justify-between text-[11px] tracking-wider whitespace-nowrap text-muted-foreground">
           {[
             { label: "詠唱した夜", value: `${observed.length}` },
             { label: "総詠唱", value: formatMinutes(totalMinutes) },
@@ -213,8 +213,8 @@ function StarMemory({ nights }: { nights: ObservedNight[] }) {
       </header>
 
       {/* 星図盤と詳細パネルを黄金比（1.618 : 1）で分け、パネルは星図盤の中心の高さに揃える */}
-      <div className="grid min-h-0 flex-1 grid-cols-[1.618fr_1fr] gap-4 lg:gap-8">
-        <section className="relative flex min-h-80 short:min-h-0 items-center justify-center [container-type:size]">
+      <div className="grid min-h-0 flex-1 grid-cols-[1.618fr_1fr] gap-4 portrait:flex-none portrait:grid-cols-1 lg:gap-8">
+        <section className="relative flex min-h-80 short:min-h-0 items-center justify-center [container-type:size] portrait:aspect-square portrait:min-h-0">
           <div
             aria-hidden
             className="pointer-events-none absolute top-1/2 left-1/2 size-[min(100cqw,100cqh)] -translate-1/2 rounded-full"

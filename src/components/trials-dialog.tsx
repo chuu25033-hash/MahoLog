@@ -54,7 +54,7 @@ export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClo
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-lg! gap-4 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-5 ring-starlight/25 backdrop-blur-2xl sm:max-w-lg!">
+      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[min(32rem,calc(100%-2rem))]! gap-4 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-5 ring-starlight/25 backdrop-blur-2xl">
         <DialogHeader className="items-center gap-1 text-center">
           <DialogTitle className="text-lg tracking-[0.35em] whitespace-nowrap text-starlight-gradient">
             <span className="-mr-[0.35em]">星の試練</span>
