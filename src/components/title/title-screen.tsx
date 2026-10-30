@@ -92,7 +92,7 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
 
       {/* 天球儀 */}
       <CelestialSphere
-        className={`pointer-events-none absolute inset-0 flex items-center justify-center p-[4vh] transition-all duration-700 ease-in ${leaving ? "scale-105 opacity-0" : "opacity-60"}`}
+        className={`pointer-events-none absolute inset-0 flex items-center justify-center p-[4dvh] transition-all duration-700 ease-in ${leaving ? "scale-105 opacity-0" : "opacity-60"}`}
       />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(closest-side,rgba(8,12,22,0.8)_35%,rgba(8,12,22,0.35)_70%,transparent)]" aria-hidden />
 
@@ -108,7 +108,7 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
           <span className="h-px w-8 bg-gradient-to-l from-transparent to-starlight/60" aria-hidden />
         </p>
         <h1
-          className="title-rise title-logo mt-4 whitespace-nowrap font-display text-[clamp(3rem,13vh,6.5rem)] font-medium leading-none tracking-[0.18em] text-starlight-gradient short:mt-2 portrait:text-[clamp(2.25rem,13vw,4.5rem)]"
+          className="title-rise title-logo mt-4 whitespace-nowrap font-display text-[clamp(3rem,13dvh,6.5rem)] font-medium leading-none tracking-[0.18em] text-starlight-gradient short:mt-2 portrait:text-[clamp(2.25rem,13vw,4.5rem)]"
           style={{ "--rise-delay": "0.45s" } as CSSProperties}
           aria-label="マホログ MAHOLOG"
         >

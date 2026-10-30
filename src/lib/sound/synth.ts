@@ -422,6 +422,23 @@ const SE: Record<SeKey, (ctx: AudioContext, out: AudioNode) => void> = {
     tone(ctx, out, { freq: 196 * 2.76, at: 2.2, attack: 0.02, decay: 2, peak: 0.012 });
     tone(ctx, out, { freq: 587.3, at: 2.25, attack: 0.04, decay: 3.4, peak: 0.03 });
   },
+  // プロローグの幕開け（詠唱開始音）: 暗闇の底から重い低音がゆっくりふくらみ、五度の響きが遠くで開く
+  prologueOpen: (ctx, out) => {
+    tone(ctx, out, { freq: 73.4, toFreq: 98, attack: 1.6, decay: 5.5, peak: 0.12 });
+    // 小さなスピーカーでも重さが届くよう、倍音を薄く重ねる
+    tone(ctx, out, { freq: 146.8, toFreq: 196, attack: 1.6, decay: 5, peak: 0.05, type: "triangle" });
+    tone(ctx, out, { freq: 110, at: 0.8, attack: 1.4, decay: 5, peak: 0.05 });
+    whoosh(ctx, out, { from: 120, to: 700, duration: 3.2, peak: 0.03 });
+    [293.7, 440].forEach((freq, i) => {
+      tone(ctx, out, { freq, at: 2 + i * 0.5, attack: 0.8, decay: 4, peak: 0.025 });
+    });
+  },
+  // プロローグの一節: 遠くで一度だけ鳴る、低く澄んだ鐘
+  prologueLine: (ctx, out) => {
+    tone(ctx, out, { freq: 146.8, attack: 0.4, decay: 3.2, peak: 0.05 });
+    tone(ctx, out, { freq: 587.3, at: 0.05, attack: 0.03, decay: 2.6, peak: 0.03 });
+    tone(ctx, out, { freq: 587.3 * 2.76, at: 0.05, attack: 0.03, decay: 1.2, peak: 0.004 });
+  },
 };
 
 const softChains = new WeakMap<AudioNode, AudioNode>();

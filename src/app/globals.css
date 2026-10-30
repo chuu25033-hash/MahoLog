@@ -400,15 +400,15 @@ body {
 }
 
 @keyframes mote-rise {
-  0% { transform: translate3d(0, 20vh, 0); opacity: 0; }
+  0% { transform: translate3d(0, 20dvh, 0); opacity: 0; }
   20%, 70% { opacity: 0.7; }
-  100% { transform: translate3d(var(--drift), -30vh, 0); opacity: 0; }
+  100% { transform: translate3d(var(--drift), -30dvh, 0); opacity: 0; }
 }
 
 @keyframes mote-fall {
-  0% { transform: translate3d(0, -20vh, 0); opacity: 0; }
+  0% { transform: translate3d(0, -20dvh, 0); opacity: 0; }
   20%, 70% { opacity: 0.65; }
-  100% { transform: translate3d(var(--drift), 30vh, 0); opacity: 0; }
+  100% { transform: translate3d(var(--drift), 30dvh, 0); opacity: 0; }
 }
 
 @keyframes mote-drift {
@@ -1110,4 +1110,73 @@ body {
 
 @keyframes avatar-halo-spin {
   to { transform: rotate(360deg); }
+}
+
+/* ---------- プロローグ（創世の記録）: 暗闇に 1px の魔法陣が脈打ちながら描かれる ---------- */
+.prologue .prologue-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+
+.prologue[data-drawing] .prologue-draw {
+  animation: prologue-draw 2.6s cubic-bezier(0.45, 0, 0.2, 1) var(--draw-delay, 0s) forwards;
+}
+
+@keyframes prologue-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+/* 線にほのかな光をまとわせ、全体をゆっくり脈打たせる */
+.prologue-pulse {
+  filter: drop-shadow(0 0 3px rgba(226, 201, 116, 0.45));
+  animation: prologue-pulse 5.5s ease-in-out infinite;
+}
+
+@keyframes prologue-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+/* 主陣はゆっくり巡り、奥の層は迫り、中の層は逆へ漂って奥行きを生む */
+.prologue-spin,
+.prologue-mid,
+.prologue-far {
+  transform-box: view-box;
+  transform-origin: center;
+}
+
+.prologue-spin { animation: prologue-spin 120s linear infinite; }
+.prologue-mid { animation: prologue-mid 40s ease-in-out infinite alternate; }
+.prologue-far { animation: prologue-far 32s ease-in-out infinite alternate; }
+
+@keyframes prologue-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes prologue-mid {
+  from { transform: scale(1) rotate(0deg); }
+  to { transform: scale(1.04) rotate(-4deg); }
+}
+
+@keyframes prologue-far {
+  from { transform: scale(0.96); }
+  to { transform: scale(1.1); }
+}
+
+.prologue-wait {
+  animation: glimmer 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prologue[data-drawing] .prologue-draw { animation: none; stroke-dashoffset: 0; }
+  .prologue-pulse,
+  .prologue-spin,
+  .prologue-mid,
+  .prologue-far { animation: none; }
+}
+
+[data-lite] .prologue-spin,
+[data-lite] .prologue-mid,
+[data-lite] .prologue-far {
+  animation: none;
 }

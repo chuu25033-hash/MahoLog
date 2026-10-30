@@ -38,6 +38,7 @@ class SoundManager {
   private volumes: SoundVolumes = { master: 1, bgm: 0.5, se: 0.7 };
   private ducked = false;
   private hidden = false;
+  private silenced = false;
   private ambienceKey: AmbienceKey | null = null;
   private current: { key: AmbienceKey; voice: Voice } | null = null;
   private ambienceGen = 0;
@@ -71,6 +72,26 @@ class SoundManager {
   tryStart() {
     const bus = this.ensureBus();
     if (bus?.ctx.state === "running") void this.syncAmbience();
+  }
+
+  /** プロローグなど、効果音だけで聴かせる演出の間は環境音を消す */
+  setSilenced(silenced: boolean) {
+    if (this.silenced === silenced) return;
+    this.silenced = silenced;
+    void this.syncAmbience();
+  }
+
+  /** 音を鳴らせる状態か（ブラウザの自動再生制限が解けているか） */
+  isAwake() {
+    return this.ensureBus()?.ctx.state === "running";
+  }
+
+  /** 操作の中で呼び、音を起こす */
+  async wake() {
+    const bus = this.ensureBus();
+    if (!bus) return;
+    if (bus.ctx.state !== "running") await bus.ctx.resume().catch(() => undefined);
+    void this.syncAmbience();
   }
 
   /** 詠唱中は環境音を控えめにする */
@@ -175,7 +196,7 @@ class SoundManager {
   private async syncAmbience() {
     const bus = this.bus;
     if (!bus || bus.ctx.state !== "running") return;
-    const want = this.enabled ? this.ambienceKey : null;
+    const want = this.enabled && !this.silenced ? this.ambienceKey : null;
     if ((this.current?.key ?? null) === want) return;
     const gen = ++this.ambienceGen;
 

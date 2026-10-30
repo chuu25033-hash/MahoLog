@@ -6,7 +6,7 @@
 export type AmbienceKey = "title" | "prelude" | "hearth" | "forest" | "stars" | "frost" | "forge" | "sanctum";
 
 /** 操作・演出の効果音 */
-export type SeKey = "begin" | "tap" | "chantStart" | "chantComplete" | "reward" | "levelUp" | "rankUp" | "restore" | "dissolve" | "craft";
+export type SeKey = "begin" | "tap" | "chantStart" | "chantComplete" | "reward" | "levelUp" | "rankUp" | "restore" | "dissolve" | "craft" | "prologueOpen" | "prologueLine";
 
 export const SOUND_FILES: {
   ambience: Partial<Record<AmbienceKey, string>>;

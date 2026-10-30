@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import { Bell, Check, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
+import { Bell, BookOpen, Check, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { ObserverIdField } from "@/components/observer/observer-id";
 import { BackToLibrary } from "@/components/back-to-library";
 import { PageLoading } from "@/components/page-loading";
+import { Prologue } from "@/components/prologue/prologue";
 import { SubjectPicker } from "@/components/subject-picker";
 import { SubjectRuneChip } from "@/components/subject-rune-chip";
 import { WIZARD_AVATARS, WizardAvatar } from "@/components/wizard-avatar";
@@ -173,6 +174,8 @@ export function SettingsView({
               />
             </div>
           </Field>
+
+          <PrologueReplay />
         </Panel>
 
         <Panel icon={Hexagon} title="詠唱の領域" label="DOMAINS">
@@ -297,6 +300,19 @@ function ActiveSubjectsField({ subjects, activeIds }: { subjects: Subject[]; act
       >
         秘術を構築するには最低3つの領域（科目）の選択が必要です
       </p>
+    </Field>
+  );
+}
+
+/** 初めて訪れたときに見たプロローグを、いつでも見返せるようにする */
+function PrologueReplay() {
+  const [playing, setPlaying] = useState(false);
+  return (
+    <Field label="創世の記録" hint="はじまりのプロローグ">
+      <Button variant="outline" size="sm" className="h-auto w-full py-2 [word-break:auto-phrase]" onClick={() => setPlaying(true)}>
+        <BookOpen /> プロローグ（創世の記録）を再生する
+      </Button>
+      {playing && <Prologue onDone={() => setPlaying(false)} />}
     </Field>
   );
 }
