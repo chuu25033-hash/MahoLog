@@ -213,7 +213,7 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
             )
           ) : null}
         </div>
-        {restoreOpen && <RestoreDialog onClose={() => setRestoreOpen(false)} onRestored={() => window.location.assign(DESTINATION)} />}
+        {restoreOpen && <RestoreDialog onClose={() => setRestoreOpen(false)} onRestored={() => router.push(DESTINATION)} />}
       </main>
 
     </div>
