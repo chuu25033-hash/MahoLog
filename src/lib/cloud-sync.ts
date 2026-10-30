@@ -37,7 +37,8 @@ type Meta = {
   linking?: boolean;
 };
 
-export type SyncStatus = "disabled" | "idle" | "syncing" | "synced" | "offline" | "error";
+/** limited: 観測者IDの試行が多すぎて、星界がしばらく受け付けていない（総当たり対策） */
+export type SyncStatus = "disabled" | "idle" | "syncing" | "synced" | "offline" | "error" | "limited";
 
 export type ObserverState = {
   id: string;
@@ -153,6 +154,11 @@ export function useLinkChoice(): LinkChoice | null {
 // ---- クラウドとのやりとり ----
 
 type Remote = { data: unknown; updatedAt: string };
+
+/** 観測者IDの試行回数の制限に掛かった（DB が HTTP 429 / PT429 で断った） */
+function isRateLimited(error: unknown) {
+  return (error as { code?: string } | null)?.code === "PT429";
+}
 type PushResult = { status: "ok" | "conflict"; updatedAt: string };
 
 async function pull(m: Meta): Promise<Remote | null> {
@@ -213,6 +219,20 @@ async function reconcile() {
   const m = loadMeta();
   setStatus("syncing");
   try {
+    if (!m.account && m.syncedAt === null) {
+      // まだ一度も預けていない観測者ID: 取り出さずにいきなり預ける（取り出すと「外れ」として試行回数に数えられるため）
+      const version = localVersion;
+      const result = await push(m, getUserData(), null);
+      if (result.status === "conflict") {
+        // 既に使われていた ID だった（ごくまれな重複）: 新しい ID を発行し直す
+        saveMeta({ ...loadMeta(), id: generateObserverId(), syncedAt: null, dirty: true });
+        return reconcile();
+      }
+      saveMeta({ ...loadMeta(), syncedAt: result.updatedAt, dirty: version !== localVersion, force: false });
+      setStatus("synced");
+      return;
+    }
+
     const remote = await pull(m);
 
     if (m.account && m.linking) {
@@ -236,11 +256,6 @@ async function reconcile() {
       return reconcile();
     }
 
-    if (!m.account && remote && m.syncedAt === null) {
-      // まだ一度も預けていない観測者IDが既に使われていた（ごくまれな重複）: 新しい ID を発行し直す
-      saveMeta({ ...m, id: generateObserverId(), syncedAt: null, dirty: true });
-      return reconcile();
-    }
     const remoteChanged = remote !== null && remote.updatedAt !== m.syncedAt;
 
     if (remote && remoteChanged && !m.force && (!m.dirty || preferRemote(getUserData(), remote.data))) {
@@ -259,8 +274,8 @@ async function reconcile() {
       saveMeta({ ...loadMeta(), syncedAt: result.updatedAt, dirty: version !== localVersion, force: false });
     }
     setStatus("synced");
-  } catch {
-    setStatus(navigator.onLine ? "error" : "offline");
+  } catch (error) {
+    setStatus(isRateLimited(error) ? "limited" : navigator.onLine ? "error" : "offline");
   }
 }
 
@@ -295,7 +310,7 @@ export async function resolveLinkChoice(pick: "account" | "device") {
  * 別の端末の記録を、観測者IDで復元する。この端末の保存データはクラウドの記録に置き換わり、
  * 以後はその観測者IDで同期する（ログイン中は使わない）
  */
-export async function restoreFromObserverId(input: string): Promise<"ok" | "invalid" | "not-found" | "same" | "error"> {
+export async function restoreFromObserverId(input: string): Promise<"ok" | "invalid" | "not-found" | "same" | "limited" | "error"> {
   const code = normalizeObserverId(input);
   if (!code) return "invalid";
   if (!isCloudSyncEnabled || loadMeta().account) return "error";
@@ -308,8 +323,8 @@ export async function restoreFromObserverId(input: string): Promise<"ok" | "inva
     saveMeta({ ...loadMeta(), id: code, syncedAt: remote.updatedAt, dirty: false });
     setStatus("synced");
     return "ok";
-  } catch {
-    return "error";
+  } catch (error) {
+    return isRateLimited(error) ? "limited" : "error";
   }
 }
 
@@ -377,9 +392,10 @@ function applySession(user: { id: string; email?: string | null } | null) {
     return;
   }
   if (m.account) {
-    // ログインが切れていた（期限切れなど）: 記録は端末に残したまま、観測者IDでの同期に戻す
+    // ログインが切れていた（期限切れなど）: 記録は端末に残したまま、新しい観測者IDでの同期に戻す
+    // （前の観測者IDの記録の更新時刻は分からないので、同じ ID に戻すと衝突して試行回数に数えられる）
     pendingLink = null;
-    saveMeta({ ...m, account: null, syncedAt: null, dirty: true, force: false, linking: false });
+    saveMeta({ ...m, id: generateObserverId(), account: null, syncedAt: null, dirty: true, force: false, linking: false });
     void syncNow();
   }
 }

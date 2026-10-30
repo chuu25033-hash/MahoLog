@@ -17,6 +17,7 @@ const STATUS_LABEL: Record<SyncStatus, { text: string; tone: string }> = {
   synced: { text: "星界と同期済み", tone: "text-aqua" },
   offline: { text: "オフライン（つながったら同期します）", tone: "text-starlight/80" },
   error: { text: "同期できませんでした", tone: "text-destructive" },
+  limited: { text: "試行が多すぎるため、1時間ほど同期を止めています", tone: "text-starlight/80" },
 };
 
 /** 同期の状態（失敗したときは再試行できる） */
@@ -158,6 +159,7 @@ const RESULT_MESSAGE = {
   invalid: "ML-XXXX-XXXX の形の観測者IDを入力してください（0・1 は使われていません）",
   "not-found": "この観測者IDの記録は星界に見つかりませんでした",
   same: "この端末は既にこの観測者IDで同期しています",
+  limited: "観測者IDの入力が続けて外れたため、しばらく受け付けられません。1時間ほど待ってからお試しください",
   error: "星界と交信できませんでした。通信状態を確かめてもう一度お試しください",
 } as const;
 
