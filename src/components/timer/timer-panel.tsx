@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { timerSummary } from "@/lib/aggregate";
+import { loadChantSession, saveChantSession, type ChantPhase, type ChantSession } from "@/lib/chant-session";
 import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
 import { cycleMarkMultiplier } from "@/lib/cycles";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
@@ -42,6 +43,7 @@ import {
 import type { StudyMode, Subject, SubjectTotal } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { usePortraitPhone } from "@/lib/use-portrait-phone";
+import { PastChantDialog } from "./past-chant-dialog";
 import { PortraitTimer } from "./portrait-timer";
 import { ResultDialog, type StudyResult } from "./result-dialog";
 import { notifyFinish, useClock } from "./use-clock";
@@ -50,8 +52,23 @@ const BREAK_OPTIONS = [5, 10, 20] as const;
 const IDLE_CHECK_MS = 2 * 60 * 60 * 1000; // ストップウォッチの放置確認（2時間）
 const IDLE_RESPONSE_MS = 5 * 60 * 1000; // 確認ダイアログの応答待ち
 
-/** idle: 開始前 / focus: 勉強中 / breakReady: 休憩待機 / break: 休憩中 */
-type Phase = "idle" | "focus" | "breakReady" | "break";
+type Phase = ChantPhase;
+
+/**
+ * 書き留めておいた詠唱を呼び戻す。無窮の詠唱が、確かめに来た星への応答を待つ時間まで過ぎていたら、
+ * 放置したときと同じく確かめた時点（2時間）で止めておき、刻むかどうかは本人に委ねる
+ */
+function restoreSession(subjects: Subject[]): { session: ChantSession; overrun: boolean } | null {
+  const session = loadChantSession();
+  if (!session || !subjects.some((s) => s.id === session.subjectId)) return null;
+  const { clock } = session;
+  const elapsed = clock.accMs + (clock.startedAt !== null ? Date.now() - clock.startedAt : 0);
+  const limit = session.confirmBaseMs + IDLE_CHECK_MS;
+  if (session.mode === "stopwatch" && session.phase === "focus" && elapsed > limit + IDLE_RESPONSE_MS) {
+    return { session: { ...session, clock: { accMs: limit, startedAt: null } }, overrun: true };
+  }
+  return { session, overrun: false };
+}
 
 function formatClock(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
@@ -84,25 +101,39 @@ export function TimerPanel({
   /** 設定画面の詳細科目 */
   initialSubSubject?: string | null;
 }) {
-  const [mode, setMode] = useState<StudyMode>("pomodoro");
-  const [focusMin, setFocusMin] = useState<number>(initialFocusMin);
-  const [breakMin, setBreakMin] = useState<number>(5);
+  // 画面を閉じる前に詠唱していたなら、その続きから始める
+  const [restored] = useState(() => restoreSession(subjects));
+  const resumed = restored?.session;
+  const [mode, setMode] = useState<StudyMode>(resumed?.mode ?? "pomodoro");
+  const [focusMin, setFocusMin] = useState<number>(resumed?.focusMin ?? initialFocusMin);
+  const [breakMin, setBreakMin] = useState<number>(resumed?.breakMin ?? 5);
   const initialSubject = subjects.find((s) => s.id === initialSubjectId);
-  const [subjectId, setSubjectId] = useState(initialSubject?.id ?? subjects[0]?.id ?? "");
-  const [subSubjectInput, setSubSubjectInput] = useState(initialSubject ? initialSubSubject : null);
-  const [phase, setPhase] = useState<Phase>("idle");
-  const { elapsedMs, running, start: resume, pause, reset, read } = useClock();
+  const [subjectId, setSubjectId] = useState(resumed?.subjectId ?? initialSubject?.id ?? subjects[0]?.id ?? "");
+  const [subSubjectInput, setSubSubjectInput] = useState(
+    resumed ? resumed.subSubject : initialSubject ? initialSubSubject : null,
+  );
+  const [phase, setPhase] = useState<Phase>(resumed?.phase ?? "idle");
+  const { elapsedMs, running, snapshot, start: resume, pause, reset, read } = useClock(resumed?.clock);
 
   const [totalMp, setTotalMp] = useState(initialTotalMp);
   const [weekTotals, setWeekTotals] = useState(initialWeekTotals);
   const [todayMp, setTodayMp] = useState(todayMinutes);
   const [result, setResult] = useState<StudyResult | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // 失敗ではない報せ（呼び戻した・書き留めた）
+  const [notice, setNotice] = useState<string | null>(() =>
+    restored?.overrun
+      ? "長く応答がなかったため、2時間の時点で詠唱を止めています。「終了して記録」で刻めます"
+      : restored?.session.phase === "focus"
+        ? "途切れていた詠唱を呼び戻しました"
+        : null,
+  );
   const [saving, startSaving] = useTransition();
+  const [pastOpen, setPastOpen] = useState(false);
 
   // ストップウォッチ放置確認
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmBaseMs, setConfirmBaseMs] = useState(0);
+  const [confirmBaseMs, setConfirmBaseMs] = useState(resumed?.confirmBaseMs ?? 0);
   const checkpointRef = useRef(0);
 
   const data = useUserData();
@@ -207,6 +238,15 @@ export function TimerPanel({
     [area, isDemo, mode, subject, subSubject, subjects, totalMp, weekTotals],
   );
 
+  // 詠唱の途中を端末に書き留め、画面を閉じても呼び戻せるようにする
+  useEffect(() => {
+    if (phase === "idle" || !subject) {
+      saveChantSession(null);
+      return;
+    }
+    saveChantSession({ phase, mode, focusMin, breakMin, subjectId: subject.id, subSubject: subSubjectInput, clock: snapshot, confirmBaseMs });
+  }, [phase, mode, focusMin, breakMin, subject, subSubjectInput, snapshot, confirmBaseMs]);
+
   // 詠唱している間だけ、結ばれた世界線へ「深き集中」の気配を残す（記録時の完了は DB 側で刻まれる）
   useEffect(() => {
     if (phase !== "focus") return;
@@ -243,7 +283,8 @@ export function TimerPanel({
   useEffect(() => {
     if (mode !== "stopwatch" || !running || confirmOpen) return;
     const id = setTimeout(() => {
-      checkpointRef.current = read();
+      // 裏に回っていて報せが遅れても、確かめに来た時点（2時間）までを刻む
+      checkpointRef.current = Math.min(read(), confirmBaseMs + IDLE_CHECK_MS);
       notifyFinish(getUserData().settings.chime);
       setConfirmOpen(true);
     }, Math.max(0, confirmBaseMs + IDLE_CHECK_MS - read()));
@@ -265,6 +306,7 @@ export function TimerPanel({
 
   const startFocus = () => {
     setMessage(null);
+    setNotice(null);
     setConfirmBaseMs(0);
     reset();
     resume();
@@ -562,7 +604,18 @@ export function TimerPanel({
           <FastForward className="size-3" /> 開発: 計測を省略して完了
         </button>
       )}
+      {/* 計り忘れた学びを後から刻む。端末に記録を持つときだけ */}
+      {isDemo && phase === "idle" && (
+        <button
+          onClick={() => setPastOpen(true)}
+          disabled={saving}
+          className="text-[11px] tracking-wider text-muted-foreground underline-offset-4 hover:text-starlight hover:underline"
+        >
+          計り忘れた詠唱を書き留める
+        </button>
+      )}
       {saving && <p className="text-xs tracking-wider text-aqua/70 glimmer">魔力を記録中…</p>}
+      {notice && !message && <p className="text-xs tracking-wider text-aqua/80">{notice}</p>}
       {message && <p className="text-xs text-destructive">{message}</p>}
     </div>
   );
@@ -586,6 +639,25 @@ export function TimerPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {pastOpen && subject && (
+        <PastChantDialog
+          open
+          onOpenChange={setPastOpen}
+          subject={subject}
+          subSubject={subSubject}
+          onRecorded={(minutes, daysAgo) => {
+            if (minutes < 1) {
+              setMessage("その日の記録上限（12時間）に達しています");
+              return;
+            }
+            setTotalMp((v) => v + minutes);
+            if (daysAgo === 0) setTodayMp((v) => v + minutes);
+            setMessage(null);
+            setNotice(`${formatMinutes(minutes)}の詠唱を書き留めました`);
+          }}
+        />
+      )}
 
       {result && <ResultDialog key={result.id} result={result} subjects={subjects} onClose={() => setResult(null)} />}
     </>

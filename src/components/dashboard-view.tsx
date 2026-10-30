@@ -7,7 +7,7 @@ import { AreaAmbience } from "@/components/area-ambience";
 import { BoundWorldlinesDialog } from "@/components/bound-worldlines-dialog";
 import { CycleRings } from "@/components/cycle/cycle-rings";
 import { MpBar } from "@/components/mp-bar";
-import { FirstVisitKeyGuide, KeyBackupReminder } from "@/components/observer/key-backup";
+import { KeyBackupReminder } from "@/components/observer/key-backup";
 import { LibraryTour } from "@/components/tour/library-tour";
 import { PageLoading } from "@/components/page-loading";
 import { RadarPanel } from "@/components/radar-panel";
@@ -46,11 +46,11 @@ export function DashboardView({ summary, subjects, isDemo }: { summary: Dashboar
   return (
     <>
       <Dashboard {...base} radar={radar} subjects={subjects} />
-      {/* 詠唱を終えて書庫に戻ったとき、復元キーをまだ控えていなければ保存を促す */}
+      {/* 最初の詠唱を終えて書庫に戻ったとき、復元キーをまだ控えていなければ保存を促す。
+          守る記録ができる前に鍵の話をして、覗きに来た人を引き留めないよう、初めての来訪では促さない */}
       <KeyBackupReminder />
-      {/* 初めて書庫に入ったときは、各ボタンを巡る案内のあと、書斎で観測者IDと復元キーを確かめるよう促す */}
+      {/* 初めて書庫に入ったときは、各ボタンを巡る案内を見せる */}
       <LibraryTour />
-      <FirstVisitKeyGuide />
     </>
   );
 }
@@ -200,7 +200,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
                 style={{ background: log.subject?.color, boxShadow: `0 0 6px ${log.subject?.color}` }}
               />
               <span className="min-w-0 tracking-wider">{log.subject?.name ?? "—"}</span>
-              <span className="hidden text-[11px] whitespace-nowrap text-muted-foreground lg:inline">{MODE_LABEL[log.mode]}</span>
+              <span className="hidden text-[11px] whitespace-nowrap text-muted-foreground lg:inline">{log.manual ? "書き留め" : MODE_LABEL[log.mode]}</span>
               <span className="ml-auto font-display whitespace-nowrap text-aqua">
                 +{log.duration_minutes} <span className="text-[10px]">MP</span>
               </span>

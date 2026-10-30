@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 import { AREAS, isAreaUnlocked, resolveArea } from "./areas";
 import { jstDateKey, startOfJstDay } from "./date";
 import { demoProfile } from "./demo";
-import { calcLevel, rankOf } from "./game";
+import { DAILY_LIMIT_MINUTES, calcLevel, rankOf } from "./game";
 import { CLEAR_MP, chapterOf, milestonesBetween, zenithFloor, type Chapter, type ChapterTheme } from "./cycles";
 import { canCraft, canRestore, dissolveValue, fragmentsOf, memoryOf, surplusCount } from "./crafting";
 import {
@@ -68,7 +68,12 @@ export type ChantRecord = {
   catalystId: string | null;
   /** 見つけたアイテム */
   dropId: string | null;
+  /** 詠唱の間で計らず、後から書き留めた記録。魔力だけを授け、試練には数えない */
+  manual?: boolean;
 };
+
+/** 後から書き留められる日数（今日を含む） */
+export const MANUAL_CHANT_DAYS = 7;
 
 export type DailyReward = {
   /** 最後に星天の導きを受け取った日（JST, YYYY-MM-DD） */
@@ -159,7 +164,8 @@ function normalize(saved: Partial<UserData>): UserData {
 /** 試練の進捗を詠唱履歴から測り直す。期間が変わっていれば受取状況も巡り直す */
 function syncedTasks(data: UserData, subjects: Pick<Subject, "id">[], now: Date): UserData["tasks"] {
   const context = {
-    history: data.chantHistory,
+    // 後から書き留めた記録で試練を満たせると、詠唱を重ねる励みにならないので数えない
+    history: data.chantHistory.filter((r) => !r.manual),
     activeSubjectIds: activeSubjectsOf(subjects, data.userProfile.activeSubjects).map((s) => s.id),
     mainSubjectId: data.userProfile.subject,
     guidanceClaimed: data.dailyReward.lastClaimedDate === jstDateKey(now),
@@ -403,6 +409,7 @@ export function localStudyLogs(data: UserData): StudyLog[] {
     duration_minutes: r.minutes,
     mode: r.mode,
     created_at: r.date,
+    manual: r.manual,
   }));
 }
 
@@ -501,6 +508,44 @@ export const userActions = {
         s.userProfile.totalMp + record.mp,
       ),
     );
+  },
+
+  /**
+   * 詠唱の間で計り忘れた学びを、後から書き留める。daysAgo 日前（0 = 今日）の記録として刻み、
+   * 得る魔力は学んだ分そのまま（エリアの属性・加護・触媒・周天の刻印は乗らず、遺物も見つからない）。
+   * その日の上限を超える分は切り詰め、刻めた分数を返す
+   */
+  recordPastChant(
+    { minutes, subjectId, subSubject, daysAgo }: { minutes: number; subjectId: string; subSubject: string | null; daysAgo: number },
+    now = new Date(),
+  ): number {
+    const days = Math.min(MANUAL_CHANT_DAYS - 1, Math.max(0, Math.floor(daysAgo)));
+    // 過ぎた日は、その日の夜（JST 21時）に詠唱したものとして刻む
+    const date = days === 0 ? now : new Date(startOfJstDay(now).getTime() - days * DAY + 21 * 60 * 60 * 1000);
+    const data = load();
+    const saved = Math.min(Math.floor(minutes), DAILY_LIMIT_MINUTES - todayChantMinutes(data, date));
+    if (saved < 1) return 0;
+    const record: ChantRecord = {
+      id: `m-${now.getTime()}`,
+      date: date.toISOString(),
+      minutes: saved,
+      subjectId,
+      subSubject,
+      mp: saved,
+      stageId: data.userProfile.currentStageId,
+      mode: "stopwatch",
+      catalystId: null,
+      dropId: null,
+      manual: true,
+    };
+    // 詠唱の記録は日時の順に並べておく
+    update((s) =>
+      withProgress(
+        { ...s, chantHistory: [...s.chantHistory, record].sort((a, b) => a.date.localeCompare(b.date)) },
+        s.userProfile.totalMp + saved,
+      ),
+    );
+    return saved;
   },
 
   /** 星天の導きを受け取る: 前日から続いていれば連続日数を加算、途切れていれば1日目から */

@@ -1,17 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import type { ClockSnapshot } from "@/lib/chant-session";
 import { soundManager } from "@/lib/sound/sound-manager";
-
-type ClockState = { accMs: number; startedAt: number | null };
 
 /**
  * 経過時間を Date.now() の差分で計算する時計。
  * setInterval の回数で数えないので、バックグラウンドタブで間引かれてもズレない。
+ * initial を渡すと、書き留めておいた時計の続きから始める
  */
-export function useClock() {
-  const [state, setState] = useState<ClockState>({ accMs: 0, startedAt: null });
-  const [now, setNow] = useState(0);
+export function useClock(initial?: ClockSnapshot) {
+  const [state, setState] = useState<ClockSnapshot>(initial ?? { accMs: 0, startedAt: null });
+  const [now, setNow] = useState(() => (initial?.startedAt != null ? Date.now() : 0));
 
   useEffect(() => {
     if (state.startedAt === null) return;
@@ -43,7 +43,7 @@ export function useClock() {
     [state],
   );
 
-  return { elapsedMs, running, start, pause, reset, read };
+  return { elapsedMs, running, snapshot: state, start, pause, reset, read };
 }
 
 /** 終了通知（魔力集束のチャイム + 振動）。設定で完了の報せを切っていれば鳴らさない */

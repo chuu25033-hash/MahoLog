@@ -22,6 +22,8 @@ export type StudyLog = {
   duration_minutes: number;
   mode: StudyMode;
   created_at: string;
+  /** 後から書き留めた記録 */
+  manual?: boolean;
 };
 
 /** レーダーチャート1軸分 */

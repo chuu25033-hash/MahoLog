@@ -45,7 +45,7 @@ export function BackToLibrary({ guard = false, className }: { guard?: boolean; c
           <DialogHeader>
             <DialogTitle className="tracking-wider">詠唱中です。魔術書庫に戻りますか？</DialogTitle>
             <DialogDescription className="[word-break:auto-phrase]">
-              戻ると詠唱が中断される場合があります。記録する場合は、先に「終了して記録」を押してください。
+              戻っても詠唱の時は流れ続け、詠唱の間に戻れば続きから再開できます。ここで記録する場合は、先に「終了して記録」を押してください。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
