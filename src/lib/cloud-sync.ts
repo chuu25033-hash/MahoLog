@@ -2,7 +2,8 @@
 
 // 端末の保存データ（user-store）を Supabase に預けるクラウド同期。預け先は2通り:
 // - Google でログインしていれば、そのアカウント（account_saves）。他の人は読み書きできない
-// - ログインしていなければ、観測者ID（ML-XXXX-XXXX）。別の端末では ID を入力して復元する（observer_saves）
+// - ログインしていなければ、観測者ID（ML-XXXX-XXXX）と復元キー。別の端末では両方を入力して復元する（observer_saves）
+//   観測者IDは名札で、記録を開く鍵は復元キー（長いランダムな文字列。見られても困るのは復元キーだけ）
 // 同期のしかたはどちらも同じ:
 // - 端末で保存データが変わったら、少し待ってまとめて預ける（画面を離れるときはすぐに）
 // - 画面に戻ったときや起動時にクラウドを確かめ、別の端末で進んでいれば取り込む
@@ -25,6 +26,8 @@ type Account = { userId: string; email: string | null };
 type Meta = {
   /** この端末の観測者ID（ログイン中も、ログアウト後の預け先として持っておく） */
   id: string;
+  /** 観測者IDの記録を開く復元キー（XXXX-XXXX-XXXX-XXXX-XXXX） */
+  key: string;
   /** Google でログインしているアカウント。あればこちらに預ける */
   account: Account | null;
   /** 最後にクラウドと揃えたときの保存の更新時刻（DB の値をそのまま持つ。初回は null） */
@@ -37,11 +40,16 @@ type Meta = {
   linking?: boolean;
 };
 
-/** limited: 観測者IDの試行が多すぎて、星界がしばらく受け付けていない（総当たり対策） */
-export type SyncStatus = "disabled" | "idle" | "syncing" | "synced" | "offline" | "error" | "limited";
+/**
+ * limited: 観測者IDの試行が多すぎて、星界がしばらく受け付けていない（総当たり対策）
+ * locked: 別の端末で復元キーが作り直され、この端末のキーでは開けなくなった
+ */
+export type SyncStatus = "disabled" | "idle" | "syncing" | "synced" | "offline" | "error" | "limited" | "locked";
 
 export type ObserverState = {
   id: string;
+  /** 復元キー（設定画面で見せる） */
+  key: string;
   status: SyncStatus;
   syncedAt: string | null;
   /** ログイン中のアカウント（ログインしていなければ null） */
@@ -59,6 +67,25 @@ export function generateObserverId() {
   const bytes = crypto.getRandomValues(new Uint8Array(8));
   const chars = Array.from(bytes, (b) => ALPHABET[b % ALPHABET.length]).join("");
   return `ML-${chars.slice(0, 4)}-${chars.slice(4)}`;
+}
+
+/** 復元キーを新しく作る（32 文字 × 20 桁 ≒ 2^100 通り。推測も総当たりもできない長さ） */
+export function generateRecoveryKey() {
+  const bytes = crypto.getRandomValues(new Uint8Array(20));
+  const chars = Array.from(bytes, (b) => ALPHABET[b % ALPHABET.length]).join("");
+  return chars.match(/.{4}/g)!.join("-");
+}
+
+/** 入力された復元キーを XXXX-XXXX-XXXX-XXXX-XXXX の形に整える（小文字・区切りや空白の有無は問わない）。読めなければ null */
+export function normalizeRecoveryKey(input: string) {
+  const body = input.toUpperCase().replace(/[^0-9A-Z]/g, "");
+  if (body.length !== 20 || [...body].some((c) => !ALPHABET.includes(c))) return null;
+  return body.match(/.{4}/g)!.join("-");
+}
+
+/** 新しい観測者ID と復元キーの組 */
+function newObserver() {
+  return { id: generateObserverId(), key: generateRecoveryKey() };
 }
 
 /** 入力された観測者IDを ML-XXXX-XXXX の形に整える（小文字・区切りや空白の有無は問わない）。読めなければ null */
@@ -88,6 +115,8 @@ function loadMeta(): Meta {
     if (saved?.id && normalizeObserverId(saved.id) === saved.id) {
       meta = {
         id: saved.id,
+        // 復元キーができる前の端末: キーを作る（最初に預けたときに、星界の記録もこのキーで閉じる）
+        key: saved.key && normalizeRecoveryKey(saved.key) === saved.key ? saved.key : generateRecoveryKey(),
         account: saved.account?.userId ? { userId: saved.account.userId, email: saved.account.email ?? null } : null,
         syncedAt: saved.syncedAt ?? null,
         dirty: saved.dirty ?? true,
@@ -98,7 +127,7 @@ function loadMeta(): Meta {
     }
   } catch {}
   // 初回アクセス: 観測者IDを発行する（いまの保存データは、まだ預けていない変更として扱う）
-  meta = { id: generateObserverId(), account: null, syncedAt: null, dirty: true };
+  meta = { ...newObserver(), account: null, syncedAt: null, dirty: true };
   saveMeta(meta);
   return meta;
 }
@@ -125,7 +154,7 @@ function emit() {
 function getSnapshot(): ObserverState {
   if (!snapshot) {
     const m = loadMeta();
-    snapshot = { id: m.id, status, syncedAt: m.syncedAt, account: m.account ? { email: m.account.email } : null };
+    snapshot = { id: m.id, key: m.key, status, syncedAt: m.syncedAt, account: m.account ? { email: m.account.email } : null };
   }
   return snapshot;
 }
@@ -159,11 +188,12 @@ type Remote = { data: unknown; updatedAt: string };
 function isRateLimited(error: unknown) {
   return (error as { code?: string } | null)?.code === "PT429";
 }
-type PushResult = { status: "ok" | "conflict"; updatedAt: string };
+/** forbidden: 観測者IDの記録が別の復元キーで閉じられていた */
+type PushResult = { status: "ok" | "conflict" | "forbidden"; updatedAt: string };
 
 async function pull(m: Meta): Promise<Remote | null> {
   const client = createClient();
-  const { data, error } = m.account ? await client.rpc("account_pull") : await client.rpc("observer_pull", { code: m.id });
+  const { data, error } = m.account ? await client.rpc("account_pull") : await client.rpc("observer_pull", { code: m.id, secret: m.key });
   if (error) throw error;
   const row = (data as { data: unknown; updated_at: string }[] | null)?.[0];
   return row ? { data: row.data, updatedAt: row.updated_at } : null;
@@ -173,9 +203,9 @@ async function push(m: Meta, payload: UserData, base: string | null): Promise<Pu
   const client = createClient();
   const { data, error } = m.account
     ? await client.rpc("account_push", { payload, base_updated_at: base })
-    : await client.rpc("observer_push", { code: m.id, payload, base_updated_at: base });
+    : await client.rpc("observer_push", { code: m.id, secret: m.key, payload, base_updated_at: base });
   if (error) throw error;
-  const row = (data as { status: "ok" | "conflict"; updated_at: string }[])[0];
+  const row = (data as { status: PushResult["status"]; updated_at: string }[])[0];
   return { status: row.status, updatedAt: row.updated_at };
 }
 
@@ -223,9 +253,9 @@ async function reconcile() {
       // まだ一度も預けていない観測者ID: 取り出さずにいきなり預ける（取り出すと「外れ」として試行回数に数えられるため）
       const version = localVersion;
       const result = await push(m, getUserData(), null);
-      if (result.status === "conflict") {
-        // 既に使われていた ID だった（ごくまれな重複）: 新しい ID を発行し直す
-        saveMeta({ ...loadMeta(), id: generateObserverId(), syncedAt: null, dirty: true });
+      if (result.status !== "ok") {
+        // 既に使われていた ID だった（ごくまれな重複）: 新しい ID と復元キーを発行し直す
+        saveMeta({ ...loadMeta(), ...newObserver(), syncedAt: null, dirty: true });
         return reconcile();
       }
       saveMeta({ ...loadMeta(), syncedAt: result.updatedAt, dirty: version !== localVersion, force: false });
@@ -266,6 +296,11 @@ async function reconcile() {
       // この端末の変更を預ける（クラウドが進んでいても、この端末の方が進んでいれば上書きする）
       const version = localVersion;
       const result = await push(m, getUserData(), remote?.updatedAt ?? m.syncedAt);
+      if (result.status === "forbidden") {
+        // 別の端末で復元キーが作り直された: この端末のキーでは開けない。新しい復元キーでの復元を待つ
+        setStatus("locked");
+        return;
+      }
       if (result.status === "conflict") {
         // 確かめてから預けるまでに別の端末が書いた: 少し待ってから揃え直す
         setStatus("idle");
@@ -307,21 +342,49 @@ export async function resolveLinkChoice(pick: "account" | "device") {
 }
 
 /**
- * 別の端末の記録を、観測者IDで復元する。この端末の保存データはクラウドの記録に置き換わり、
- * 以後はその観測者IDで同期する（ログイン中は使わない）
+ * 別の端末の記録を、観測者IDと復元キーで復元する。この端末の保存データはクラウドの記録に置き換わり、
+ * 以後はその観測者IDと復元キーで同期する（ログイン中は使わない）。
+ * 観測者IDか復元キーが違えば not-found（どちらが違うかは星界も明かさない）
  */
-export async function restoreFromObserverId(input: string): Promise<"ok" | "invalid" | "not-found" | "same" | "limited" | "error"> {
-  const code = normalizeObserverId(input);
+export async function restoreFromObserverId(
+  idInput: string,
+  keyInput: string,
+): Promise<"ok" | "invalid" | "invalid-key" | "not-found" | "same" | "limited" | "error"> {
+  const code = normalizeObserverId(idInput);
   if (!code) return "invalid";
+  const key = normalizeRecoveryKey(keyInput);
+  if (!key) return "invalid-key";
   if (!isCloudSyncEnabled || loadMeta().account) return "error";
-  if (code === loadMeta().id) return "same";
+  // 鍵が締め出されている（locked）ときは、同じ観測者IDでも新しい復元キーで復元できる
+  if (code === loadMeta().id && key === loadMeta().key) return "same";
   try {
     if (running) await running;
-    const remote = await pull({ ...loadMeta(), id: code });
+    const remote = await pull({ ...loadMeta(), id: code, key });
     if (!remote) return "not-found";
     if (!replaceUserData(remote.data)) return "error";
-    saveMeta({ ...loadMeta(), id: code, syncedAt: remote.updatedAt, dirty: false });
+    saveMeta({ ...loadMeta(), id: code, key, syncedAt: remote.updatedAt, dirty: false });
     setStatus("synced");
+    return "ok";
+  } catch (error) {
+    return isRateLimited(error) ? "limited" : "error";
+  }
+}
+
+/**
+ * 復元キーを作り直す。古い復元キーは使えなくなり、同じ観測者IDを使っている他の端末は新しいキーで復元し直す必要がある
+ */
+export async function rotateRecoveryKey(): Promise<"ok" | "unsynced" | "limited" | "error"> {
+  const m = loadMeta();
+  if (!isCloudSyncEnabled || m.account) return "error";
+  // 星界にまだ一度も預けていなければ、作り直すものが無い（先に預ける）
+  await syncNow();
+  if (loadMeta().syncedAt === null) return "unsynced";
+  const next = generateRecoveryKey();
+  try {
+    const { data, error } = await createClient().rpc("observer_rotate_key", { code: m.id, secret: loadMeta().key, new_secret: next });
+    if (error) throw error;
+    if (data !== true) return "error";
+    saveMeta({ ...loadMeta(), key: next });
     return "ok";
   } catch (error) {
     return isRateLimited(error) ? "limited" : "error";
@@ -345,7 +408,7 @@ export function startNewObserver() {
     saveMeta({ ...m, dirty: true, force: true });
     return;
   }
-  saveMeta({ ...m, id: generateObserverId(), syncedAt: null, dirty: true });
+  saveMeta({ ...m, ...newObserver(), syncedAt: null, dirty: true });
 }
 
 // ---- Google ログイン ----
@@ -372,7 +435,7 @@ export async function signOutAccount({ force = false } = {}): Promise<"ok" | "un
     .auth.signOut()
     .catch(() => {});
   pendingLink = null;
-  saveMeta({ id: generateObserverId(), account: null, syncedAt: null, dirty: true });
+  saveMeta({ ...newObserver(), account: null, syncedAt: null, dirty: true });
   userActions.reset();
   return "ok";
 }
@@ -395,7 +458,7 @@ function applySession(user: { id: string; email?: string | null } | null) {
     // ログインが切れていた（期限切れなど）: 記録は端末に残したまま、新しい観測者IDでの同期に戻す
     // （前の観測者IDの記録の更新時刻は分からないので、同じ ID に戻すと衝突して試行回数に数えられる）
     pendingLink = null;
-    saveMeta({ ...m, id: generateObserverId(), account: null, syncedAt: null, dirty: true, force: false, linking: false });
+    saveMeta({ ...m, ...newObserver(), account: null, syncedAt: null, dirty: true, force: false, linking: false });
     void syncNow();
   }
 }
