@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import type { StudyMode } from "./types";
 
 // 進行中の詠唱を端末に書き留めておく。画面を閉じたり、スマホが裏で画面を破棄したりしても、
@@ -46,4 +47,43 @@ export function saveChantSession(session: ChantSession | null) {
   } catch {
     // 保存できない端末では、呼び戻せないだけで詠唱は続けられる
   }
+  listeners.forEach((fn) => fn());
+}
+
+const listeners = new Set<() => void>();
+
+function subscribe(onChange: () => void) {
+  listeners.add(onChange);
+  // 別のタブで詠唱が始まった・終わったときも追う
+  const onStorage = (e: StorageEvent) => e.key === STORAGE_KEY && onChange();
+  window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(onChange);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+let cachedRaw: string | null = null;
+let cached: ChantSession | null = null;
+
+function snapshot() {
+  let raw: string | null = null;
+  try {
+    raw = localStorage.getItem(STORAGE_KEY);
+  } catch {}
+  if (raw !== cachedRaw) {
+    cachedRaw = raw;
+    cached = loadChantSession();
+  }
+  return cached;
+}
+
+/** 進行中の詠唱（書庫などから、詠唱の間へ戻る導線を出すのに使う）。サーバーでは無い扱い */
+export function useChantSession() {
+  return useSyncExternalStore(subscribe, snapshot, () => null);
+}
+
+/** 書き留めた時計の、いまの経過時間（ms） */
+export function sessionElapsedMs({ clock }: ChantSession, now = Date.now()) {
+  return clock.accMs + (clock.startedAt !== null ? Math.max(0, now - clock.startedAt) : 0);
 }

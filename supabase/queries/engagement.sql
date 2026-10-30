@@ -6,6 +6,7 @@
 --   ・定着率: 始めて2週以上たった人のうち、2週目（8〜14日目）にも詠唱した人の割合 … 20% 以上
 -- 訪問数（SNS からの流入）は Vercel Analytics で見る。ここでは「使い続けているか」だけを見る
 -- Google でログインした人は、ログイン前の観測者IDの記録も残るため、二重に数えることがある（目安としては十分）
+-- 後から書き留めた記録（manual: true）は、その日に開いて詠唱したことにはならないので数えない
 with saves as (
   select data from public.observer_saves
   union all
@@ -23,6 +24,7 @@ days as (
     ((r ->> 'date')::timestamptz at time zone 'Asia/Tokyo')::date as day
   from numbered c
   cross join lateral jsonb_array_elements(coalesce(c.data -> 'chantHistory', '[]'::jsonb)) as r
+  where coalesce((r ->> 'manual')::boolean, false) = false
 ),
 per_saver as (
   select

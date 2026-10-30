@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { timerSummary } from "@/lib/aggregate";
-import { loadChantSession, saveChantSession, type ChantPhase, type ChantSession } from "@/lib/chant-session";
+import { loadChantSession, saveChantSession, sessionElapsedMs, type ChantPhase, type ChantSession } from "@/lib/chant-session";
 import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
 import { cycleMarkMultiplier } from "@/lib/cycles";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
@@ -61,8 +61,7 @@ type Phase = ChantPhase;
 function restoreSession(subjects: Subject[]): { session: ChantSession; overrun: boolean } | null {
   const session = loadChantSession();
   if (!session || !subjects.some((s) => s.id === session.subjectId)) return null;
-  const { clock } = session;
-  const elapsed = clock.accMs + (clock.startedAt !== null ? Date.now() - clock.startedAt : 0);
+  const elapsed = sessionElapsedMs(session);
   const limit = session.confirmBaseMs + IDLE_CHECK_MS;
   if (session.mode === "stopwatch" && session.phase === "focus" && elapsed > limit + IDLE_RESPONSE_MS) {
     return { session: { ...session, clock: { accMs: limit, startedAt: null } }, overrun: true };

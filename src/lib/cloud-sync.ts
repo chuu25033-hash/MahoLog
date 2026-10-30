@@ -228,8 +228,8 @@ async function push(m: Meta, payload: UserData, base: string | null): Promise<Pu
 }
 
 function summarize(data: unknown): SaveSummary {
-  const d = data as Partial<UserData>;
-  return { mp: d.userProfile?.totalMp ?? 0, chants: d.chantHistory?.length ?? 0 };
+  const d = data as Partial<UserData> | null;
+  return { mp: d?.userProfile?.totalMp ?? 0, chants: d?.chantHistory?.length ?? 0 };
 }
 
 /** まだ何も始めていない記録か（ログインしたとき、アカウントの記録をそのまま取り込んでよい） */
@@ -238,7 +238,7 @@ function isFresh(data: UserData) {
 }
 
 /** 両方で進んでいたとき、クラウドの方を残すか: 累積MP、同じなら詠唱の記録の数が多い方。それも同じならクラウド */
-function preferRemote(local: UserData, remote: unknown) {
+export function preferRemote(local: UserData, remote: unknown) {
   const r = summarize(remote);
   if (r.mp !== local.userProfile.totalMp) return r.mp > local.userProfile.totalMp;
   return r.chants >= local.chantHistory.length;

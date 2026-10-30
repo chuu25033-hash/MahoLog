@@ -21,6 +21,7 @@ import { RankSigil } from "@/components/arcane-icons";
 import { dashboardSummary, type DashboardSummary } from "@/lib/aggregate";
 import { cycleLabel } from "@/lib/cycles";
 import { formatMinutes, levelProgress, rankOf } from "@/lib/game";
+import { sessionElapsedMs, useChantSession, type ChantSession } from "@/lib/chant-session";
 import { activeSubjectsOf } from "@/lib/subjects";
 import { usePortraitPhone } from "@/lib/use-portrait-phone";
 import type { Subject } from "@/lib/types";
@@ -154,20 +155,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
     </Card>
   );
 
-  const chantButton = (
-    <Link
-      href="/timer"
-      data-tour="chant"
-      className={cn(
-        buttonVariants({ size: "lg" }),
-        "group h-auto shrink-0 flex-col gap-1.5 rounded-2xl py-5 text-base tracking-[0.3em] compact:py-3 short:py-2",
-      )}
-    >
-      <Wand2 className="size-6! transition-transform duration-500 group-hover:-rotate-12" strokeWidth={1.25} />
-      詠唱を開始する
-      <span className="font-display text-[10px] tracking-[0.3em] text-starlight/70">BEGIN THE CHANT</span>
-    </Link>
-  );
+  const chantButton = <ChantButton />;
 
   const codexButton = (
     <Link
@@ -314,5 +302,53 @@ function MenuTiles({ subjects, className }: { subjects: Subject[]; className?: s
       {trialsOpen && <TrialsDialog subjects={subjects} onClose={() => setTrialsOpen(false)} />}
       {worldlinesOpen && <BoundWorldlinesDialog onClose={() => setWorldlinesOpen(false)} />}
     </div>
+  );
+}
+
+function formatClock(ms: number) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const mmss = `${String(Math.floor((total % 3600) / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+  return h > 0 ? `${h}:${mmss}` : mmss;
+}
+
+/** 詠唱の間の様子をひとことで（律動の詠唱は残り時間、無窮の詠唱は経過時間） */
+function chantStatus(session: ChantSession, now: number) {
+  if (session.phase !== "focus") return "静息中";
+  if (session.clock.startedAt === null) return "詠唱中断";
+  const elapsed = sessionElapsedMs(session, now);
+  if (session.mode === "stopwatch") return `詠唱中 ${formatClock(elapsed)}`;
+  const left = session.focusMin * 60_000 - elapsed;
+  return left > 0 ? `残り ${formatClock(left)}` : "詠唱完了 — 戻って刻む";
+}
+
+/** 詠唱を始める扉。詠唱の途中で書庫に来ていれば、詠唱の間へ戻る扉として様子を映す */
+function ChantButton() {
+  const session = useChantSession();
+  const ticking = session !== null && session.clock.startedAt !== null;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!ticking) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [ticking]);
+
+  return (
+    <Link
+      href="/timer"
+      data-tour="chant"
+      className={cn(
+        buttonVariants({ size: "lg" }),
+        "group h-auto shrink-0 flex-col gap-1.5 rounded-2xl py-5 text-base tracking-[0.3em] compact:py-3 short:py-2",
+        session && "shadow-[0_0_18px_-4px_rgba(226,201,116,0.6)]",
+      )}
+    >
+      <Wand2 className="size-6! transition-transform duration-500 group-hover:-rotate-12" strokeWidth={1.25} />
+      {session ? "詠唱の間へ戻る" : "詠唱を開始する"}
+      <span className="font-display text-[10px] tracking-[0.3em] text-starlight/70">
+        {session ? "RETURN TO THE CHANT" : "BEGIN THE CHANT"}
+      </span>
+      {session && <span className="text-[11px] tracking-[0.2em] text-aqua/90 glimmer">{chantStatus(session, now)}</span>}
+    </Link>
   );
 }
