@@ -363,10 +363,27 @@ html[data-chapter="azure"] {
   animation: glimmer 7s ease-in-out infinite;
 }
 
-/* スマホ縦持ち時は横向きを促す */
+/* スマホ・タブレットの縦持ちでは横向きを促す */
 .rotate-hint { display: none; }
-@media (orientation: portrait) and (max-width: 820px) {
+@media (orientation: portrait) and (max-width: 1024px) {
   .rotate-hint { display: flex; }
+}
+
+/*
+ * 横画面のノッチ・ホームバーを避ける（viewport-fit=cover で画面いっぱいに描くため）。
+ * 背景の星空（fixed）は端まで広げ、操作する中身だけを安全域に収める
+ */
+.safe-area {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+/* ホーム画面から開いたアプリらしく: 引っ張って再読み込み・タップの青い影・横向き時の文字拡大を抑える */
+html,
+body {
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* ---------- 滞在エリアの雰囲気（漂う粒子） ---------- */

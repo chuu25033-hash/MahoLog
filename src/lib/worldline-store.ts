@@ -5,7 +5,7 @@
 import { useEffect, useSyncExternalStore } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "./supabase/client";
-import { isSupabaseConfigured } from "./supabase/config";
+import { isEmailAuthMode } from "./supabase/config";
 import { userActions, useUserData } from "./user-store";
 import { simulatedName, simulatedPresence, type Bond, type Presence } from "./worldlines";
 
@@ -249,13 +249,13 @@ function useRemotePulses() {
   useSyncExternalStore(subscribeRemote, remoteSnapshot, () => REMOTE_SERVER_SNAPSHOT);
 }
 
-export const useWorldlines: () => WorldlinesView = isSupabaseConfigured ? useRemoteWorldlines : useDemoWorldlines;
+export const useWorldlines: () => WorldlinesView = isEmailAuthMode ? useRemoteWorldlines : useDemoWorldlines;
 
 /** 結ばれた相手の詠唱の開始・完了を onWorldlinePulse へ流す（画面に一つだけ置く） */
-export const useWorldlinePulseSource: () => void = isSupabaseConfigured ? useRemotePulses : useDemoPulses;
+export const useWorldlinePulseSource: () => void = isEmailAuthMode ? useRemotePulses : useDemoPulses;
 
 /** 自分の詠唱の開始・中断を、結ばれた相手に気配として残す（デモモードでは何もしない） */
 export function setChantPresence(chanting: boolean, stageId?: string) {
-  if (!isSupabaseConfigured) return;
+  if (!isEmailAuthMode) return;
   void createClient().rpc("set_chant_presence", { chanting, stage_id: stageId ?? null });
 }

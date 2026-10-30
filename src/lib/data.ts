@@ -4,7 +4,7 @@ import { connection } from "next/server";
 import { dashboardSummary, timerSummary } from "./aggregate";
 import { startOfJstMonth, startOfJstWeek } from "./date";
 import { demoLogs, demoProfile, demoSubjects } from "./demo";
-import { isSupabaseConfigured } from "./supabase/config";
+import { isEmailAuthMode } from "./supabase/config";
 import { createClient } from "./supabase/server";
 import type { Profile, StudyLog, Subject } from "./types";
 
@@ -13,7 +13,7 @@ async function loadUserData(since: Date): Promise<{
   subjects: Subject[];
   logs: StudyLog[];
 }> {
-  if (!isSupabaseConfigured) {
+  if (!isEmailAuthMode) {
     return {
       profile: demoProfile,
       subjects: demoSubjects,
@@ -59,14 +59,14 @@ export async function getDashboardData() {
   const month = startOfJstMonth(now);
   const { profile, subjects, logs } = await loadUserData(week < month ? week : month);
 
-  return { ...dashboardSummary(profile, subjects, logs, now), subjects, isDemo: !isSupabaseConfigured };
+  return { ...dashboardSummary(profile, subjects, logs, now), subjects, isDemo: !isEmailAuthMode };
 }
 
 export async function getSettingsData() {
   await connection();
   const { subjects } = await loadUserData(new Date());
 
-  return { subjects: subjects.filter((s) => s.is_active), isDemo: !isSupabaseConfigured };
+  return { subjects: subjects.filter((s) => s.is_active), isDemo: !isEmailAuthMode };
 }
 
 /** 星天の塔: 累積MP（周天の制覇・儀式の判定に使う）だけを読む */
@@ -74,7 +74,7 @@ export async function getZenithData() {
   await connection();
   const { profile } = await loadUserData(new Date());
 
-  return { totalMp: profile.total_study_time, isDemo: !isSupabaseConfigured };
+  return { totalMp: profile.total_study_time, isDemo: !isEmailAuthMode };
 }
 
 export async function getTimerData() {
@@ -82,5 +82,5 @@ export async function getTimerData() {
   const now = new Date();
   const { profile, subjects, logs } = await loadUserData(startOfJstWeek(now));
 
-  return { profile, ...timerSummary(subjects, logs, now), isDemo: !isSupabaseConfigured };
+  return { profile, ...timerSummary(subjects, logs, now), isDemo: !isEmailAuthMode };
 }

@@ -77,7 +77,7 @@ export function GuidanceScreen() {
   const { night, reward } = guidance;
 
   return (
-    <div className="relative flex h-dvh w-full items-center justify-center gap-[4vw] overflow-hidden px-8">
+    <div className="relative flex h-full w-full items-center justify-center gap-[4vw] overflow-hidden px-8">
       {/* 星図と授かり物 */}
       <div
         className={`guidance-chart relative size-[min(84vh,46vw)] shrink-0 transition-all duration-700 ease-in ${claiming ? "scale-105 opacity-0" : ""}`}

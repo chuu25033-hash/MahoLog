@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { isSupabaseConfigured, supabaseKey, supabaseUrl } from "./config";
+import { isEmailAuthMode, supabaseKey, supabaseUrl } from "./config";
 
 // "/" はタイトル画面（誰でも閲覧可）
 const LANDING_PATH = "/";
@@ -8,7 +8,7 @@ const AUTH_PATHS = ["/login"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
-  if (!isSupabaseConfigured) return response;
+  if (!isEmailAuthMode) return response;
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {

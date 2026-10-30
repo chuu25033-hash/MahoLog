@@ -4,9 +4,11 @@ import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArcaneLogo } from "@/components/arcane-icons";
+import { RestoreDialog } from "@/components/observer/observer-id";
 import { VEIL_COVER_MS, coverScreen } from "@/components/transition-veil";
 import { pendingGuidance } from "@/lib/celestial-guidance";
 import { soundManager } from "@/lib/sound/sound-manager";
+import { isCloudSyncEnabled } from "@/lib/supabase/config";
 import { CelestialSphere } from "./celestial-sphere";
 
 const DESTINATION = "/dashboard";
@@ -41,6 +43,7 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
   const [burst, setBurst] = useState(0);
+  const [restoreOpen, setRestoreOpen] = useState(false);
 
   useEffect(() => {
     router.prefetch(DESTINATION);
@@ -61,7 +64,7 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
   }
 
   return (
-    <div className="relative flex h-dvh w-full items-center justify-center overflow-hidden">
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
       {/* 明るい星屑 */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         {BRIGHT_STARS.map((s, i) => (
@@ -193,12 +196,18 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
             <Link href="/login" className="transition-colors hover:text-starlight">
               ログイン / 新規登録
             </Link>
+          ) : isCloudSyncEnabled ? (
+            // 別の端末で始めた旅を、観測者IDで呼び戻す
+            <button type="button" onClick={() => setRestoreOpen(true)} className="transition-colors hover:text-starlight">
+              世界線の復元（ログイン）
+            </button>
           ) : (
             <button type="button" onClick={() => start()} className="transition-colors hover:text-starlight">
               デモモードで詠唱する（サンプルデータ）
             </button>
           )}
         </div>
+        {restoreOpen && <RestoreDialog onClose={() => setRestoreOpen(false)} onRestored={() => window.location.assign(DESTINATION)} />}
       </main>
 
     </div>

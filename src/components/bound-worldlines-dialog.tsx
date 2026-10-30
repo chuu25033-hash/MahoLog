@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import { Copy, Link2, Unlink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isEmailAuthMode } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
 import { useWorldlines, type BindResult } from "@/lib/worldline-store";
 import { lastChantLabel, normalizeWorldlineCode, presenceStatus, stageLabel, type Bond } from "@/lib/worldlines";
@@ -64,7 +64,7 @@ export function BoundWorldlinesDialog({ onClose }: { onClose: () => void }) {
           </p>
           <DialogDescription className="mt-1 text-[11px] leading-relaxed tracking-wider [word-break:auto-phrase]">
             世界線IDを交わした相手の気配だけが、ここに静かに届きます
-            {!isSupabaseConfigured && "（デモモード: 入力したIDごとに架空の探究者の気配を模擬します）"}
+            {!isEmailAuthMode && "（デモモード: 入力したIDごとに架空の探究者の気配を模擬します）"}
           </DialogDescription>
         </DialogHeader>
 

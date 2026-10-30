@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { DAILY_LIMIT_MINUTES } from "@/lib/game";
-import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { isEmailAuthMode } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import type { StudyMode } from "@/lib/types";
 
@@ -26,7 +26,7 @@ export async function saveStudyLog(input: {
   }
   const requested = Math.min(minutes, DAILY_LIMIT_MINUTES);
 
-  if (!isSupabaseConfigured) {
+  if (!isEmailAuthMode) {
     const before = input.demoTotalMp ?? 0;
     return { ok: true, savedMinutes: requested, beforeMp: before, afterMp: before + requested };
   }

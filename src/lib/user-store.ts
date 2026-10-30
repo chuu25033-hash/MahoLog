@@ -304,10 +304,36 @@ function load(): UserData {
   return state;
 }
 
-function update(next: (s: UserData) => UserData) {
+/** この端末で保存データを書き換えたときの通知先（クラウド同期が預け直しの合図に使う） */
+const localChangeHooks = new Set<() => void>();
+
+export function onLocalChange(hook: () => void) {
+  localChangeHooks.add(hook);
+  return () => {
+    localChangeHooks.delete(hook);
+  };
+}
+
+/** local: この端末での変更か（クラウドから取り込んだときは false にして、預け直しの合図を出さない） */
+function update(next: (s: UserData) => UserData, local = true) {
   state = next(load());
   persist();
   listeners.forEach((l) => l());
+  if (local) localChangeHooks.forEach((h) => h());
+}
+
+/** 保存データとして読み込める形か（バックアップ・クラウドの保存データの検査） */
+function isUserDataLike(saved: unknown): saved is Partial<UserData> {
+  if (typeof saved !== "object" || saved === null) return false;
+  const s = saved as Partial<UserData>;
+  return typeof s.userProfile === "object" && s.userProfile !== null && Array.isArray(s.chantHistory);
+}
+
+/** クラウドに預けた保存データで、この端末の保存データを置き換える。形式が違えば false */
+export function replaceUserData(saved: unknown): boolean {
+  if (!isUserDataLike(saved)) return false;
+  update(() => normalize(saved), false);
+  return true;
 }
 
 function subscribe(listener: () => void) {
@@ -521,9 +547,7 @@ export const userActions = {
   importData(json: string): boolean {
     try {
       const saved = JSON.parse(json);
-      if (typeof saved !== "object" || saved === null || typeof saved.userProfile !== "object" || !Array.isArray(saved.chantHistory)) {
-        return false;
-      }
+      if (!isUserDataLike(saved)) return false;
       update(() => normalize(saved));
       return true;
     } catch {

@@ -3,6 +3,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { Bell, Check, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
 import { ArrowGlyph } from "@/components/arcane-icons";
+import { ObserverIdField } from "@/components/observer/observer-id";
 import { BackToLibrary } from "@/components/back-to-library";
 import { PageLoading } from "@/components/page-loading";
 import { SubjectPicker } from "@/components/subject-picker";
@@ -16,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { overrideCloud, startNewObserver } from "@/lib/cloud-sync";
 import { THEME_LABEL, unlockedThemes } from "@/lib/cycles";
 import { jstDateKey } from "@/lib/date";
 import { soundManager } from "@/lib/sound/sound-manager";
@@ -77,6 +79,8 @@ export function SettingsView({
               aria-label="探究者名"
             />
           </Field>
+
+          <ObserverIdField />
 
           <Field label="デフォルト詠唱時間" hint="律動の詠唱の初期集中時間">
             <div className="grid grid-cols-4 gap-1.5">
@@ -401,11 +405,14 @@ function DevTools() {
   // 各画面が保存データを読み直すよう、切り替えたら再読み込みする
   function unlockAll() {
     userActions.unlockAll();
+    overrideCloud();
     window.location.reload();
   }
 
   function restore() {
-    if (userActions.restoreDevBackup()) window.location.reload();
+    if (!userActions.restoreDevBackup()) return;
+    overrideCloud();
+    window.location.reload();
   }
 
   return (
@@ -464,11 +471,15 @@ function DataControls() {
       setMessage({ text: "マホログのバックアップとして読み込めませんでした", error: true });
       return;
     }
+    // 読み込んだ記録が少なくても、星界の記録に巻き戻されないようにする
+    overrideCloud();
     window.location.reload();
   }
 
   function reset() {
     userActions.reset();
+    // 旅をやり直すときは新しい観測者IDになる（これまでの記録は元の ID のまま星界に残る）
+    startNewObserver();
     window.location.reload();
   }
 
@@ -544,7 +555,7 @@ function DataControls() {
           <DialogHeader>
             <DialogTitle className="tracking-wider">本当にすべての魔力と記憶を消去しますか？</DialogTitle>
             <DialogDescription className="[word-break:auto-phrase]">
-              累積魔力・魔導の軌跡・図鑑の記録・設定がすべて消え、元に戻すことはできません。必要なら先に記録を書き出してください。
+              累積魔力・魔導の軌跡・図鑑の記録・設定がすべて消え、新しい観測者IDで旅をやり直します。これまでの記録は、いまの観測者IDで復元しない限り戻せません。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

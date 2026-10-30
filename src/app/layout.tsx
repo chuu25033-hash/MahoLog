@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cinzel, Geist_Mono, Shippori_Mincho } from "next/font/google";
 import { Smartphone } from "lucide-react";
 import { ChapterThemeSync } from "@/components/chapter-theme-sync";
+import { CloudSyncStarter } from "@/components/cloud-sync-starter";
 import { LiteModeSync } from "@/components/lite-mode-sync";
 import { SoundSync } from "@/components/sound-sync";
 import { StarField } from "@/components/star-field";
@@ -29,6 +30,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "マホログ",
   description: "孤独な世界の奥地に眠る秘術を解き明かし、己の実力を高める旅の記録",
+  applicationName: "マホログ",
+  // iPhone / iPad でホーム画面に追加したとき、ブラウザの枠なしで開く
+  appleWebApp: { capable: true, title: "マホログ", statusBarStyle: "black-translucent" },
+  formatDetection: { telephone: false },
 };
 
 export const viewport: Viewport = {
@@ -44,10 +49,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="ja"
       className={`dark ${mincho.variable} ${cinzel.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="h-dvh overflow-hidden bg-midnight">
+      <body className="safe-area h-dvh overflow-hidden bg-midnight">
         <StarField />
         <LiteModeSync />
         <ChapterThemeSync />
+        <CloudSyncStarter />
         <SoundSync />
         {children}
         <TransitionVeil />
