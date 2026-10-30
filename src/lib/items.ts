@@ -161,7 +161,30 @@ export const CATALYSTS: CatalystItem[] = [
   catalyst("c-quill", "彗星の羽根ペン", "quill", "#e2c974", 2, 1, "百年に一度、尾を引いて落ちる彗星の羽根。書いた文字は、書き手より先に意味を理解する。"),
 ];
 
-const LORE_GLYPHS = ["starmap", "scroll", "key", "compass", "leaf", "feather", "bell", "lantern"] as const;
+/** 伝承の品の絵柄（品の名前に合わせる） */
+const LORE_GLYPHS: Record<string, keyof typeof GLYPHS> = {
+  "1-1": "candle",
+  "1-2": "starmap",
+  "1-3": "waxseal",
+  "2-1": "vial",
+  "2-2": "leaf",
+  "2-3": "scroll",
+  "2-4": "key",
+  "3-1": "stair",
+  "3-2": "gear",
+  "3-3": "tome",
+  "3-4": "lens",
+  "4-1": "footprint",
+  "4-2": "bookmark",
+  "4-3": "clock",
+  "5-1": "flame",
+  "5-2": "tablet",
+  "5-3": "scale",
+  "5-4": "core",
+  "6-1": "feather",
+  "6-2": "score",
+  "6-3": "bell",
+};
 
 const LORE_TEXT: Record<string, [string, string]> = {
   "1-1": ["溶けかけた蝋燭", "最初の夜、探究者はこの灯りの下で一行だけ文字を覚えた。灯は今も、その一行を覚えている。"],
@@ -197,7 +220,7 @@ export const LORES: LoreItem[] = AREAS.map((area, i) => ({
   name: LORE_TEXT[area.id][0],
   flavorText: LORE_TEXT[area.id][1],
   areaId: area.id,
-  svgIcon: GLYPHS[LORE_GLYPHS[i % LORE_GLYPHS.length]],
+  svgIcon: GLYPHS[LORE_GLYPHS[area.id]],
   color: LORE_COLORS[i % 2],
 }));
 
@@ -303,7 +326,7 @@ export const RELICS: RelicItem[] = [
   relic("r-kotodama", "A", "伝承", 2, "言霊の古文書", "tome", "#e7a9c6", { mp: { rate: 0.15, subjects: ["国語"] } }, "一文字ごとに魂が宿るとされた古文書。声に出して読むと、頁の奥で誰かが小さく頷く。"),
   relic("r-epigraph", "A", "伝承", 2, "異邦の碑文写本", "tablet", "#8fdcc4", { mp: { rate: 0.15, subjects: ["英語"] } }, "海の向こうの碑文を写し取った石板。読めない文字ほど、こちらを読もうとしてくる。"),
   relic("r-alchemist", "A", "伝承", 3, "錬金術師の覚え書き", "scroll", "#e2c974", { mp: { rate: 0.15, subjects: ["理科"] } }, "失敗した錬成の記録ばかりが几帳面に綴られた手帳。最後の頁にだけ、成功の印が小さく描かれている。"),
-  relic("r-chronicle", "A", "伝承", 4, "王朝年代記の断簡", "starmap", "#b9a2f7", { mp: { rate: 0.15, subjects: ["社会"] } }, "滅んだ王朝の年代記から破り取られた数頁。並べ直すたびに、歴史は少しだけ違う顔を見せる。"),
+  relic("r-chronicle", "A", "伝承", 4, "王朝年代記の断簡", "scroll", "#b9a2f7", { mp: { rate: 0.15, subjects: ["社会"] } }, "滅んだ王朝の年代記から破り取られた数頁。並べ直すたびに、歴史は少しだけ違う顔を見せる。"),
   relic("r-starstone", "A", "触媒", 1, "星詠みの輝石", "gem", "#cfe9ff", { mp: { rate: 0.05 } }, "夜明け前の一番星を閉じ込めた輝石。尽きることなく、持ち主の魔力をほんの少しだけ澄ませ続ける。"),
   relic("r-compass", "A", "装置", 3, "渡り鳥の羅針儀", "compass", "#71e2ef", { drop: 0.1 }, "針は北ではなく、まだ見ぬ宝の在処を指す。渡り鳥たちは皆、この羅針儀の写しを胸に宿しているという。"),
   relic("r-armillary", "S", "装置", 3, "天球の調律器", "armillary", "#a882fb", { mp: { rate: 0.2, subjects: ["数学", "理科"] } }, "天球の運行を寸分違わず写す真鍮の環。回せば星々の和音が整い、理の言葉が澄んで響く。"),
