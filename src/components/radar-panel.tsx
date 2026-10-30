@@ -22,9 +22,9 @@ export function RadarPanel({ data }: { data: Record<RangeKey, SubjectTotal[]> })
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="flex items-baseline gap-2 tracking-[0.2em] whitespace-nowrap">
+        <h2 className="flex flex-col leading-tight tracking-[0.2em] whitespace-nowrap">
           魔法陣
-          <span className="hidden font-display text-[10px] tracking-[0.25em] text-starlight/70 lg:inline">ARCANE CIRCLE</span>
+          <span className="font-display text-[9px] tracking-[0.25em] text-starlight/70">ARCANE CIRCLE</span>
         </h2>
         <div className="flex rounded-full border border-white/10 bg-white/[0.03] p-0.5 text-xs" role="tablist">
           {RANGES.map((r) => (
@@ -51,7 +51,7 @@ export function RadarPanel({ data }: { data: Record<RangeKey, SubjectTotal[]> })
         </div>
       </div>
       {/* 期間で文字数や表示有無が変わってもチャートの大きさが揃うよう、常に1行分の高さを確保する */}
-      <p className="h-4 truncate text-center text-xs leading-4 tracking-wider whitespace-nowrap text-muted-foreground">
+      <p className="min-h-4 text-center text-xs leading-4 tracking-wider text-muted-foreground">
         {total > 0 && top && (
           <>
             合計 {formatMinutes(total)} ／ 得意属性 <span className="text-starlight">{top.name}</span>

@@ -288,7 +288,7 @@ function TrialRewards({ subjects, onClaimed }: { subjects: Subject[]; onClaimed:
           const claimed = data.tasks[def.scope].items[def.id]?.isClaimed ?? false;
           return (
             <li key={def.id} className={cn("flex items-center gap-2 text-xs tracking-wider", claimed && "opacity-55")}>
-              <span className="min-w-0 truncate">{def.title}</span>
+              <span className="min-w-0">{def.title}</span>
               <span className="ml-auto shrink-0">
                 <RewardLabel def={def} />
               </span>
@@ -385,7 +385,7 @@ function UnlockPanel({ areas }: { areas: Area[] }) {
                 STAGE {stage.id} · AREA {area.id}
                 <span className="ml-2 font-serif tracking-wider text-muted-foreground">{stage.name}</span>
               </p>
-              <p className="relative mt-1 truncate text-lg tracking-[0.15em] whitespace-nowrap">{area.name}</p>
+              <p className="relative mt-1 text-lg tracking-[0.15em]">{area.name}</p>
               <p className="relative mt-0.5 text-xs leading-relaxed text-muted-foreground [word-break:auto-phrase]">{area.description}</p>
               <p className="relative mt-1.5 text-[11px] tracking-wider text-muted-foreground">
                 属性ブースト {boostLabel(area)}

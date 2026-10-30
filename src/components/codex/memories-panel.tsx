@@ -28,10 +28,12 @@ export function MemoriesPanel({ data }: { data: UserData }) {
 
   return (
     <section className="glass rounded-2xl p-3 lg:p-4">
-      <h2 className="mb-1 flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
+      <h2 className="mb-1 flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap portrait:flex-wrap">
         <ScrollText className="size-4 shrink-0 self-center text-starlight" strokeWidth={1.25} />
-        星脈の記憶
-        <span className="font-display text-[10px] tracking-[0.3em] text-starlight/60">STELLAR MEMORIES</span>
+        <span className="flex flex-col leading-tight">
+          星脈の記憶
+          <span className="font-display text-[9px] tracking-[0.3em] text-starlight/60">STELLAR MEMORIES</span>
+        </span>
         <span className="ml-auto font-display text-xs text-muted-foreground">
           {restored} / {DOCUMENTS.length}
           <span className="ml-2 font-serif text-[11px] tracking-wider text-aqua">全属性 MP +{restored}%</span>
@@ -40,7 +42,7 @@ export function MemoriesPanel({ data }: { data: UserData }) {
       <p className="mb-3 text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
         各ステージの宝箱に眠る古代文書の断片（I〜IV）を集め、4葉が揃えば復元できます。復元した文書1冊ごとに、全属性の獲得MPが永久に +1% されます
       </p>
-      <ul className="grid grid-cols-3 gap-2">
+      <ul className="grid grid-cols-3 gap-2 portrait:grid-cols-1">
         {DOCUMENTS.map((doc) => (
           <li key={doc.id}>
             <DocumentCard documentId={doc.id} data={data} onRestore={() => restore(doc.id)} onRead={() => setReading(memoryOf(doc.id))} />
@@ -91,11 +93,11 @@ function DocumentCard({
           className="size-10 shrink-0"
         />
         <div className="min-w-0">
-          <p className="truncate font-display text-[10px] tracking-[0.25em] whitespace-nowrap text-starlight/60">
+          <p className="flex flex-wrap items-baseline gap-x-1.5 font-display text-[10px] tracking-[0.25em] text-starlight/60">
             STAGE {doc.stageId}
-            <span className="ml-1.5 font-serif tracking-wider text-muted-foreground">{stage?.name}</span>
+            <span className="font-serif tracking-wider whitespace-nowrap text-muted-foreground">{stage?.name}</span>
           </p>
-          <p className="truncate text-sm tracking-[0.15em] whitespace-nowrap" style={restored ? { color: doc.color } : undefined}>
+          <p className="text-sm tracking-[0.15em]" style={restored ? { color: doc.color } : undefined}>
             {known ? `『${doc.title}』` : "未発見の古代文書"}
           </p>
         </div>

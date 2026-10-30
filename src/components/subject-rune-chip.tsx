@@ -29,7 +29,7 @@ export function SubjectRuneChip({
           <span className="text-[10px] tracking-normal text-muted-foreground" aria-label="の">
             <ArrowGlyph className="size-3" />
           </span>
-          <span className="truncate text-[#e8fbfd]">{subSubject}</span>
+          <span className="text-[#e8fbfd]">{subSubject}</span>
         </>
       )}
       <span className="text-[9px] tracking-normal opacity-60" style={{ color }} aria-hidden>

@@ -58,7 +58,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
           <CycleRings laps={laps} className="absolute -inset-2" />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-base tracking-wider whitespace-nowrap">
+          <p className="text-base tracking-wider">
             {title ? (
               <span className="mr-1 text-[11px] tracking-[0.15em] text-starlight text-glow-gold">【{title.name}】</span>
             ) : (
@@ -66,11 +66,14 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
             )}
             {profile.username}
           </p>
-          <p className="flex items-center truncate text-[11px] tracking-[0.2em] whitespace-nowrap text-starlight/85">
-            <RankSigil numeral={rank.numeral} className="mr-1 size-5 shrink-0 text-starlight" />
-            <span className="mr-1.5 font-display text-[10px] tracking-[0.2em] text-starlight/60">RANK {rank.numeral}</span>
-            {rank.title}
-          </p>
+          <div className="flex items-center gap-1 text-[11px] tracking-[0.2em] whitespace-nowrap text-starlight/85">
+            <RankSigil numeral={rank.numeral} className="size-5 shrink-0 text-starlight" />
+            {/* 階級名の下に英語の階位を小さく添える */}
+            <p className="flex flex-col leading-tight">
+              {rank.title}
+              <span className="font-display text-[9px] tracking-[0.2em] text-starlight/60">RANK {rank.numeral}</span>
+            </p>
+          </div>
         </div>
         <div className="ml-auto shrink-0 text-right">
           <p className="text-[10px] tracking-[0.3em] whitespace-nowrap text-muted-foreground">探求度</p>
@@ -140,16 +143,18 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
       className={cn(buttonVariants({ variant: "outline" }), "h-auto shrink-0 justify-start gap-2 rounded-2xl px-3 py-2 text-sm tracking-[0.2em]")}
     >
       <BookMarked className="size-4 text-starlight" strokeWidth={1.25} />
-      魔導図鑑
-      <span className="ml-auto font-display text-[10px] tracking-[0.25em] text-starlight/70">CODEX</span>
+      <span className="flex flex-col items-start leading-tight">
+        魔導図鑑
+        <span className="font-display text-[9px] tracking-[0.25em] text-starlight/70">CODEX</span>
+      </span>
     </Link>
   );
 
   const memoryCard = (
     <Card size="sm" className="min-h-0 flex-1 px-3">
-      <h2 className="flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
+      <h2 className="flex flex-col text-sm leading-tight tracking-[0.2em] whitespace-nowrap">
         詠唱の記憶
-        <span className="min-w-0 truncate font-display text-[9px] tracking-[0.25em] text-starlight/60">OBSERVATIONAL MEMORY</span>
+        <span className="font-display text-[9px] tracking-[0.25em] whitespace-normal text-starlight/60">OBSERVATIONAL MEMORY</span>
       </h2>
       {recentLogs.length === 0 ? (
         <p className="text-xs text-muted-foreground">まだ記憶は刻まれていません</p>
@@ -161,7 +166,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
                 className="size-1.5 shrink-0 rounded-full"
                 style={{ background: log.subject?.color, boxShadow: `0 0 6px ${log.subject?.color}` }}
               />
-              <span className="min-w-0 truncate tracking-wider">{log.subject?.name ?? "—"}</span>
+              <span className="min-w-0 tracking-wider">{log.subject?.name ?? "—"}</span>
               <span className="hidden text-[11px] whitespace-nowrap text-muted-foreground lg:inline">{MODE_LABEL[log.mode]}</span>
               <span className="ml-auto font-display whitespace-nowrap text-aqua">
                 +{log.duration_minutes} <span className="text-[10px]">MP</span>

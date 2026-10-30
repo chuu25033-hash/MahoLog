@@ -81,9 +81,9 @@ export function CollectionView() {
         <div className="flex min-w-0 items-center gap-4">
           <BackToLibrary />
           <div className="min-w-0">
-            <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap short:text-base">
+            <h1 className="flex flex-col text-xl leading-tight tracking-[0.25em] whitespace-nowrap short:text-base">
               古代の秘術図鑑
-              <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">ARCANE CODEX</span>
+              <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">ARCANE CODEX</span>
             </h1>
             <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">
               宝箱や星天の導きで見つけた遺物を解読し、古代文書を復元し、錬成陣で神話の遺物を生み出します
@@ -106,7 +106,7 @@ export function CollectionView() {
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div role="tablist" aria-label="分類" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs portrait:max-w-full portrait:overflow-x-auto portrait:scrollbar-none">
+        <div role="tablist" aria-label="分類" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs portrait:grid portrait:w-full portrait:grid-cols-4 portrait:rounded-2xl">
           {FILTERS.map((f) => {
             const items = codex.filter((i) => f === "すべて" || i.type === f);
             const active = f === filter;
@@ -117,7 +117,7 @@ export function CollectionView() {
                 aria-selected={active}
                 onClick={() => setFilter(f)}
                 className={cn(
-                  "flex items-baseline gap-1.5 rounded-full px-4 py-1.5 tracking-[0.2em] portrait:px-3 whitespace-nowrap transition-all duration-300",
+                  "flex items-baseline gap-1.5 rounded-full px-4 py-1.5 tracking-[0.2em] portrait:flex-col portrait:items-center portrait:gap-0 portrait:rounded-xl portrait:px-1 portrait:tracking-[0.1em] whitespace-nowrap transition-all duration-300",
                   active
                     ? "bg-gradient-to-b from-starlight/15 to-aqua/5 text-starlight ring-1 ring-starlight/35"
                     : "text-muted-foreground hover:text-foreground",
@@ -131,7 +131,7 @@ export function CollectionView() {
             );
           })}
         </div>
-        <div role="tablist" aria-label="古代文書と錬成" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs portrait:max-w-full portrait:overflow-x-auto portrait:scrollbar-none">
+        <div role="tablist" aria-label="古代文書と錬成" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs portrait:grid portrait:w-full portrait:grid-cols-2 portrait:rounded-2xl">
           {(
             [
               { key: "星脈の記憶", count: `${restoredCount(data)}/${DOCUMENTS.length}` },
@@ -144,7 +144,7 @@ export function CollectionView() {
               aria-selected={filter === key}
               onClick={() => setFilter(key)}
               className={cn(
-                "flex items-baseline gap-1.5 rounded-full px-4 py-1.5 tracking-[0.2em] portrait:px-3 whitespace-nowrap transition-all duration-300",
+                "flex items-baseline gap-1.5 rounded-full px-4 py-1.5 tracking-[0.2em] portrait:flex-col portrait:items-center portrait:gap-0 portrait:rounded-xl portrait:px-1 portrait:tracking-[0.1em] whitespace-nowrap transition-all duration-300",
                 filter === key
                   ? "bg-gradient-to-b from-starlight/15 to-aqua/5 text-starlight ring-1 ring-starlight/35"
                   : "text-muted-foreground hover:text-foreground",
@@ -168,7 +168,7 @@ export function CollectionView() {
             <h2 className="mb-3 flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
               <span className={cn("font-display text-[11px]", rarity === "S" || rarity === "SS" ? "text-starlight text-glow-gold" : "text-starlight/80")}>RARE {rarity}</span>
               {RARITY_LABEL[rarity]}
-              <span className="min-w-0 truncate text-[11px] tracking-wider text-muted-foreground">{captions[rarity]}</span>
+              <span className="min-w-0 text-[11px] tracking-wider whitespace-normal text-muted-foreground">{captions[rarity]}</span>
               <span className="ml-auto font-display text-xs text-muted-foreground">
                 {items.filter((i) => isDiscovered(data, i.id)).length} / {items.length}
               </span>
@@ -224,7 +224,7 @@ function ItemCard({ item, data, onSelect }: { item: Item; data: UserData; onSele
           className="aspect-square w-full max-w-20 transition-transform duration-500 group-hover:scale-105"
         />
       )}
-      <span className={cn("w-full truncate text-center text-[10px] tracking-wider", owned ? "text-foreground" : "text-muted-foreground/50")}>
+      <span className={cn("w-full text-center text-[10px] leading-snug tracking-wider", owned ? "text-foreground" : "text-muted-foreground/50")}>
         {owned ? item.name : "？？？"}
       </span>
       <span className="font-display text-[9px] tracking-[0.15em] text-muted-foreground/70">
@@ -289,7 +289,7 @@ function DecipherDialog({ item, data, onClose }: { item: Item; data: UserData; o
         </div>
 
         <div className="flex flex-col items-center gap-1 text-center">
-          <DialogTitle className="max-w-full truncate text-base tracking-[0.2em] whitespace-nowrap">
+          <DialogTitle className="max-w-full text-base tracking-[0.2em]">
             {owned ? (item.kind === "title" ? `【${item.name}】` : `『${item.name}』`) : "未解読の遺物"}
           </DialogTitle>
           <p className="font-display text-[10px] tracking-[0.25em] text-starlight/60">{owned ? item.id.toUpperCase() : "UNDECIPHERED"}</p>

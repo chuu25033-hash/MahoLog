@@ -171,7 +171,8 @@ export function StageMap({ totalMp, currentArea }: { totalMp: number; currentAre
         ))}
       </div>
 
-      <div ref={scrollRef} className="scroll-area scrollbar-none absolute inset-y-0 left-0 right-[15.5rem]">
+      {/* 縦持ちでは地図を全幅にして、詳細は下に重ねる（横にはみ出してスクロールさせない） */}
+      <div ref={scrollRef} className="scroll-area scrollbar-none absolute inset-y-0 left-0 right-[15.5rem] overflow-x-hidden portrait:right-0 portrait:bottom-[45%]">
         <div className="relative" style={{ height: LAYOUT.height }}>
           <TrailLines totalMp={totalMp} />
           {LAYOUT.points.map((p) =>
@@ -195,7 +196,7 @@ export function StageMap({ totalMp, currentArea }: { totalMp: number; currentAre
         variant="outline"
         size="xs"
         onClick={returnToOrigin}
-        className="absolute bottom-3 left-3 border-[#e8b86a]/35 bg-black/30 font-serif tracking-wider backdrop-blur-md hover:border-[#e8b86a]/60"
+        className="absolute bottom-3 left-3 border-[#e8b86a]/35 portrait:top-3 portrait:bottom-auto bg-black/30 font-serif tracking-wider backdrop-blur-md hover:border-[#e8b86a]/60"
       >
         <Flame className="candle-flame text-[#f4d9a0]" strokeWidth={1.25} /> 原点へ還る
       </Button>
@@ -266,7 +267,7 @@ function StageRing({ point, unlocked }: { point: Extract<MapPoint, { kind: "ring
         <p className="font-display text-[10px] tracking-[0.3em] whitespace-nowrap" style={{ color: unlocked ? color : undefined }}>
           STAGE {stage.id}
         </p>
-        <p className={cn("truncate text-xs tracking-[0.2em] whitespace-nowrap", !unlocked && "text-muted-foreground")}>{stage.name}</p>
+        <p className={cn("text-xs tracking-[0.2em]", !unlocked && "text-muted-foreground")}>{stage.name}</p>
       </div>
       {!unlocked && (
         <p className="absolute left-[54px] flex -translate-y-1/2 items-center gap-1 text-[10px] tracking-wider whitespace-nowrap text-muted-foreground">
@@ -336,7 +337,15 @@ function AreaNode({
           {current && " · 滞在中"}
         </span>
         <span className={cn("text-[11px] tracking-wider", unlocked ? "text-foreground/90" : "text-muted-foreground/70")}>
-          {unlocked ? (area.alias ? `${area.name}（${area.alias}）` : area.name) : "？？？"}
+          {/* 縦持ちの狭い地図では、名前が地図の端で切れないよう別名を省く */}
+          {unlocked ? (
+            <>
+              {area.name}
+              {area.alias && <span className="portrait:hidden">（{area.alias}）</span>}
+            </>
+          ) : (
+            "？？？"
+          )}
         </span>
       </span>
     </button>
@@ -351,15 +360,16 @@ function AreaPanel({ area, totalMp, current }: { area: Area; totalMp: number; cu
   return (
     <div
       key={area.id}
-      className="absolute inset-y-2 right-2 flex w-60 animate-in flex-col gap-2 rounded-xl border border-white/15 bg-white/[0.05] p-3 text-xs tracking-wider shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-xl duration-300 fade-in slide-in-from-right-2"
+      className="absolute inset-y-2 right-2 flex w-60 animate-in flex-col gap-2 rounded-xl border border-white/15 bg-white/[0.05] p-3 text-xs tracking-wider shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6)] backdrop-blur-xl duration-300 fade-in slide-in-from-right-2 portrait:top-auto portrait:left-2 portrait:h-[calc(45%-0.75rem)] portrait:w-auto portrait:slide-in-from-bottom-2"
     >
-      <div className="scroll-area scrollbar-none -mr-1 flex min-h-0 flex-1 flex-col gap-2 pr-1">
+      {/* 背が低いときは中身を縮めず、枠の中でスクロールさせる */}
+      <div className="scroll-area scrollbar-none -mr-1 flex min-h-0 flex-1 flex-col gap-2 pr-1 [&>*]:shrink-0">
         <p className="font-display text-[10px] tracking-[0.25em] whitespace-nowrap text-starlight/80">
           STAGE {area.id} · {stage.name}
         </p>
         {unlocked ? (
           <>
-            <p className="truncate text-base tracking-[0.15em] whitespace-nowrap">{area.name}</p>
+            <p className="text-base tracking-[0.15em]">{area.name}</p>
             {area.alias && <p className="-mt-1.5 text-[11px] text-muted-foreground">{area.alias}</p>}
             {area.epigraph && <p className="origin-epigraph leading-relaxed tracking-[0.2em] text-starlight/85">{area.epigraph}</p>}
             <p className="leading-relaxed text-muted-foreground [word-break:auto-phrase]">{area.description}</p>

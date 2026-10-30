@@ -38,11 +38,13 @@ export function ObserverIdField() {
     <div className="rounded-xl border border-starlight/25 bg-starlight/[0.03] p-3">
       <p className="flex items-center gap-1.5 text-sm tracking-wider whitespace-nowrap">
         <KeyRound className="size-4 shrink-0 text-starlight" strokeWidth={1.25} />
-        観測者ID
-        <span className="truncate font-display text-[9px] tracking-[0.25em] text-starlight/60">OBSERVER ID</span>
+        <span className="flex flex-col leading-tight">
+          観測者ID
+          <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60">OBSERVER ID</span>
+        </span>
       </p>
-      <div className="mt-2 flex items-center gap-2">
-        <code className="min-w-0 flex-1 truncate rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 text-center font-mono text-base tracking-[0.2em] text-starlight">
+      <div className="@container mt-2 flex items-center gap-2">
+        <code className="min-w-0 flex-1 rounded-lg border border-white/10 bg-black/20 px-2 py-1.5 text-center font-mono text-[clamp(0.75rem,3.6cqw,1rem)] tracking-[0.12em] whitespace-nowrap text-starlight">
           {observer.id}
         </code>
         <Button variant="outline" size="icon-sm" onClick={copy} aria-label="観測者IDをコピー">

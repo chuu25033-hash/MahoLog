@@ -138,7 +138,7 @@ function BondCard({ bond, now, onAccept, onUnbind }: { bond: Bond; now: number; 
       <div className="relative flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <p className="flex items-baseline gap-2 whitespace-nowrap">
-            <span className="truncate text-sm tracking-wider">{bond.name ?? "まだ名の知れぬ世界線"}</span>
+            <span className="min-w-0 text-sm tracking-wider">{bond.name ?? "まだ名の知れぬ世界線"}</span>
             <span className="shrink-0 font-display text-[10px] tracking-[0.25em] text-muted-foreground">{bond.code}</span>
           </p>
 

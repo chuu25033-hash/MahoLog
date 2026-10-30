@@ -39,8 +39,10 @@ export function CraftPanel({ data }: { data: UserData }) {
       <section className="glass col-span-3 rounded-2xl portrait:col-span-1 p-3 lg:p-4">
         <h2 className="mb-1 flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
           <Hexagon className="size-4 shrink-0 self-center text-starlight" strokeWidth={1.25} />
-          錬成陣
-          <span className="font-display text-[10px] tracking-[0.3em] text-starlight/60">TRANSMUTATION</span>
+          <span className="flex flex-col leading-tight">
+            錬成陣
+            <span className="font-display text-[9px] tracking-[0.3em] text-starlight/60">TRANSMUTATION</span>
+          </span>
         </h2>
         <p className="mb-3 text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
           星屑の原石と指定の秘宝を捧げ、宝箱からは決して見つからない神話遺物（SS）を錬成します。捧げた秘宝の加護は、神話遺物の加護へと受け継がれます
@@ -57,8 +59,10 @@ export function CraftPanel({ data }: { data: UserData }) {
       <section className="glass col-span-2 flex flex-col rounded-2xl portrait:col-span-1 p-3 lg:p-4">
         <h2 className="mb-1 flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
           <Flame className="size-4 shrink-0 self-center text-starlight" strokeWidth={1.25} />
-          還元
-          <span className="font-display text-[10px] tracking-[0.3em] text-starlight/60">DISSOLUTION</span>
+          <span className="flex flex-col leading-tight">
+            還元
+            <span className="font-display text-[9px] tracking-[0.3em] text-starlight/60">DISSOLUTION</span>
+          </span>
         </h2>
         <div className="mb-2 flex items-center gap-3 rounded-xl border border-aqua/25 bg-aqua/[0.04] px-3 py-2">
           <ItemArt icon={STARDUST_ORE.svgIcon} rarity="C" color={STARDUST_ORE.color} seed={STARDUST_ORE.id} className="size-10 shrink-0" />
@@ -79,7 +83,7 @@ export function CraftPanel({ data }: { data: UserData }) {
               <li key={item.id} className="flex items-center gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] px-2 py-1.5">
                 <ItemArt icon={item.svgIcon} rarity={item.rarity} color={item.color} seed={item.id} className="size-7 shrink-0" />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs tracking-wider whitespace-nowrap">{item.name}</p>
+                  <p className="text-xs tracking-wider">{item.name}</p>
                   <p className="text-[10px] tracking-wider text-muted-foreground">
                     余剰 ×{count} ・ 1つで原石 <span className="font-display text-aqua">{value}</span>
                   </p>
@@ -144,7 +148,7 @@ function RecipeCard({ mythic, data, onCraft }: { mythic: RelicItem; data: UserDa
         <ItemArt icon={mythic.svgIcon} rarity="SS" color={mythic.color} seed={mythic.id} locked={!crafted} className="size-12 shrink-0" />
         <div className="min-w-0">
           <p className="font-display text-[10px] tracking-[0.25em] text-starlight/70">RARE SS · 神話</p>
-          <p className="truncate text-sm tracking-[0.12em] whitespace-nowrap">『{mythic.name}』</p>
+          <p className="text-sm tracking-[0.12em]">『{mythic.name}』</p>
           <p className="text-[11px] tracking-wider text-aqua [word-break:auto-phrase]">{mythic.effect}</p>
         </div>
       </div>
@@ -176,7 +180,7 @@ function Requirement({ met, children }: { met: boolean; children: React.ReactNod
   return (
     <li className={cn("flex items-center gap-1.5", met ? "text-foreground" : "text-muted-foreground")}>
       {met ? <Check className="size-3 shrink-0 text-aqua" /> : <X className="size-3 shrink-0 text-white/25" />}
-      <span className="min-w-0 truncate whitespace-nowrap">{children}</span>
+      <span className="min-w-0">{children}</span>
     </li>
   );
 }

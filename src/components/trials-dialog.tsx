@@ -62,9 +62,9 @@ export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClo
           <p className="font-display text-[10px] tracking-[0.4em] whitespace-nowrap text-starlight/70">
             <span className="-mr-[0.4em]">— ORBITS OF TRIALS —</span>
           </p>
-          <DialogDescription className="mt-1 flex w-full items-baseline justify-between gap-3 text-[11px] tracking-wider whitespace-nowrap">
-            <span className="truncate">{current.reset}</span>
-            <span className="shrink-0">
+          <DialogDescription className="mt-1 flex w-full flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-[11px] tracking-wider max-sm:justify-center">
+            <span className="whitespace-nowrap">{current.reset}</span>
+            <span className="shrink-0 whitespace-nowrap">
               累積魔力 <span className="font-display text-sm text-starlight text-glow-gold">{totalMp.toLocaleString()}</span>
               <span className="font-display text-[10px]"> MP</span>
               <span className="ml-2 inline-flex items-center gap-1 align-middle font-display text-[10px] tracking-[0.2em] text-starlight/70">
@@ -85,15 +85,16 @@ export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClo
                 aria-selected={scope === s.key}
                 onClick={() => setScope(s.key)}
                 className={cn(
-                  "flex items-baseline justify-center gap-1.5 rounded-full py-1.5 text-xs tracking-wider whitespace-nowrap transition-all duration-300",
+                  "relative flex flex-col items-center rounded-full py-1 text-xs leading-tight tracking-wider whitespace-nowrap transition-all duration-300",
                   scope === s.key
                     ? "bg-starlight/10 text-starlight ring-1 ring-starlight/45 shadow-[0_0_10px_-2px_rgba(226,201,116,0.4)]"
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {s.label}
-                <span className="text-[10px] opacity-60">/ {s.sub}</span>
-                {ready > 0 && <span className="size-1.5 self-center rounded-full bg-starlight shadow-[0_0_6px_#e2c974]" />}
+                {/* 読みは名前の下に小さく添える */}
+                <span className="text-[9px] opacity-60">{s.sub}</span>
+                {ready > 0 && <span className="absolute top-1/2 right-3 size-1.5 -translate-y-1/2 rounded-full bg-starlight shadow-[0_0_6px_#e2c974]" />}
               </button>
             );
           })}
@@ -167,13 +168,13 @@ function GuidanceRow({ data, onClaimed }: { data: UserData; onClaimed: () => voi
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="flex items-baseline gap-2 text-sm tracking-wider whitespace-nowrap">
-            <span className="truncate">【星天の導き】</span>
+          <p className="flex flex-wrap items-baseline gap-x-2 text-sm tracking-wider whitespace-nowrap">
+            <span>【星天の導き】</span>
             <span className="ml-auto shrink-0 font-display text-[10px] tracking-[0.25em] text-starlight/70">
               NIGHT {ROMAN[night - 1]} / {ROMAN[GUIDANCE_CYCLE - 1]}
             </span>
           </p>
-          <p className="mt-0.5 truncate text-[11px] tracking-wider text-muted-foreground">
+          <p className="mt-0.5 text-[11px] tracking-wider text-muted-foreground">
             {guidance ? `今宵の授かり物: ${guidance.reward.name}` : `本日の導きは授かりました（${streak}夜連続）`}
           </p>
           {/* 7夜の周期: 受け取った夜の星が灯る */}
@@ -275,8 +276,8 @@ function TaskRow({
 
       <div className={cn("flex items-start gap-3", claimed && "opacity-55")}>
         <div className="min-w-0 flex-1">
-          <p className="flex items-baseline gap-2 text-sm tracking-wider whitespace-nowrap">
-            <span className="truncate">【{def.title}】</span>
+          <p className="flex flex-wrap items-baseline gap-x-2 text-sm tracking-wider">
+            <span className="whitespace-nowrap">【{def.title}】</span>
             <span className="ml-auto shrink-0">
               <RewardLabel def={def} />
             </span>

@@ -39,10 +39,10 @@ export function StageCard({ totalMp, className }: { totalMp: number; className?:
         )}
       />
       <div className="relative flex items-center gap-2 font-display text-[11px] tracking-[0.3em] whitespace-nowrap text-starlight/80">
-        <Map className="size-3.5 shrink-0" strokeWidth={1.25} />
-        <span className="truncate">{area.zenith ? `ZENITH ${zenithFloor(data.zenith.minutes)}F` : `AREA ${area.id}`}</span>
+        <Map className="size-3.5 shrink-0 short:hidden" strokeWidth={1.25} />
+        <span className="short:tracking-[0.1em]">{area.zenith ? `ZENITH ${zenithFloor(data.zenith.minutes)}F` : `AREA ${area.id}`}</span>
         {data.cycle.count > 1 && (
-          <span className="truncate font-serif text-[10px] tracking-wider text-muted-foreground">
+          <span className="font-serif text-[10px] tracking-wider whitespace-normal text-muted-foreground">
             {cycleLabel(data.cycle.count)}・{chapterOf(data.cycle.count).name}
           </span>
         )}
@@ -57,7 +57,7 @@ export function StageCard({ totalMp, className }: { totalMp: number; className?:
           </Button>
         </span>
       </div>
-      <p className="relative truncate text-lg leading-tight tracking-[0.15em] whitespace-nowrap">
+      <p className="relative text-lg leading-tight tracking-[0.15em]">
         {area.name}
         <span className="ml-2 text-[11px] tracking-wider text-muted-foreground">{area.alias ?? areaStage?.name}</span>
       </p>
@@ -77,7 +77,7 @@ export function StageCard({ totalMp, className }: { totalMp: number; className?:
       ) : stage.next ? (
         <div className="relative mt-1 short:mt-0">
           <MpBar ratio={stage.ratio} variant="stage" />
-          <p className="mt-1.5 text-xs tracking-wider text-muted-foreground short:mt-1 short:truncate short:text-[11px] short:whitespace-nowrap">
+          <p className="mt-1.5 text-xs tracking-wider text-muted-foreground short:mt-1 short:text-[11px]">
             {/* 低い画面では1行に収めるため、ステージ名を省いて残り時間を優先する */}
             次のステージ<span className="short:hidden">「<span className="text-foreground">{stage.next.name}</span>」</span>まで あと
             <span className="mx-1 text-starlight text-glow-gold">{formatMinutes(stage.remainingMinutes)}</span>
@@ -90,7 +90,7 @@ export function StageCard({ totalMp, className }: { totalMp: number; className?:
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="flex h-[calc(100dvh-1rem)] max-h-[44rem] max-w-[min(48rem,calc(100%-2rem))]! flex-col gap-3 rounded-2xl p-4 ring-starlight/25 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle className="tracking-[0.3em]">魔導の軌跡</DialogTitle>
+            <DialogTitle className="tracking-[0.3em]">エリア選択</DialogTitle>
             <DialogDescription>ノードをタップすると詳細が開きます。歩みは原点から上へと続いていきます。</DialogDescription>
           </DialogHeader>
           <StageMap totalMp={progressMp} currentArea={mapArea} />

@@ -141,7 +141,7 @@ export function ZenithPanel({ climb }: { climb: ZenithClimb }) {
                 <p className="font-display text-[10px] tracking-[0.2em] text-starlight/80">
                   RARE {item.rarity} · {item.kind === "title" ? "称号" : "天界遺物"}
                 </p>
-                <p className="truncate text-sm tracking-[0.15em]">{item.kind === "title" ? `【${item.name}】` : `『${item.name}』`}</p>
+                <p className="text-sm tracking-[0.15em]">{item.kind === "title" ? `【${item.name}】` : `『${item.name}』`}</p>
                 <p className="text-[11px] text-muted-foreground [word-break:auto-phrase]">
                   {item.effect}
                   {isNew && " ・図鑑に登録された"}

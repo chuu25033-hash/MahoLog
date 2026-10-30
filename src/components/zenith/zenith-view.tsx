@@ -48,9 +48,9 @@ function Header() {
     <header className="flex items-center gap-4">
       <BackToLibrary />
       <div className="min-w-0">
-        <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap short:text-base">
+        <h1 className="flex flex-col text-xl leading-tight tracking-[0.25em] whitespace-nowrap short:text-base">
           星天の塔
-          <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">ASTRA ZENITH</span>
+          <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">ASTRA ZENITH</span>
         </h1>
         <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">{ZENITH_AREA.description}</p>
       </div>
@@ -134,9 +134,9 @@ function Zenith({ data, totalMp }: { data: UserData; totalMp: number }) {
 
           <section className="col-span-7 flex min-h-0 flex-col gap-3">
             <Card size="sm" className="min-h-0 flex-1 gap-2 px-3">
-              <h2 className="flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
+              <h2 className="flex flex-col text-sm leading-tight tracking-[0.2em] whitespace-nowrap">
                 節目の階層
-                <span className="min-w-0 truncate font-display text-[9px] tracking-[0.25em] text-starlight/60">MILESTONES</span>
+                <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60">MILESTONES</span>
                 {milestone && (
                   <span className="ml-auto text-[11px] tracking-wider text-muted-foreground">
                     次は {milestone.floor}層（あと{milestone.floor - floor}層）
@@ -185,7 +185,7 @@ function MilestoneRow({ floor, reached, rewards, data }: { floor: number; reache
                 <span className="block font-display text-[9px] tracking-[0.2em] text-muted-foreground">
                   {owned ? `${item.kind === "title" ? "称号" : "天界遺物"} · ${item.rarity}` : "UNKNOWN"}
                 </span>
-                <span className={cn("block truncate text-xs tracking-wider", owned ? "text-foreground" : "text-muted-foreground/60")}>
+                <span className={cn("block text-xs tracking-wider", owned ? "text-foreground" : "text-muted-foreground/60")}>
                   {owned ? (item.kind === "title" ? `【${item.name}】` : `『${item.name}』`) : "？？？"}
                 </span>
               </span>
@@ -211,11 +211,11 @@ function CycleRite({ data, totalMp }: { data: UserData; totalMp: number }) {
           <Orbit className="absolute inset-[32%] size-[36%] text-starlight" strokeWidth={1} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
+          <p className="flex flex-col text-sm leading-tight tracking-[0.2em] whitespace-nowrap">
             周天の儀式
-            <span className="truncate font-display text-[9px] tracking-[0.25em] text-starlight/60">{chapter.label}</span>
+            <span className="font-display text-[9px] tracking-[0.25em] whitespace-normal text-starlight/60">{chapter.label}</span>
           </p>
-          <p className="truncate text-xs tracking-wider whitespace-nowrap text-muted-foreground">
+          <p className="text-xs tracking-wider text-muted-foreground">
             {cycleLabel(data.cycle.count)}・<span className="text-foreground">{chapter.name}</span>
             <span className="ml-2">
               周天の刻印 <span className="font-display text-amethyst">MP ×{Number(cycleMarkMultiplier(data.cycle.count).toFixed(2))}</span>

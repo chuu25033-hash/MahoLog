@@ -49,9 +49,9 @@ export function SettingsView({
       <header className="flex items-center gap-4">
         <BackToLibrary />
         <div className="min-w-0 flex-1">
-          <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap short:text-base">
+          <h1 className="flex flex-col text-xl leading-tight tracking-[0.25em] whitespace-nowrap short:text-base">
             秘術探究者の書斎
-            <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">SETTINGS</span>
+            <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">SETTINGS</span>
           </h1>
           <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">
             探究者の名と詠唱の作法を定め、これまでの探求の記録を守ります
@@ -235,7 +235,8 @@ function ActiveSubjectsField({ subjects, activeIds }: { subjects: Subject[]; act
 
   return (
     <Field label="詠唱に使う科目" hint={`${activeIds.length} 領域 ・ 正${activeIds.length}角形の魔法陣`}>
-      <div className="grid grid-cols-2 gap-1.5">
+      {/* 科目名が収まる幅を保ち、狭い列では1列に並べる */}
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(6.75rem,1fr))] gap-1.5">
         {subjects.map((s) => {
           const checked = activeIds.includes(s.id);
           return (
@@ -258,7 +259,7 @@ function ActiveSubjectsField({ subjects, activeIds }: { subjects: Subject[]; act
               >
                 {checked && <Check className="size-2.5" strokeWidth={2} style={{ color: s.color }} />}
               </span>
-              <span className="truncate">{s.name}</span>
+              <span>{s.name}</span>
             </button>
           );
         })}
@@ -292,8 +293,10 @@ function Panel({
     <section className="glass flex min-h-0 flex-col overflow-hidden rounded-2xl">
       <h2 className="mx-4 mt-4 flex shrink-0 items-center gap-2 border-b border-white/10 pb-3 text-sm tracking-[0.25em] whitespace-nowrap short:mx-3 short:mt-3 short:pb-2 lg:mx-5 lg:mt-5">
         <Icon className="size-4 shrink-0 text-starlight" strokeWidth={1.25} />
-        {title}
-        <span className="ml-auto truncate font-display text-[10px] tracking-[0.3em] text-starlight/60">{label}</span>
+        <span className="flex flex-col leading-tight">
+          {title}
+          <span className="font-display text-[9px] tracking-[0.3em] whitespace-normal text-starlight/60">{label}</span>
+        </span>
       </h2>
       <div className="flex min-h-0 flex-1 flex-col gap-4 scroll-area scrollbar-none p-4 short:gap-3 short:p-3 lg:p-5">{children}</div>
     </section>
@@ -303,9 +306,9 @@ function Panel({
 function Field({ label, hint, children }: { label: ReactNode; hint?: string; children: ReactNode }) {
   return (
     <div>
-      <p className="mb-2 flex items-baseline justify-between gap-2 text-xs tracking-[0.2em] whitespace-nowrap text-muted-foreground">
-        {label}
-        {hint && <span className="truncate text-[10px] tracking-wider text-muted-foreground/70">{hint}</span>}
+      <p className="mb-2 flex flex-wrap items-baseline justify-between gap-x-2 text-xs tracking-[0.2em] text-muted-foreground">
+        <span className="whitespace-nowrap">{label}</span>
+        {hint && <span className="text-[10px] tracking-wider text-muted-foreground/70">{hint}</span>}
       </p>
       {children}
     </div>
@@ -419,8 +422,10 @@ function DevTools() {
     <div className="rounded-xl border border-dashed border-amethyst/40 bg-amethyst/[0.04] p-3">
       <p className="flex items-center gap-1.5 text-sm tracking-wider whitespace-nowrap text-amethyst">
         <Wrench className="size-4 shrink-0" strokeWidth={1.25} />
-        開発者ツール
-        <span className="ml-auto font-display text-[9px] tracking-[0.25em] text-amethyst/70">DEV ONLY</span>
+        <span className="flex flex-col leading-tight">
+          開発者ツール
+          <span className="font-display text-[9px] tracking-[0.25em] text-amethyst/70">DEV ONLY</span>
+        </span>
       </p>
       <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
         {backedUp

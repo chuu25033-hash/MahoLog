@@ -399,7 +399,7 @@ export function TimerPanel({
       <p className="flex items-center gap-1.5 text-muted-foreground">
         <MapPin className="size-3.5 text-aqua/80" strokeWidth={1.25} />
         滞在中 <span className="font-display text-[10px] text-starlight/80">{area.zenith ? "ASTRA ZENITH" : `AREA ${area.id}`}</span>
-        <span className="truncate text-foreground">{area.name}</span>
+        <span className="text-foreground">{area.name}</span>
       </p>
       <p className="text-[11px] text-muted-foreground">
         属性ブースト {boostLabel(area)}

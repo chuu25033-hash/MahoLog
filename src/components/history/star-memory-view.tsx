@@ -191,9 +191,9 @@ function StarMemory({ nights }: { nights: ObservedNight[] }) {
         <div className="flex min-w-0 items-center gap-4">
           <BackToLibrary />
           <div className="min-w-0">
-            <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap short:text-base">
+            <h1 className="flex flex-col text-xl leading-tight tracking-[0.25em] whitespace-nowrap short:text-base">
               魔導の軌跡
-              <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">ARCANE TRACES</span>
+              <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">ARCANE TRACES</span>
             </h1>
             <p className="text-xs tracking-wider text-muted-foreground short:hidden">詠唱した夜は星となり、日々の学びが夜空に自分だけの星座を描きます</p>
           </div>
@@ -535,9 +535,9 @@ function NightDetail({ night }: { night: ObservedNight }) {
 
   return (
     <article key={night.date.getTime()} className="glass flex flex-col gap-3 rounded-2xl p-4 animate-in fade-in duration-500">
-      <header className="flex items-baseline justify-between gap-2">
+      <header className="flex flex-wrap items-baseline justify-between gap-x-2">
         <h2 className="text-base tracking-[0.2em] whitespace-nowrap">{dateLabel.format(night.date)}</h2>
-        <span className="truncate font-display text-[10px] tracking-[0.25em] text-starlight/70">
+        <span className="font-display text-[10px] tracking-[0.25em] whitespace-nowrap text-starlight/70">
           WEEK {ROMAN[night.week]} · NIGHT {night.weekday + 1}
         </span>
       </header>
@@ -562,7 +562,7 @@ function NightDetail({ night }: { night: ObservedNight }) {
             </div>
           </div>
           {night.catalyst && (
-            <p className="-mt-1 truncate text-[11px] tracking-wider text-starlight/80">
+            <p className="-mt-1 text-[11px] tracking-wider text-starlight/80">
               {night.catalyst.name}の力で魔力 ×{night.catalyst.multiplier}
             </p>
           )}
@@ -585,7 +585,7 @@ function NightDetail({ night }: { night: ObservedNight }) {
                 const subject = subjectOf(id);
                 return (
                   <li key={id} className="flex items-center gap-2 text-xs">
-                    <span className="w-8 shrink-0 tracking-wider">{subject?.name ?? "—"}</span>
+                    <span className="w-16 shrink-0 tracking-wider">{subject?.name ?? "—"}</span>
                     <span className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
                       <span
                         className="block h-full rounded-full"
@@ -613,8 +613,8 @@ function NightDetail({ night }: { night: ObservedNight }) {
                   <li key={`${item.id}-${i}`} className="flex items-center gap-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-2 py-1">
                     <ItemArt icon={item.svgIcon} rarity={item.rarity} color={item.color} seed={item.id} className="size-9 shrink-0" />
                     <div className="min-w-0">
-                      <p className="truncate text-xs tracking-wider">{item.name}</p>
-                      <p className="truncate text-[10px] tracking-wider text-muted-foreground">
+                      <p className="text-xs tracking-wider">{item.name}</p>
+                      <p className="text-[10px] tracking-wider text-muted-foreground">
                         <span className="font-display text-starlight/80">RARE {item.rarity}</span> {item.type}
                       </p>
                     </div>
@@ -632,9 +632,9 @@ function NightDetail({ night }: { night: ObservedNight }) {
 function ConstellationList({ nights, completed }: { nights: ObservedNight[]; completed: boolean[] }) {
   return (
     <section className="glass rounded-2xl p-4">
-      <h2 className="mb-2 flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
+      <h2 className="mb-2 flex flex-col text-sm leading-tight tracking-[0.2em] whitespace-nowrap">
         描かれた星座
-        <span className="min-w-0 truncate font-display text-[9px] tracking-[0.25em] text-starlight/60">CONSTELLATIONS</span>
+        <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60">CONSTELLATIONS</span>
       </h2>
       <ul className="flex flex-col text-xs">
         {CONSTELLATIONS.slice(0, MEMORY_WEEKS).map((name, w) => {
@@ -648,7 +648,7 @@ function ConstellationList({ nights, completed }: { nights: ObservedNight[]; com
                 <Star className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.25} />
               )}
               <span className="font-display text-[10px] text-muted-foreground">{ROMAN[w]}</span>
-              <span className={cn("min-w-0 truncate tracking-wider", completed[w] ? "text-starlight" : "text-muted-foreground")}>
+              <span className={cn("min-w-0 tracking-wider", completed[w] ? "text-starlight" : "text-muted-foreground")}>
                 {completed[w] ? name : inProgress ? "紡がれている星座" : "途切れた星座"}
               </span>
               <span className="ml-auto font-display whitespace-nowrap text-muted-foreground">{lit} / 7</span>
