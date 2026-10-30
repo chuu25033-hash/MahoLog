@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy, ImageDown, KeyRound, LockKeyhole, ScrollText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { markKeySaved, snoozeKeyReminder, useObserver } from "@/lib/cloud-sync";
 import { saveKeyCard } from "@/lib/key-card";
+import { markKeyGuideDone, useKeyGuideDone, useLibraryTourDone } from "@/lib/onboarding";
 import { isCloudSyncEnabled } from "@/lib/supabase/config";
 import { useStoredUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
@@ -47,49 +48,24 @@ export function KeyBackupActions({ id, secret, className }: { id: string; secret
   );
 }
 
-/** 初めて書庫に入ったときの案内を済ませたか。この端末にだけ覚える */
-const FIRST_GUIDE_KEY = "maholog_first_library_guided";
-const firstGuideListeners = new Set<() => void>();
-
-function readFirstGuided() {
-  try {
-    return localStorage.getItem(FIRST_GUIDE_KEY) === "1";
-  } catch {
-    return true;
-  }
-}
-
-function markFirstGuided() {
-  try {
-    localStorage.setItem(FIRST_GUIDE_KEY, "1");
-  } catch {}
-  firstGuideListeners.forEach((fn) => fn());
-}
-
 /**
  * 初めて書庫に入ったとき、まず書斎（設定）で観測者IDと復元キーを確かめるよう案内する。
- * 案内は一度きり。既に鍵を控えた人・Google でログインした人（ID と鍵を使わない）には出さない
+ * 書庫の案内（各ボタンの説明）を終えてから一度きり。既に鍵を控えた人・Google でログインした人（ID と鍵を使わない）には出さない
  */
 export function FirstVisitKeyGuide() {
   const router = useRouter();
   const observer = useObserver();
-  const guided = useSyncExternalStore(
-    (onChange) => {
-      firstGuideListeners.add(onChange);
-      return () => firstGuideListeners.delete(onChange);
-    },
-    readFirstGuided,
-    () => true,
-  );
-  if (guided || !observer || observer.account || observer.keySaved) return null;
+  const tourDone = useLibraryTourDone();
+  const guided = useKeyGuideDone();
+  if (!tourDone || guided || !observer || observer.account || observer.keySaved) return null;
 
   function goToStudy() {
-    markFirstGuided();
+    markKeyGuideDone();
     router.push("/settings#observer-id");
   }
 
   return (
-    <Dialog open onOpenChange={(open) => !open && markFirstGuided()}>
+    <Dialog open onOpenChange={(open) => !open && markKeyGuideDone()}>
       <DialogContent className="max-w-[min(28rem,calc(100%-2rem))]!">
         <DialogHeader>
           <DialogTitle className="flex flex-col items-center gap-1 tracking-[0.2em]">
@@ -105,7 +81,7 @@ export function FirstVisitKeyGuide() {
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={markFirstGuided}>
+          <Button variant="outline" onClick={markKeyGuideDone}>
             あとで
           </Button>
           <Button onClick={goToStudy}>

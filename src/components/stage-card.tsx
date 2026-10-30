@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
  * ホームのステージ表示 + 滞在エリア（小ステージ）の選択。
  * totalMp は累積MP。ステージの進み具合はこの周天での MP で測る。STAGE 6 を制覇していれば星天の塔へ入れる
  */
-export function StageCard({ totalMp, className }: { totalMp: number; className?: string }) {
+export function StageCard({ totalMp, className, ...rest }: { totalMp: number; className?: string; "data-tour"?: string }) {
   const data = useUserData();
   const [open, setOpen] = useState(false);
   const progressMp = cycleMp(data, totalMp);
@@ -30,7 +30,7 @@ export function StageCard({ totalMp, className }: { totalMp: number; className?:
   const mapArea = area.zenith ? resolveArea(null, progressMp) : area;
 
   return (
-    <Card className={cn("gap-2 px-4", className)}>
+    <Card {...rest} className={cn("gap-2 px-4", className)}>
       {/* 滞在ステージごとの淡い色味 */}
       <div
         className={cn(

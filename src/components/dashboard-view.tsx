@@ -8,6 +8,7 @@ import { BoundWorldlinesDialog } from "@/components/bound-worldlines-dialog";
 import { CycleRings } from "@/components/cycle/cycle-rings";
 import { MpBar } from "@/components/mp-bar";
 import { FirstVisitKeyGuide, KeyBackupReminder } from "@/components/observer/key-backup";
+import { LibraryTour } from "@/components/tour/library-tour";
 import { PageLoading } from "@/components/page-loading";
 import { RadarPanel } from "@/components/radar-panel";
 import { ShareRecordButton } from "@/components/share-record";
@@ -47,7 +48,8 @@ export function DashboardView({ summary, subjects, isDemo }: { summary: Dashboar
       <Dashboard {...base} radar={radar} subjects={subjects} />
       {/* 詠唱を終えて書庫に戻ったとき、復元キーをまだ控えていなければ保存を促す */}
       <KeyBackupReminder />
-      {/* 初めて書庫に入ったときは、まず書斎で観測者IDと復元キーを確かめるよう案内する */}
+      {/* 初めて書庫に入ったときは、各ボタンを巡る案内のあと、書斎で観測者IDと復元キーを確かめるよう促す */}
+      <LibraryTour />
       <FirstVisitKeyGuide />
     </>
   );
@@ -62,7 +64,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
   const portrait = usePortraitPhone();
 
   const profileCard = (
-    <Card className="shrink-0 gap-3 px-4 compact:gap-2 compact:py-3 short:py-2">
+    <Card data-tour="profile" className="shrink-0 gap-3 px-4 compact:gap-2 compact:py-3 short:py-2">
       <div className="flex items-center gap-3">
         {/* 巡り終えた周天の数だけ、周回リングが外周を回る */}
         <div className="relative shrink-0" title={laps > 0 ? `${cycleLabel(data.cycle.count)}（${laps}周を巡り終えた）` : undefined}>
@@ -110,11 +112,11 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
   );
 
   const stageCard = (
-    <StageCard totalMp={profile.total_study_time} className="shrink-0 compact:py-3 short:py-2" />
+    <StageCard data-tour="stage" totalMp={profile.total_study_time} className="shrink-0 compact:py-3 short:py-2" />
   );
 
   const totalsRow = (
-    <div className="grid shrink-0 grid-cols-3 gap-2">
+    <div data-tour="totals" className="grid shrink-0 grid-cols-3 gap-2">
       {[
         { label: "今宵", value: totals.today, icon: Sun },
         { label: "七夜", value: totals.week, icon: Moon },
@@ -130,7 +132,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
   );
 
   const radarCard = (
-    <Card className="col-span-5 h-full min-h-0 px-4 short:py-3">
+    <Card data-tour="radar" className="col-span-5 h-full min-h-0 px-4 short:py-3">
       <RadarPanel
         data={radar}
         action={
@@ -155,6 +157,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
   const chantButton = (
     <Link
       href="/timer"
+      data-tour="chant"
       className={cn(
         buttonVariants({ size: "lg" }),
         "group h-auto shrink-0 flex-col gap-1.5 rounded-2xl py-5 text-base tracking-[0.3em] compact:py-3 short:py-2",
@@ -169,6 +172,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
   const codexButton = (
     <Link
       href="/collection"
+      data-tour="codex"
       className={cn(buttonVariants({ variant: "outline" }), "h-auto shrink-0 justify-start gap-2 rounded-2xl px-3 py-2 text-sm tracking-[0.2em]")}
     >
       <BookMarked className="size-4 text-starlight" strokeWidth={1.25} />
@@ -180,7 +184,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
   );
 
   const memoryCard = (
-    <Card size="sm" className="min-h-0 flex-1 px-3">
+    <Card data-tour="memory" size="sm" className="min-h-0 flex-1 px-3">
       <h2 className="flex flex-col text-sm leading-tight tracking-[0.2em] whitespace-nowrap">
         詠唱の記憶
         <span className="font-display text-[9px] tracking-[0.25em] whitespace-normal text-starlight/60">OBSERVATIONAL MEMORY</span>
@@ -290,7 +294,7 @@ function MenuTiles({ subjects, className }: { subjects: Subject[]; className?: s
 
   return (
     <div className={cn("grid min-h-12 flex-1 grid-cols-2 gap-2 short:min-h-9 short:grid-cols-4", className)}>
-      <button type="button" onClick={() => setTrialsOpen(true)} aria-haspopup="dialog" title="星の試練" className={cn(tileClass, ready > 0 && "claim-glow border-starlight/45")}>
+      <button type="button" data-tour="trials" onClick={() => setTrialsOpen(true)} aria-haspopup="dialog" title="星の試練" className={cn(tileClass, ready > 0 && "claim-glow border-starlight/45")}>
         <TileContent icon={Swords} label="星の試練" sub="TRIALS" />
         {ready > 0 && (
           <span className="absolute top-2 right-2 rounded-full border border-starlight/50 bg-starlight/10 px-1.5 font-display text-[10px] tracking-normal text-starlight">
@@ -298,13 +302,13 @@ function MenuTiles({ subjects, className }: { subjects: Subject[]; className?: s
           </span>
         )}
       </button>
-      <Link href="/history" title="魔導の軌跡" className={tileClass}>
+      <Link href="/history" data-tour="history" title="魔導の軌跡" className={tileClass}>
         <TileContent icon={CalendarDays} label="魔導の軌跡" sub="CHRONICLE" />
       </Link>
-      <button type="button" onClick={() => setWorldlinesOpen(true)} aria-haspopup="dialog" title="結びし世界線" className={tileClass}>
+      <button type="button" data-tour="worldlines" onClick={() => setWorldlinesOpen(true)} aria-haspopup="dialog" title="結びし世界線" className={tileClass}>
         <TileContent icon={Orbit} label="結びし世界線" sub="BOUND WORLDLINES" />
       </button>
-      <Link href="/settings" title="設定" className={tileClass}>
+      <Link href="/settings" data-tour="settings" title="設定" className={tileClass}>
         <TileContent icon={Settings} label="設定" sub="SETTINGS" />
       </Link>
       {trialsOpen && <TrialsDialog subjects={subjects} onClose={() => setTrialsOpen(false)} />}

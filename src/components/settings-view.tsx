@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
-import { Bell, BookOpen, Check, FlaskConical, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Bell, BookOpen, Check, Compass, FlaskConical, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { ObserverIdField } from "@/components/observer/observer-id";
 import { BackToLibrary } from "@/components/back-to-library";
@@ -22,6 +23,7 @@ import {
 import { overrideCloud, startNewObserver } from "@/lib/cloud-sync";
 import { THEME_LABEL, unlockedThemes } from "@/lib/cycles";
 import { jstDateKey } from "@/lib/date";
+import { resetLibraryTour } from "@/lib/onboarding";
 import { soundManager } from "@/lib/sound/sound-manager";
 import { MIN_ACTIVE_SUBJECTS, activeSubjectsOf, resolveSubSubject } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
@@ -304,14 +306,26 @@ function ActiveSubjectsField({ subjects, activeIds }: { subjects: Subject[]; act
   );
 }
 
-/** 初めて訪れたときに見たプロローグを、いつでも見返せるようにする */
+/** 初めて訪れたときに見たプロローグと書庫の案内を、いつでも見返せるようにする */
 function PrologueReplay() {
+  const router = useRouter();
   const [playing, setPlaying] = useState(false);
+
+  function replayTour() {
+    resetLibraryTour();
+    router.push("/dashboard?tour");
+  }
+
   return (
-    <Field label="創世の記録" hint="はじまりのプロローグ">
-      <Button variant="outline" size="sm" className="h-auto w-full py-2 [word-break:auto-phrase]" onClick={() => setPlaying(true)}>
-        <BookOpen /> プロローグ（創世の記録）を再生する
-      </Button>
+    <Field label="はじまりの記録" hint="初めて訪れたときの演出と案内">
+      <div className="flex flex-col gap-1.5">
+        <Button variant="outline" size="sm" className="h-auto w-full py-2 [word-break:auto-phrase]" onClick={() => setPlaying(true)}>
+          <BookOpen /> プロローグ（創世の記録）を再生する
+        </Button>
+        <Button variant="outline" size="sm" className="h-auto w-full py-2 [word-break:auto-phrase]" onClick={replayTour}>
+          <Compass /> 書庫の案内をもう一度見る
+        </Button>
+      </div>
       {playing && <Prologue onDone={() => setPlaying(false)} />}
     </Field>
   );
