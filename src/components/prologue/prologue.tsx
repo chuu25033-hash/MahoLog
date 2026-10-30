@@ -20,7 +20,7 @@ const LAST_LINE_MS = 7500;
 const CLOSE_MS = 2400;
 
 /** 四つの節。縦持ちでは句ごとに行を分け、数文字だけが次の行へこぼれないようにする */
-const LINES: ReactNode[][] = [
+export const LINES: ReactNode[][] = [
   [
     "世界から、",
     <>
@@ -290,7 +290,7 @@ function pathOf(s: Shape) {
 const circles = (...rs: number[]): Shape[] => rs.map((r) => ({ kind: "circle", r }));
 
 /** 横画面の奥の層: 画面を横切る楕円と、四隅へ伸びる光の筋 */
-const FAR_LAYER = [
+export const FAR_LAYER = [
   ...draw([{ kind: "ellipse", rx: 760, ry: 400 }, { kind: "ellipse", rx: 620, ry: 330 }], 0.4, 0.8, 0.35),
   ...draw(rays(8, 340, 920, 45 / 2), 1.2, 1.6, 0.22),
   ...draw([{ kind: "line", x1: -790, y1: 0, x2: 790, y2: 0 }], 0.8, 0, 0.45),
@@ -307,7 +307,7 @@ const satellites = [-1, 1].flatMap((side): Shape[] => [
   { kind: "line", x1: side * 340, y1: 120, x2: side * 500, y2: 70 },
 ]);
 
-const MID_LAYER = [
+export const MID_LAYER = [
   ...draw(rays(36, 300, 340), 1.6, 1.4, 0.55),
   ...draw(rays(12, 300, 400, 15), 2, 1, 0.45),
   ...draw(circles(400), 1.8, 0, 0.3),
@@ -315,7 +315,7 @@ const MID_LAYER = [
 ];
 
 /** 横画面の中心の層: ゆっくり巡る主陣 */
-const CORE_LAYER = [
+export const CORE_LAYER = [
   ...draw(circles(300, 290), 0, 0.5),
   ...draw(circles(240, 180, 110, 50), 0.5, 1.2),
   ...draw([{ kind: "polygon", points: ring(4, 240) }, { kind: "polygon", points: ring(4, 240, 45) }], 1.2, 0.4),
