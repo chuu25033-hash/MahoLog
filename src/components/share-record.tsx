@@ -73,42 +73,44 @@ function ShareRecordDialog({ record, onClose }: { record: ShareRecord; onClose: 
   }
 
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-[min(36rem,calc(100%-2rem))]!">
-        <DialogHeader>
-          <DialogTitle className="tracking-[0.2em]">探求の記録を共有</DialogTitle>
-          <DialogDescription className="[word-break:auto-phrase]">
-            紋章と階級、七夜の魔法陣を1枚の画像にしました。観測者IDや復元キーは載りません。
-          </DialogDescription>
-        </DialogHeader>
-        {/* 画像に描く紋章（画面には出さない） */}
-        <AvatarGlyph avatar={record.avatar} ref={glyphRef} className="hidden" />
-        <div className="flex aspect-[1200/675] items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/30">
-          {image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={image.url} alt="探求の記録の画像" className="size-full object-contain" />
-          ) : (
-            <p className="text-xs tracking-widest text-muted-foreground">{failed ? "画像を描けませんでした" : "記録を描いています…"}</p>
-          )}
-        </div>
-        <DialogFooter className="sm:justify-between">
-          <Button variant="outline" disabled={!image} onClick={() => image && downloadBlob(image.blob, "maholog-record.png")}>
-            <Download /> 画像を保存
-          </Button>
-          {file && canShareImage(file) ? (
-            <Button onClick={share}>
-              <Share2 /> 共有する
+    <>
+      {/* 画像に描く紋章（画面には出さない）。ダイアログの中身は遅れて描かれ、画像を作る時点で間に合わないので外に置く */}
+      <AvatarGlyph avatar={record.avatar} ref={glyphRef} className="hidden" />
+      <Dialog open onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="max-w-[min(36rem,calc(100%-2rem))]!">
+          <DialogHeader>
+            <DialogTitle className="tracking-[0.2em]">探求の記録を共有</DialogTitle>
+            <DialogDescription className="[word-break:auto-phrase]">
+              紋章と階級、七夜の魔法陣を1枚の画像にしました。観測者IDや復元キーは載りません。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex aspect-[1200/675] items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-black/30">
+            {image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={image.url} alt="探求の記録の画像" className="size-full object-contain" />
+            ) : (
+              <p className="text-xs tracking-widest text-muted-foreground">{failed ? "画像を描けませんでした" : "記録を描いています…"}</p>
+            )}
+          </div>
+          <DialogFooter className="sm:justify-between">
+            <Button variant="outline" disabled={!image} onClick={() => image && downloadBlob(image.blob, "maholog-record.png")}>
+              <Download /> 画像を保存
             </Button>
-          ) : (
-            <Button onClick={postToX}>X に投稿</Button>
+            {file && canShareImage(file) ? (
+              <Button onClick={share}>
+                <Share2 /> 共有する
+              </Button>
+            ) : (
+              <Button onClick={postToX}>X に投稿</Button>
+            )}
+          </DialogFooter>
+          {!(file && canShareImage(file)) && (
+            <p className="-mt-2 text-center text-[11px] tracking-wider text-muted-foreground [word-break:auto-phrase]">
+              X では、保存した画像を投稿画面に添えてください
+            </p>
           )}
-        </DialogFooter>
-        {!(file && canShareImage(file)) && (
-          <p className="-mt-2 text-center text-[11px] tracking-wider text-muted-foreground [word-break:auto-phrase]">
-            X では、保存した画像を投稿画面に添えてください
-          </p>
-        )}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
