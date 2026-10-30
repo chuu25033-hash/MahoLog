@@ -613,16 +613,37 @@ body {
   }
 }
 
-@keyframes chest-shake {
-  0%, 100% { transform: rotate(0deg); }
-  20% { transform: rotate(-4deg); }
-  40% { transform: rotate(4deg); }
-  60% { transform: rotate(-2deg); }
-  80% { transform: rotate(2deg); }
+/* 詠唱を終えたときの流れ星: 右上の夜空から降りてきて、触れられるのを待つように明滅する */
+@keyframes star-arrive {
+  from { transform: translate(34px, -34px) scale(0.5); opacity: 0; }
+  to { transform: none; opacity: 1; }
 }
 
-.chest-shake {
-  animation: chest-shake 0.6s ease-in-out 2;
+@keyframes star-beckon {
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(226, 201, 116, 0.8)) drop-shadow(0 0 6px rgba(226, 201, 116, 0.35)); }
+  50% { filter: drop-shadow(0 0 4px rgba(255, 248, 220, 0.9)) drop-shadow(0 0 16px rgba(226, 201, 116, 0.65)); }
+}
+
+.star-arrive {
+  animation:
+    star-arrive 1s cubic-bezier(0.2, 0.7, 0.2, 1) both,
+    star-beckon 2.4s ease-in-out 1s infinite;
+}
+
+/* 触れた瞬間に散った光が、淡く落ち着く */
+@keyframes star-scatter {
+  0% { opacity: 0; transform: scale(0.5); }
+  25% { opacity: 1; }
+  100% { opacity: 0.3; transform: scale(1.1); }
+}
+
+.star-scatter {
+  animation: star-scatter 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star-arrive { animation: none; }
+  .star-scatter { animation: none; opacity: 0.3; }
 }
 
 /* ---------- タイトル画面 ---------- */

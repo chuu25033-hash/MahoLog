@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { ItemRarity } from "@/lib/items";
 import { cn } from "@/lib/utils";
 
@@ -134,40 +135,56 @@ const OCTAGRAM = Array.from({ length: 8 }, (_, i) => {
   return `${(Math.cos(angle) * 38).toFixed(2)},${(Math.sin(angle) * 38).toFixed(2)}`;
 }).join(" ");
 
-/** ドロップ演出の宝箱（open で蓋が開き、光が溢れる） */
-export function TreasureChest({ open, className }: { open: boolean; className?: string }) {
+/**
+ * 詠唱を終えたときに降りてくる流れ星。open で尾が消え、星が光の輪とともにほどけて光が散る。
+ * ほどけたあとは淡い輪だけが残り、運ばれてきた遺物の背後に灯る
+ */
+export function ShootingStar({ open, className }: { open: boolean; className?: string }) {
+  const id = useId().replace(/:/g, "");
+  const fade = "transition-all duration-700 ease-out";
   return (
-    <svg
-      viewBox="-50 -50 100 100"
-      className={cn("overflow-visible", className)}
-      style={{ filter: "drop-shadow(0 0 2px #e2c974cc) drop-shadow(0 0 8px #e2c97455)" }}
-      aria-hidden
-    >
-      {/* 開いた瞬間に放射する光線 */}
+    <svg viewBox="-50 -50 100 100" className={cn("overflow-visible", className)} aria-hidden>
+      <defs>
+        <linearGradient id={`tail-${id}`} x1="1" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#e2c974" stopOpacity="0" />
+          <stop offset="100%" stopColor="#fff8dc" stopOpacity="0.95" />
+        </linearGradient>
+      </defs>
+      {/* 残る淡い輪 */}
+      <circle r="22" stroke="#e2c974" strokeOpacity="0.35" strokeDasharray="1 3" {...hairline} />
+      {/* 尾: 右上の夜空から星へ */}
+      <g className={fade} style={{ opacity: open ? 0 : 1 }}>
+        <line x1="46" y1="-46" x2="3" y2="-3" stroke={`url(#tail-${id})`} strokeWidth="1.4" />
+        <line x1="34" y1="-46" x2="2" y2="-14" stroke={`url(#tail-${id})`} strokeOpacity="0.5" {...hairline} />
+        <line x1="46" y1="-34" x2="14" y2="-2" stroke={`url(#tail-${id})`} strokeOpacity="0.5" {...hairline} />
+      </g>
+      {/* ほどける瞬間に散り、淡く落ち着く光 */}
       <g
-        className="transition-opacity duration-700"
-        style={{ opacity: open ? 1 : 0 }}
+        className={open ? "star-scatter" : undefined}
+        style={{ transformBox: "view-box", transformOrigin: "0 0", opacity: open ? undefined : 0 }}
         stroke="#fbf3d4"
         strokeOpacity="0.6"
       >
-        {[-60, -40, -20, 0, 20, 40, 60].map((deg) => (
-          <line key={deg} y1="-6" y2="-40" transform={`rotate(${deg} 0 -4)`} {...hairline} />
+        {Array.from({ length: 12 }, (_, i) => (
+          <line key={i} y1={i % 2 ? -10 : -8} y2={i % 2 ? -26 : -38} transform={`rotate(${i * 30})`} {...hairline} />
         ))}
       </g>
-      {/* 本体 */}
-      <g stroke="#e2c974">
-        <path d="M-26,-4 H26 V24 H-26 Z" {...hairline} />
-        <path d="M-26,4 H26 M-14,-4 V24 M14,-4 V24" strokeOpacity="0.5" {...hairline} />
-        <path d="M-4,-4 V6 H4 V-4 M0,1 V3" {...hairline} />
-      </g>
-      {/* 蓋: 左奥の蝶番を支点に開く */}
+      {/* 広がって消える光の輪 */}
+      <circle
+        r="12"
+        stroke="#fff8dc"
+        className="transition-all duration-1000 ease-out"
+        style={{ transformBox: "view-box", transformOrigin: "0 0", transform: open ? "scale(3)" : "scale(1)", opacity: open ? 0 : 0.6 }}
+        {...hairline}
+      />
+      {/* 星 */}
       <g
-        stroke="#e2c974"
-        className="transition-transform duration-700 ease-out"
-        style={{ transformBox: "view-box", transformOrigin: "-26px -4px", transform: open ? "rotate(-28deg)" : "rotate(0deg)" }}
+        className={fade}
+        style={{ transformBox: "view-box", transformOrigin: "0 0", transform: open ? "scale(1.8)" : "scale(1)", opacity: open ? 0 : 1 }}
       >
-        <path d="M-26,-4 V-12 Q0,-26 26,-12 V-4 Z" {...hairline} />
-        <path d="M-14,-4 V-17 M14,-4 V-17" strokeOpacity="0.5" {...hairline} />
+        <circle r="9" fill="#e2c974" opacity="0.18" />
+        <path d="M0,-14 C1,-4 4,-1 14,0 C4,1 1,4 0,14 C-1,4 -4,1 -14,0 C-4,-1 -1,-4 0,-14 Z" fill="#fff8dc" />
+        <circle r="2.4" fill="#ffffff" />
       </g>
     </svg>
   );

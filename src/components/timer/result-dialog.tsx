@@ -3,7 +3,7 @@
 import { useEffect, useState, type Dispatch, type MouseEvent, type SetStateAction } from "react";
 import { ChevronRight, Gift, Hourglass, MapPinned, Sparkles } from "lucide-react";
 import { ArrowGlyph, RankSigil } from "@/components/arcane-icons";
-import { ItemArt, TreasureChest } from "@/components/item-art";
+import { ItemArt, ShootingStar } from "@/components/item-art";
 import { MagicRadar } from "@/components/magic-radar";
 import { MpBar } from "@/components/mp-bar";
 import { RewardLabel, claimable } from "@/components/trials-dialog";
@@ -420,9 +420,9 @@ function DropReveal({
         onClick={onOpen}
         disabled={opened}
         aria-label="流れ星に触れる"
-        className={cn("relative size-20 short:size-16", !opened && "chest-shake cursor-pointer")}
+        className={cn("relative size-20 short:size-16", !opened && "star-arrive cursor-pointer")}
       >
-        <TreasureChest open={opened} className={cn("absolute inset-0 transition-opacity duration-500", opened && drop && "opacity-25")} />
+        <ShootingStar open={opened} className={cn("absolute inset-0 transition-opacity duration-500", opened && drop && "opacity-40")} />
         {opened && drop && (
           <ItemArt
             icon={drop.item.svgIcon}
@@ -465,7 +465,7 @@ function DropReveal({
           </div>
         ) : (
           <p className="text-[11px] tracking-wider text-muted-foreground">
-            この夜、{area.name}に流れ星は降りなかった
+            この夜の流れ星は、何も遺さず{area.name}の空に溶けた
           </p>
         ))}
     </div>
