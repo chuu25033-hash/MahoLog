@@ -204,3 +204,33 @@ export function AvatarGlyph({ avatar, className }: { avatar: string; className?:
     </Svg>
   );
 }
+
+/** 紋章の後光: 内外二重の円環に十二の目盛りと四方の星を刻む（外環は css の .avatar-halo でゆっくり巡る） */
+export function AvatarHalo({ className }: { className?: string }) {
+  const c = 24;
+  return (
+    <Svg viewBox="0 0 48 48" className={cn("overflow-visible", className)}>
+      <g className="avatar-halo">
+        <circle cx={c} cy={c} r={23} {...line} strokeOpacity={0.55} />
+        {Array.from({ length: 12 }, (_, i) => {
+          if (i % 3 === 0) return null;
+          const [x1, y1] = polar(c, c, 21.6, i * 30);
+          const [x2, y2] = polar(c, c, 23, i * 30);
+          return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} {...line} strokeOpacity={0.5} />;
+        })}
+        {[0, 90, 180, 270].map((deg) => {
+          const [x, y] = polar(c, c, 23, deg);
+          const s = deg === 0 ? 2.4 : 1.6;
+          return (
+            <path
+              key={deg}
+              d={`M${x} ${y - s}Q${x} ${y} ${x + s} ${y}Q${x} ${y} ${x} ${y + s}Q${x} ${y} ${x - s} ${y}Q${x} ${y} ${x} ${y - s}Z`}
+              fill="currentColor"
+            />
+          );
+        })}
+      </g>
+      <circle cx={c} cy={c} r={20.6} {...line} strokeOpacity={0.3} strokeDasharray="0.6 2.4" />
+    </Svg>
+  );
+}

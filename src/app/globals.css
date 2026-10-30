@@ -1093,3 +1093,21 @@ body {
   .worldline-sweep { display: none; }
   .presence-glow { animation: none; box-shadow: 0 0 6px rgba(113, 226, 239, 0.8); }
 }
+
+/* ---------- 紋章の後光: 外環がゆっくり巡る ---------- */
+.avatar-halo {
+  transform-origin: 24px 24px;
+  animation: avatar-halo-spin 60s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-halo { animation: none; }
+}
+
+[data-lite] .avatar-halo {
+  animation: none;
+}
+
+@keyframes avatar-halo-spin {
+  to { transform: rotate(360deg); }
+}

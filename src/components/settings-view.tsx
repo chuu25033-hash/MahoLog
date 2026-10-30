@@ -83,7 +83,7 @@ export function SettingsView({
           </Field>
 
           <Field label="紋章" hint={WIZARD_AVATARS[userProfile.avatar]?.name}>
-            <div className="flex justify-between gap-1.5 px-1 py-1">
+            <div className="flex justify-between gap-3 px-2 py-2">
               {Object.entries(WIZARD_AVATARS).map(([id, { name }]) => (
                 <button
                   key={id}

@@ -1,4 +1,4 @@
-import { AvatarGlyph } from "@/components/arcane-icons";
+import { AvatarGlyph, AvatarHalo } from "@/components/arcane-icons";
 import { cn } from "@/lib/utils";
 
 // プロフィールの avatar_url にはプリセットID（wizard-1 など）を保存する。紋章は arcane-icons のラインアートで描く
@@ -16,15 +16,20 @@ export function WizardAvatar({ avatar, className }: { avatar: string; className?
   return (
     <div
       className={cn(
-        "relative flex size-12 shrink-0 items-center justify-center rounded-full text-starlight ring-1 ring-starlight/50 shadow-[0_0_16px_-4px_rgba(226,201,116,0.5)]",
+        "relative flex size-12 shrink-0 items-center justify-center rounded-full text-starlight ring-1 ring-starlight/50 shadow-[0_0_18px_-3px_rgba(226,201,116,0.55),inset_0_0_10px_-2px_rgba(226,201,116,0.35)]",
         className,
       )}
-      style={{ background: `radial-gradient(circle at 35% 30%, ${preset.tint}, rgba(10, 15, 30, 0.9) 75%)` }}
+      style={{
+        // 上から差す後光を、紋章の色味の上に重ねる
+        background: `radial-gradient(ellipse 60% 45% at 50% 18%, rgba(255, 236, 170, 0.22), transparent 70%), radial-gradient(circle at 35% 30%, ${preset.tint}, rgba(10, 15, 30, 0.9) 75%)`,
+      }}
       aria-hidden
     >
-      {/* 外周の天球リング */}
-      <span className="absolute -inset-1 rounded-full border border-dashed border-starlight/25" />
-      <AvatarGlyph avatar={key} className="size-[58%] drop-shadow-[0_0_4px_rgba(226,201,116,0.45)]" />
+      {/* 外周の天球の後光 */}
+      <span className="pointer-events-none absolute -inset-1.5">
+        <AvatarHalo className="size-full" />
+      </span>
+      <AvatarGlyph avatar={key} className="size-[58%] drop-shadow-[0_0_5px_rgba(255,226,140,0.6)]" />
     </div>
   );
 }
