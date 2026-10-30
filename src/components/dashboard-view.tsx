@@ -136,7 +136,8 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
   );
 
   const radarCard = (
-    <Card data-tour="radar" className="col-span-5 h-full min-h-0 px-4 short:py-3">
+    <Card data-tour="radar" className="relative col-span-5 h-full min-h-0 px-4 short:py-3">
+      <CornerMarks />
       <RadarPanel
         data={radar}
         action={

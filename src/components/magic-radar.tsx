@@ -43,48 +43,121 @@ function SparkleDot({
   );
 }
 
-/** チャート背後の天球図（同心円・星座線・軌道） */
-function CelestialBackdrop() {
+const RUNES = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ";
+/** 背後の図の 1 単位あたりの大きさに対する、チャートの外周の半径。
+ * 図は min(幅,高さ) の 84% に 200 単位、チャートの外周は min(幅,高さ) の 33%（outerRadius 66%）なので 0.33 / 0.84 * 200 */
+const CHART_R = 78.6;
+
+/** 拡大縮小しても細さを保つ光の線 */
+const hairline = { fill: "none", vectorEffect: "non-scaling-stroke" } as const;
+
+/** 真上から時計回りに並ぶ、科目の頂点 */
+function vertex(i: number, n: number, r = CHART_R) {
+  const rad = ((-90 + (360 * i) / n) * Math.PI) / 180;
+  return [Math.round(Math.cos(rad) * r * 100) / 100, Math.round(Math.sin(rad) * r * 100) / 100] as const;
+}
+
+/** 頂点どうしを一つ飛ばしに結ぶ星形（5科目なら五芒星）。偶数で一筆に描けないときは二つの多角形を重ねる */
+function starPaths(n: number) {
+  const step = n >= 5 ? 2 : 1;
+  const visited = new Set<number>();
+  const paths: string[] = [];
+  for (let start = 0; start < n; start++) {
+    if (visited.has(start)) continue;
+    const pts: string[] = [];
+    let i = start;
+    do {
+      visited.add(i);
+      pts.push(vertex(i, n).join(","));
+      i = (i + step) % n;
+    } while (i !== start);
+    paths.push(`M${pts.join("L")}Z`);
+  }
+  return paths;
+}
+
+/**
+ * チャート背後の陣: 外周のルーンの帯と刻みの輪（逆向きにゆっくり巡る）、科目の頂点を結ぶ星形と頂点の輪、
+ * 中心の印、傾いた天体軌道と星座線、中心からにじむ光
+ */
+function CelestialBackdrop({ count }: { count: number }) {
+  const id = useId().replace(/:/g, "");
   const ticks = Array.from({ length: 72 }, (_, i) => i * 5);
+  const runeR = 91;
   return (
-    <svg viewBox="-100 -100 200 200" className="absolute h-[min(84cqw,84cqh)] w-[min(84cqw,84cqh)]" aria-hidden>
-      {/* SVG 要素の transform-origin は viewBox 座標基準なので、中心 (0,0) を明示する */}
+    <svg viewBox="-100 -100 200 200" className="absolute h-[min(84cqw,84cqh)] w-[min(84cqw,84cqh)] overflow-visible" aria-hidden>
+      <defs>
+        <radialGradient id={`aura-${id}`}>
+          <stop offset="0%" stopColor="#a882fb" stopOpacity="0.16" />
+          <stop offset="45%" stopColor="#71e2ef" stopOpacity="0.06" />
+          <stop offset="100%" stopColor="#71e2ef" stopOpacity="0" />
+        </radialGradient>
+        <path id={`runes-${id}`} d={`M0,${-runeR} A${runeR},${runeR} 0 1,1 -0.01,${-runeR}`} />
+      </defs>
+      {/* 中心からにじむ光 */}
+      <circle r="96" fill={`url(#aura-${id})`} />
+
+      {/* 外周: ルーンの帯（SVG 要素の transform-origin は viewBox 基準なので、中心 (0,0) を明示する） */}
       <g className="animate-spin-slower" style={{ transformBox: "view-box", transformOrigin: "0 0" }}>
-        <circle r="98" fill="none" stroke="#e2c974" strokeOpacity="0.28" strokeWidth="0.5" />
-        <circle r="94" fill="none" stroke="#e2c974" strokeOpacity="0.16" strokeWidth="0.4" />
+        <circle r="98" stroke="#e2c974" strokeOpacity="0.32" strokeWidth="0.5" {...hairline} />
+        <circle r="87.5" stroke="#e2c974" strokeOpacity="0.22" strokeWidth="0.4" {...hairline} />
+        <text className="glimmer-slow" fill="#e2c974" fillOpacity="0.5" fontSize="5.2">
+          <textPath href={`#runes-${id}`} textLength={2 * Math.PI * runeR - 4} lengthAdjust="spacing">
+            {RUNES + RUNES}
+          </textPath>
+        </text>
+      </g>
+      {/* 刻みの輪: ルーンと逆向きに巡る */}
+      <g className="animate-spin-slow" style={{ transformBox: "view-box", transformOrigin: "0 0", animationDirection: "reverse" }}>
+        <circle r="95" stroke="#e2c974" strokeOpacity="0.14" strokeWidth="0.4" strokeDasharray="0.6 2.4" {...hairline} />
         {ticks.map((deg) => (
           <line
             key={deg}
-            x1="0"
-            y1={deg % 30 === 0 ? -98 : -96}
-            x2="0"
-            y2="-94"
+            y1={deg % 30 === 0 ? -87.5 : -86}
+            y2="-84"
             stroke="#e2c974"
-            strokeOpacity={deg % 30 === 0 ? 0.45 : 0.2}
+            strokeOpacity={deg % 30 === 0 ? 0.5 : 0.22}
             strokeWidth="0.4"
             transform={`rotate(${deg})`}
           />
         ))}
       </g>
+
       <g className="glimmer-slow">
         {/* 傾いた天体軌道 */}
-        <ellipse rx="86" ry="34" fill="none" stroke="#71e2ef" strokeOpacity="0.16" strokeWidth="0.4" transform="rotate(-24)" />
-        <ellipse rx="86" ry="30" fill="none" stroke="#a882fb" strokeOpacity="0.16" strokeWidth="0.4" transform="rotate(38)" />
+        <ellipse rx="86" ry="34" stroke="#71e2ef" strokeOpacity="0.14" strokeWidth="0.4" transform="rotate(-24)" {...hairline} />
+        <ellipse rx="86" ry="30" stroke="#a882fb" strokeOpacity="0.14" strokeWidth="0.4" transform="rotate(38)" {...hairline} />
         {/* 星座線 */}
-        <polyline
-          points="-78,-30 -60,-52 -38,-60 -30,-80"
-          fill="none"
-          stroke="#cfe9ff"
-          strokeOpacity="0.22"
-          strokeWidth="0.4"
-        />
-        <polyline points="58,52 72,30 84,40 76,62" fill="none" stroke="#cfe9ff" strokeOpacity="0.22" strokeWidth="0.4" />
+        <polyline points="-78,-30 -60,-52 -38,-60 -30,-80" stroke="#cfe9ff" strokeOpacity="0.22" strokeWidth="0.4" {...hairline} />
+        <polyline points="58,52 72,30 84,40 76,62" stroke="#cfe9ff" strokeOpacity="0.22" strokeWidth="0.4" {...hairline} />
         {[
           [-78, -30], [-60, -52], [-38, -60], [-30, -80], [58, 52], [72, 30], [84, 40], [76, 62],
         ].map(([x, y]) => (
           <circle key={`${x}${y}`} cx={x} cy={y} r="0.9" fill="#f4f1e6" opacity="0.8" />
         ))}
       </g>
+
+      {/* 科目の頂点を結ぶ星形と、頂点の小さな輪 */}
+      {starPaths(count).map((d) => (
+        <path key={d} d={d} stroke="#e2c974" strokeOpacity="0.16" strokeWidth="0.5" {...hairline} />
+      ))}
+      <circle r={CHART_R} stroke="#e2c974" strokeOpacity="0.12" strokeWidth="0.4" strokeDasharray="1 2" {...hairline} />
+      {Array.from({ length: count }, (_, i) => {
+        const [x, y] = vertex(i, count);
+        return (
+          <g key={i}>
+            <circle cx={x} cy={y} r="3.2" stroke="#e2c974" strokeOpacity="0.35" strokeWidth="0.5" {...hairline} />
+            <circle cx={x} cy={y} r="1.8" stroke="#e2c974" strokeOpacity="0.2" strokeWidth="0.4" strokeDasharray="0.6 1" {...hairline} />
+          </g>
+        );
+      })}
+
+      {/* 中心の印 */}
+      <g className="animate-spin-slow" style={{ transformBox: "view-box", transformOrigin: "0 0" }}>
+        <circle r="13" stroke="#e2c974" strokeOpacity="0.28" strokeWidth="0.4" strokeDasharray="1 2" {...hairline} />
+      </g>
+      <circle r="7" stroke="#e2c974" strokeOpacity="0.3" strokeWidth="0.5" {...hairline} />
+      <path d="M0,-5 L1,-1 L5,0 L1,1 L0,5 L-1,1 L-5,0 L-1,-1 Z" fill="#f6f1dc" fillOpacity="0.35" />
     </svg>
   );
 }
@@ -120,9 +193,9 @@ export function MagicRadar({
   const chartData = data.map((d) => ({ ...d, ratio: d.minutes / maxMinutes }));
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full [&_.recharts-radar-polygon]:[filter:drop-shadow(0_0_6px_rgba(113,226,239,0.45))]">
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center [container-type:size]">
-        <CelestialBackdrop />
+        <CelestialBackdrop count={data.length} />
       </div>
       <ResponsiveContainer width="100%" height="100%">
         {/* 眺めるだけの図なので、キーボード操作の層（フォーカスと枠）を持たせない */}
