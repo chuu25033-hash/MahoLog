@@ -183,7 +183,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
       <>
         <AreaAmbience totalMp={profile.total_study_time} />
         {/* スマホ縦持ち: 詠唱への入口を上に置き、ほかは1列に並べて縦にスクロールする */}
-        <div data-portrait-ready className="h-full scroll-area scrollbar-none">
+        <div className="h-full scroll-area scrollbar-none">
           <div className="flex flex-col gap-3 px-4 pt-3 pb-8 animate-in fade-in duration-700">
             {profileCard}
             {chantButton}

@@ -76,7 +76,7 @@ export function CollectionView() {
   const captions = zenithKnown ? { ...RARITY_CAPTION, ...ZENITH_CAPTION } : RARITY_CAPTION;
 
   return (
-    <div data-portrait-ready className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 portrait:px-4 portrait:pb-8 lg:p-5">
+    <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 portrait:px-4 portrait:pb-8 lg:p-5">
       <header className="flex items-end justify-between gap-6 short:items-center portrait:flex-col portrait:items-stretch portrait:gap-3">
         <div className="flex min-w-0 items-center gap-4">
           <BackToLibrary />

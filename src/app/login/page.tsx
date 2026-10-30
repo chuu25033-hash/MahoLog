@@ -8,8 +8,8 @@ export default function LoginPage() {
   if (!isEmailAuthMode) redirect("/dashboard");
 
   return (
-    <div className="grid h-full grid-cols-2 items-center gap-6 scroll-area overflow-x-hidden p-6">
-      <div className="relative flex h-full items-center justify-center">
+    <div className="grid h-full grid-cols-2 items-center gap-6 scroll-area overflow-x-hidden p-6 portrait:grid-cols-1 portrait:content-start">
+      <div className="relative flex h-full items-center justify-center portrait:h-72">
         <MagicCircle color="#a882fb" running intensity={0.4} className="absolute h-[90%] max-h-full opacity-80" />
         <div className="relative text-center">
           <ArcaneLogo className="mx-auto size-12 text-starlight drop-shadow-[0_0_8px_rgba(226,201,116,0.45)]" />

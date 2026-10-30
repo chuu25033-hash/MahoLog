@@ -45,7 +45,7 @@ export function SettingsView({
   const mainSubject = activeSubjects.find((s) => s.id === userProfile.subject);
 
   return (
-    <div data-portrait-ready className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 animate-in fade-in duration-700 portrait:px-4 portrait:pb-8 lg:p-5">
+    <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 animate-in fade-in duration-700 portrait:px-4 portrait:pb-8 lg:p-5">
       <header className="flex items-center gap-4">
         <BackToLibrary />
         <div className="min-w-0 flex-1">

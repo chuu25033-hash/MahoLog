@@ -186,7 +186,7 @@ function StarMemory({ nights }: { nights: ObservedNight[] }) {
   const totalMinutes = observed.reduce((acc, n) => acc + n.minutes, 0);
 
   return (
-    <div data-portrait-ready className="flex h-full flex-col gap-3 short:gap-2 p-3 animate-in fade-in duration-700 portrait:scroll-area portrait:scrollbar-none portrait:px-4 portrait:pb-8 lg:gap-4 lg:p-5">
+    <div className="flex h-full flex-col gap-3 short:gap-2 p-3 animate-in fade-in duration-700 portrait:scroll-area portrait:scrollbar-none portrait:px-4 portrait:pb-8 lg:gap-4 lg:p-5">
       <header className="flex items-end justify-between gap-4 portrait:flex-col portrait:items-stretch">
         <div className="flex min-w-0 items-center gap-4">
           <BackToLibrary />

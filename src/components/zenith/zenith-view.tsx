@@ -62,7 +62,7 @@ function Header() {
 function SealedGate({ data, totalMp }: { data: UserData; totalMp: number }) {
   const progress = cycleMp(data, totalMp);
   return (
-    <div className="flex h-full flex-col gap-4 short:gap-2 p-3 animate-in fade-in duration-700 lg:p-5">
+    <div className="flex h-full flex-col gap-4 short:gap-2 p-3 animate-in fade-in duration-700 portrait:px-4 lg:p-5">
       <Header />
       <Card className="mx-auto my-auto w-full max-w-md items-center gap-3 px-6 text-center">
         <Lock className="size-6 text-muted-foreground" strokeWidth={1.25} />
@@ -94,12 +94,12 @@ function Zenith({ data, totalMp }: { data: UserData; totalMp: number }) {
     <>
       {/* 昇った階層の分だけ濃くなる星天 */}
       <ZenithSky floor={floor} className="pointer-events-none fixed inset-0 -z-[5] overflow-hidden" />
-      <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 animate-in fade-in duration-700 lg:p-5">
+      <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 animate-in fade-in duration-700 portrait:px-4 portrait:pb-8 lg:p-5">
         <Header />
-        <div className="grid min-h-0 flex-1 grid-cols-12 gap-3 lg:gap-4">
-          <Card className="col-span-5 min-h-0 items-center gap-3 px-4 text-center">
+        <div className="grid min-h-0 flex-1 grid-cols-12 gap-3 portrait:flex-none portrait:grid-cols-1 lg:gap-4">
+          <Card className="col-span-5 min-h-0 items-center gap-3 px-4 text-center portrait:col-span-1">
             <p className="font-display text-[10px] tracking-[0.4em] text-starlight/70">CURRENT FLOOR</p>
-            <TowerDiagram floor={floor} ratio={ratio} className="min-h-0 w-full max-w-56 flex-1" />
+            <TowerDiagram floor={floor} ratio={ratio} className="min-h-0 w-full max-w-56 flex-1 portrait:h-72 portrait:flex-none" />
             <p className="flex items-baseline gap-2 whitespace-nowrap">
               <span className="font-display text-5xl text-starlight-gradient short:text-4xl">{floor}</span>
               <span className="text-sm tracking-[0.3em] text-starlight/80">層</span>
@@ -132,7 +132,7 @@ function Zenith({ data, totalMp }: { data: UserData; totalMp: number }) {
             </div>
           </Card>
 
-          <section className="col-span-7 flex min-h-0 flex-col gap-3">
+          <section className="col-span-7 flex min-h-0 flex-col gap-3 portrait:col-span-1">
             <Card size="sm" className="min-h-0 flex-1 gap-2 px-3">
               <h2 className="flex flex-col text-sm leading-tight tracking-[0.2em] whitespace-nowrap">
                 節目の階層

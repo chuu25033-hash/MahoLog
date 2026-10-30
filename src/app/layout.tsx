@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import { Cinzel, Geist_Mono, Shippori_Mincho } from "next/font/google";
-import Link from "next/link";
 import { Smartphone } from "lucide-react";
 import { ChapterThemeSync } from "@/components/chapter-theme-sync";
 import { CloudSyncStarter } from "@/components/cloud-sync-starter";
@@ -58,22 +57,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SoundSync />
         {children}
         <TransitionVeil />
+        {/* スマホは縦持ち専用。横にしたときだけ縦向きを促す（iPhone は向きを固定できないため） */}
         <div className="rotate-hint night-sky fixed inset-0 z-[100] flex-col items-center justify-center gap-4 p-8 text-center">
-          <Smartphone className="size-10 rotate-90 text-starlight" strokeWidth={1.25} />
-          <p className="text-lg tracking-widest">端末を横向きにしてください</p>
-          <p className="text-sm text-muted-foreground">マホログは横画面に最適化されています</p>
-          {/* 魔術書庫と詠唱画面には縦持ち用の作りがある */}
-          <div className="mt-4 flex flex-col items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="rounded-full border border-starlight/40 px-5 py-2 text-sm tracking-[0.25em] text-starlight transition-colors hover:bg-starlight/10"
-            >
-              縦のまま魔術書庫へ
-            </Link>
-            <Link href="/timer" className="text-xs tracking-[0.25em] text-muted-foreground transition-colors hover:text-starlight">
-              縦のまま詠唱する
-            </Link>
-          </div>
+          <Smartphone className="size-10 text-starlight" strokeWidth={1.25} />
+          <p className="text-lg tracking-widest">端末を縦向きにしてください</p>
+          <p className="text-sm text-muted-foreground">スマホでは縦画面で詠唱します</p>
         </div>
       </body>
     </html>

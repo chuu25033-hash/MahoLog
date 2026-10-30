@@ -77,10 +77,10 @@ export function GuidanceScreen() {
   const { night, reward } = guidance;
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center gap-[4vw] overflow-hidden px-8">
+    <div className="relative flex h-full w-full items-center justify-center gap-[4vw] overflow-hidden px-8 portrait:flex-col portrait:gap-4 portrait:px-6">
       {/* 星図と授かり物 */}
       <div
-        className={`guidance-chart relative size-[min(84vh,46vw)] shrink-0 transition-all duration-700 ease-in ${claiming ? "scale-105 opacity-0" : ""}`}
+        className={`guidance-chart relative size-[min(84vh,46vw)] shrink-0 portrait:size-[min(78vw,42vh)] transition-all duration-700 ease-in ${claiming ? "scale-105 opacity-0" : ""}`}
       >
         <StarChart night={night} className="absolute inset-0 size-full" />
 

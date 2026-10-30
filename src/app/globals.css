@@ -365,12 +365,10 @@ html[data-chapter="azure"] {
   animation: glimmer 7s ease-in-out infinite;
 }
 
-/* スマホ・タブレットの縦持ちでは横向きを促す */
+/* スマホは縦持ち専用: 指で操作する背の低い横画面（スマホの横持ち）では縦向きを促す。タブレットの横持ちと PC は広い画面のまま */
 .rotate-hint { display: none; }
-@media (orientation: portrait) and (max-width: 1024px) {
+@media (orientation: landscape) and (max-height: 500px) and (pointer: coarse) {
   .rotate-hint { display: flex; }
-  /* 縦持ち用の作りがある画面（詠唱画面）では出さない */
-  body:has([data-portrait-ready]) .rotate-hint { display: none; }
 }
 
 /*

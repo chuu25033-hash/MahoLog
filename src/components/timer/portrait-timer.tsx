@@ -43,8 +43,7 @@ export function PortraitTimer({
   const preparing = phase === "idle";
 
   return (
-    // data-portrait-ready: 縦持ちでも横向きの案内（.rotate-hint）を出さない
-    <div data-portrait-ready className="flex h-full flex-col animate-in fade-in duration-700">
+    <div className="flex h-full flex-col animate-in fade-in duration-700">
       <header className="flex shrink-0 items-center justify-between gap-3 px-4 pt-3">
         <BackToLibrary guard={locked} />
         {preparing && (

@@ -105,14 +105,14 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
           <span className="h-px w-8 bg-gradient-to-l from-transparent to-starlight/60" aria-hidden />
         </p>
         <h1
-          className="title-rise title-logo mt-4 whitespace-nowrap font-display text-[clamp(3rem,13vh,6.5rem)] font-medium leading-none tracking-[0.18em] text-starlight-gradient short:mt-2"
+          className="title-rise title-logo mt-4 whitespace-nowrap font-display text-[clamp(3rem,13vh,6.5rem)] font-medium leading-none tracking-[0.18em] text-starlight-gradient short:mt-2 portrait:text-[clamp(2.25rem,13vw,4.5rem)]"
           style={{ "--rise-delay": "0.45s" } as CSSProperties}
           aria-label="マホログ MAHOLOG"
         >
           <span className="-mr-[0.18em]">MAHOLOG</span>
         </h1>
         <p
-          className="title-rise mt-4 whitespace-nowrap font-display text-[10px] tracking-[0.5em] text-starlight/55 short:mt-2 lg:text-[11px]"
+          className="title-rise mt-4 whitespace-nowrap font-display text-[10px] tracking-[0.5em] text-starlight/55 short:mt-2 portrait:tracking-[0.3em] portrait:whitespace-normal lg:text-[11px]"
           style={{ "--rise-delay": "0.8s" } as CSSProperties}
         >
           <span className="-mr-[0.5em]">Arcane Observatory for Knowledge</span>

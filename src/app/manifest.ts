@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-/** ホーム画面に追加して、アプリのように横画面いっぱいで開く */
+/** ホーム画面に追加して、アプリのように縦画面いっぱいで開く（スマホは縦持ち専用） */
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
@@ -12,7 +12,7 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: "/",
     display: "fullscreen",
     display_override: ["fullscreen", "standalone"],
-    orientation: "landscape",
+    orientation: "portrait",
     background_color: "#080c16",
     theme_color: "#080c16",
     categories: ["education", "productivity"],
