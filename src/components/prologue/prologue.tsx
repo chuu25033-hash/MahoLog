@@ -7,29 +7,35 @@ import { soundManager } from "@/lib/sound/sound-manager";
 import { usePortraitPhone } from "@/lib/use-portrait-phone";
 
 /** 魔法陣が描かれはじめてから、最初の一節が浮かぶまで（ms） */
-const OPEN_MS = 3200;
-/** 一節ごとの長さ（ms）。浮かぶ → 留まる → 消えるまで */
-const LINE_MS = 6200;
+const OPEN_MS = 3600;
+/** 一節ごとの長さ（ms）。浮かぶ → 留まる → 消え、次の一節が浮かぶまで */
+const LINE_MS = 8600;
 /** 一節が浮かぶ・消えるのにかける時間（ms）。CSS の transition と合わせる */
-const FADE_MS = 1600;
+const FADE_MS = 1800;
+/** 一節が消えてから次の一節が浮かぶまでの闇の間（ms） */
+const GAP_MS = 900;
 /** 最後の一節は長く留める（ms） */
-const LAST_LINE_MS = 6000;
+const LAST_LINE_MS = 7500;
 /** 全体が闇に溶けて、メイン画面へ移るまで（ms） */
-const CLOSE_MS = 2200;
+const CLOSE_MS = 2400;
 
-const LINES: ReactNode[] = [
-  <>
-    世界から、言葉と
-    <ruby>
-      刻<rp>（</rp>
-      <rt>とき</rt>
-      <rp>）</rp>
-    </ruby>
-    が失われて久しい。
-  </>,
-  "静寂の中に残されたのは、忘れ去られた古代の魔法陣のみ。",
-  "汝の集積が、星脈に光を灯す鍵となる。",
-  "— 観測を、始めよう。",
+/** 四つの節。縦持ちでは句ごとに行を分け、数文字だけが次の行へこぼれないようにする */
+const LINES: ReactNode[][] = [
+  [
+    "世界から、",
+    <>
+      言葉と
+      <ruby>
+        刻<rp>（</rp>
+        <rt>とき</rt>
+        <rp>）</rp>
+      </ruby>
+      が失われて久しい。
+    </>,
+  ],
+  ["静寂の中に残されたのは、", "忘れ去られた古代の魔法陣のみ。"],
+  ["汝の集積が、", "星脈に光を灯す鍵となる。"],
+  ["— 観測を、始めよう。"],
 ];
 
 type Phase = "waiting" | "playing" | "closing";
@@ -44,6 +50,8 @@ export function Prologue({ onDone }: { onDone?: () => void }) {
   const portrait = usePortraitPhone();
   // 音が起きていなければ（初めての訪問など）、最初の一触れで音を起こしてから始める
   const [phase, setPhase] = useState<Phase>(() => (soundManager.isAwake() ? "playing" : "waiting"));
+  // 閉じる段階に移っても予定を取り消さないよう、始まったかどうかだけで演出の予定を組む
+  const started = phase !== "waiting";
   const [line, setLine] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const onDoneRef = useRef(onDone);
@@ -65,7 +73,7 @@ export function Prologue({ onDone }: { onDone?: () => void }) {
   }, []);
 
   useEffect(() => {
-    if (phase !== "playing") return;
+    if (!started) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
     const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
 
@@ -78,7 +86,7 @@ export function Prologue({ onDone }: { onDone?: () => void }) {
         soundManager.playSe("prologueLine");
       });
       t += last ? LAST_LINE_MS : LINE_MS;
-      if (!last) at(t - FADE_MS, () => setLine(null));
+      if (!last) at(t - FADE_MS - GAP_MS, () => setLine(null));
     });
     at(t, () => setPhase("closing"));
     at(t + CLOSE_MS, () => {
@@ -86,7 +94,7 @@ export function Prologue({ onDone }: { onDone?: () => void }) {
       onDoneRef.current?.();
     });
     return () => timers.forEach(clearTimeout);
-  }, [phase]);
+  }, [started]);
 
   function begin() {
     if (phase !== "waiting") return;
@@ -154,7 +162,7 @@ function PortraitStage({ line }: { line: number | null }) {
         aria-hidden
       />
       <div className="absolute inset-x-0 top-[62%] bottom-[8%] flex items-center justify-center px-8 pb-[env(safe-area-inset-bottom)]">
-        <Lines line={line} className="text-[15px] leading-[2.2] tracking-[0.2em]" />
+        <Lines line={line} stacked className="text-[clamp(13px,3.9vw,15px)] leading-[2.2] tracking-[0.2em]" />
       </div>
     </>
   );
@@ -180,28 +188,32 @@ function WideStage({ line }: { line: number | null }) {
         aria-hidden
       />
       <div className="absolute inset-0 flex items-center justify-center px-10">
-        <Lines line={line} className="text-xl leading-loose tracking-[0.3em] whitespace-nowrap lg:text-2xl" />
+        <Lines line={line} className="text-xl leading-loose tracking-[0.3em] lg:text-2xl" />
       </div>
     </>
   );
 }
 
 /** 四つの節を同じ位置に重ね、いまの一節だけを浮かべる */
-function Lines({ line, className }: { line: number | null; className: string }) {
+function Lines({ line, className, stacked = false }: { line: number | null; className: string; stacked?: boolean }) {
   return (
     <div className="relative grid w-full place-items-center text-center" aria-live="polite">
-      {LINES.map((text, i) => {
+      {LINES.map((parts, i) => {
         const last = i === LINES.length - 1;
         return (
           <p
             key={i}
             aria-hidden={line !== i}
-            className={`col-start-1 row-start-1 max-w-full font-serif [word-break:auto-phrase] transition-all ease-in-out ${className} ${
+            className={`col-start-1 row-start-1 max-w-full font-serif whitespace-nowrap transition-all ease-in-out ${className} ${
               last ? "font-medium text-starlight-gradient" : "text-foreground/90"
             } ${line === i ? "opacity-100 blur-0" : "opacity-0 blur-[3px]"}`}
             style={{ transitionDuration: `${FADE_MS}ms` }}
           >
-            {text}
+            {parts.map((part, j) => (
+              <span key={j} className={stacked ? "block" : undefined}>
+                {part}
+              </span>
+            ))}
           </p>
         );
       })}
