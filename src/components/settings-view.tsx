@@ -8,6 +8,7 @@ import { BackToLibrary } from "@/components/back-to-library";
 import { PageLoading } from "@/components/page-loading";
 import { SubjectPicker } from "@/components/subject-picker";
 import { SubjectRuneChip } from "@/components/subject-rune-chip";
+import { WIZARD_AVATARS, WizardAvatar } from "@/components/wizard-avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -79,6 +80,29 @@ export function SettingsView({
               className="h-9 w-full rounded-xl border border-white/15 bg-white/[0.03] px-3 text-sm tracking-wider outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-starlight/55 focus-visible:shadow-[0_0_12px_-3px_rgba(226,201,116,0.45)]"
               aria-label="探究者名"
             />
+          </Field>
+
+          <Field label="紋章" hint={WIZARD_AVATARS[userProfile.avatar]?.name}>
+            <div className="flex justify-between gap-1.5 px-1 py-1">
+              {Object.entries(WIZARD_AVATARS).map(([id, { name }]) => (
+                <button
+                  key={id}
+                  onClick={() => userActions.setAvatar(id)}
+                  aria-pressed={id === userProfile.avatar}
+                  aria-label={name}
+                  title={name}
+                  className={cn(
+                    "rounded-full transition-all duration-300",
+                    id === userProfile.avatar ? "opacity-100" : "opacity-45 grayscale-[0.4] hover:opacity-80",
+                  )}
+                >
+                  <WizardAvatar
+                    avatar={id}
+                    className={cn("size-10 short:size-8", id !== userProfile.avatar && "shadow-none ring-white/15")}
+                  />
+                </button>
+              ))}
+            </div>
           </Field>
 
           <ObserverIdField />

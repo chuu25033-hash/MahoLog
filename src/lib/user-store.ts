@@ -34,6 +34,8 @@ const DAY = 24 * 60 * 60 * 1000;
 
 export type UserProfile = {
   username: string;
+  /** 紋章のプリセットID（wizard-1 など） */
+  avatar: string;
   /** 魔術階級の数字（I〜X） */
   rank: string;
   /** 累積MP */
@@ -119,7 +121,7 @@ const unlockedAt = (totalMp: number) => AREAS.filter((a) => isAreaUnlocked(a, to
 /** 初回起動時の状態: Rank I「門前の解読者」、はじまりの小屋から */
 export function initialUserData(): UserData {
   return {
-    userProfile: { username: demoProfile.username, rank: rankOf(calcLevel(0)).numeral, totalMp: 0, currentStageId: "1-1", subject: null, subSubject: null, activeSubjects: null },
+    userProfile: { username: demoProfile.username, avatar: demoProfile.avatar_url, rank: rankOf(calcLevel(0)).numeral, totalMp: 0, currentStageId: "1-1", subject: null, subSubject: null, activeSubjects: null },
     chantHistory: [],
     dailyReward: { lastClaimedDate: null, streak: 0 },
     inventory: {},
@@ -389,8 +391,8 @@ export function armedCatalyst(data: UserData): CatalystItem | null {
 
 /** 保存データをプロフィールの形にする */
 export function localProfile(data: UserData): Profile {
-  const { username, totalMp } = data.userProfile;
-  return { ...demoProfile, id: "local", username, total_study_time: totalMp, current_level: calcLevel(totalMp) };
+  const { username, avatar, totalMp } = data.userProfile;
+  return { ...demoProfile, id: "local", username, avatar_url: avatar, total_study_time: totalMp, current_level: calcLevel(totalMp) };
 }
 
 /** 詠唱履歴を勉強記録の形にする */
@@ -512,6 +514,10 @@ export const userActions = {
 
   setUsername(username: string) {
     update((s) => ({ ...s, userProfile: { ...s.userProfile, username } }));
+  },
+
+  setAvatar(avatar: string) {
+    update((s) => ({ ...s, userProfile: { ...s.userProfile, avatar } }));
   },
 
   /** 主軸カテゴリと詳細科目 */

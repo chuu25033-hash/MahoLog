@@ -33,7 +33,9 @@ const MODE_LABEL = { pomodoro: "律動の詠唱", stopwatch: "無窮の詠唱" }
 export function DashboardView({ summary, subjects, isDemo }: { summary: DashboardSummary; subjects: Subject[]; isDemo: boolean }) {
   const stored = useStoredUserData();
   if (!stored) return <PageLoading />;
-  const base = isDemo ? dashboardSummary(localProfile(stored), subjects, localStudyLogs(stored)) : summary;
+  const summed = isDemo ? dashboardSummary(localProfile(stored), subjects, localStudyLogs(stored)) : summary;
+  // 紋章は設定画面で選び、端末に保存したものを掲げる
+  const base = { ...summed, profile: { ...summed.profile, avatar_url: stored.userProfile.avatar } };
   const activeIds = new Set(activeSubjectsOf(subjects, stored.userProfile.activeSubjects).map((s) => s.id));
   const radar = Object.fromEntries(
     Object.entries(base.radar).map(([range, totals]) => [range, totals.filter((t) => activeIds.has(t.subjectId))]),
