@@ -599,15 +599,15 @@ function OptionRow({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <p className="w-14 shrink-0 text-xs tracking-[0.2em] whitespace-nowrap text-muted-foreground">{label}</p>
-      <div className="grid flex-1 gap-1.5" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+      <p className="w-14 shrink-0 text-xs tracking-[0.2em] whitespace-nowrap text-muted-foreground short:w-auto short:tracking-normal">{label}</p>
+      <div className="grid flex-1 gap-1.5 short:gap-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
         {options.map((o) => (
           <button
             key={o}
             disabled={disabled}
             onClick={() => onChange(o)}
             className={cn(
-              "rounded-lg border py-1 font-display text-sm transition-all duration-300 disabled:opacity-50",
+              "rounded-lg border py-1 font-display text-sm whitespace-nowrap transition-all duration-300 disabled:opacity-50 short:py-0.5 short:text-xs",
               o === value
                 ? "border-starlight/55 bg-starlight/[0.08] text-starlight shadow-[0_0_12px_-3px_rgba(226,201,116,0.45)]"
                 : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",

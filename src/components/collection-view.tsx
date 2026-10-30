@@ -76,16 +76,16 @@ export function CollectionView() {
   const captions = zenithKnown ? { ...RARITY_CAPTION, ...ZENITH_CAPTION } : RARITY_CAPTION;
 
   return (
-    <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 p-3 lg:p-5">
-      <header className="flex items-end justify-between gap-6">
+    <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 lg:p-5">
+      <header className="flex items-end justify-between gap-6 short:items-center">
         <div className="flex min-w-0 items-center gap-4">
           <BackToLibrary />
           <div className="min-w-0">
-            <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap">
+            <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap short:text-base">
               古代の秘術図鑑
               <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">ARCANE CODEX</span>
             </h1>
-            <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase]">
+            <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">
               宝箱や星天の導きで見つけた遺物を解読し、古代文書を復元し、錬成陣で神話の遺物を生み出します
             </p>
           </div>

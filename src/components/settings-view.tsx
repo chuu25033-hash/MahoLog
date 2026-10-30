@@ -45,15 +45,15 @@ export function SettingsView({
   const mainSubject = activeSubjects.find((s) => s.id === userProfile.subject);
 
   return (
-    <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 p-3 animate-in fade-in duration-700 lg:p-5">
+    <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 animate-in fade-in duration-700 lg:p-5">
       <header className="flex items-center gap-4">
         <BackToLibrary />
         <div className="min-w-0 flex-1">
-          <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap">
+          <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap short:text-base">
             秘術探究者の書斎
             <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">SETTINGS</span>
           </h1>
-          <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase]">
+          <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">
             探究者の名と詠唱の作法を定め、これまでの探求の記録を守ります
             {!isDemo && "（ここでの設定はこの端末に保存されます）"}
           </p>
@@ -289,12 +289,12 @@ function Panel({
   return (
     // 枠線（glass の ::before）が中身と一緒に流れないよう、スクロールは内側の領域だけで行う
     <section className="glass flex min-h-0 flex-col overflow-hidden rounded-2xl">
-      <h2 className="mx-4 mt-4 flex shrink-0 items-center gap-2 border-b border-white/10 pb-3 text-sm tracking-[0.25em] whitespace-nowrap lg:mx-5 lg:mt-5">
+      <h2 className="mx-4 mt-4 flex shrink-0 items-center gap-2 border-b border-white/10 pb-3 text-sm tracking-[0.25em] whitespace-nowrap short:mx-3 short:mt-3 short:pb-2 lg:mx-5 lg:mt-5">
         <Icon className="size-4 shrink-0 text-starlight" strokeWidth={1.25} />
         {title}
         <span className="ml-auto truncate font-display text-[10px] tracking-[0.3em] text-starlight/60">{label}</span>
       </h2>
-      <div className="flex min-h-0 flex-1 flex-col gap-4 scroll-area scrollbar-none p-4 lg:p-5">{children}</div>
+      <div className="flex min-h-0 flex-1 flex-col gap-4 scroll-area scrollbar-none p-4 short:gap-3 short:p-3 lg:p-5">{children}</div>
     </section>
   );
 }
@@ -325,12 +325,10 @@ function ToggleRow({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-2.5">
+    // 説明文はスイッチの下まで回り込ませ、狭い列でも1語ずつ折り返さないようにする
+    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-3 rounded-xl border border-white/10 bg-white/[0.02] p-2.5">
       <Icon className={cn("mt-0.5 size-4 shrink-0", checked ? "text-aqua" : "text-muted-foreground")} strokeWidth={1.25} />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm tracking-wider whitespace-nowrap">{label}</p>
-        <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">{description}</p>
-      </div>
+      <p className="text-sm tracking-wider whitespace-nowrap">{label}</p>
       <button
         role="switch"
         aria-checked={checked}
@@ -350,6 +348,7 @@ function ToggleRow({
           )}
         />
       </button>
+      <p className="col-start-2 col-end-4 mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">{description}</p>
     </div>
   );
 }

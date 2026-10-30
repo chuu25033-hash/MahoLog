@@ -48,11 +48,11 @@ function Header() {
     <header className="flex items-center gap-4">
       <BackToLibrary />
       <div className="min-w-0">
-        <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap">
+        <h1 className="flex items-baseline gap-2 text-xl tracking-[0.25em] whitespace-nowrap short:text-base">
           星天の塔
           <span className="truncate font-display text-[10px] tracking-[0.3em] text-starlight/70">ASTRA ZENITH</span>
         </h1>
-        <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase]">{ZENITH_AREA.description}</p>
+        <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">{ZENITH_AREA.description}</p>
       </div>
     </header>
   );
@@ -62,7 +62,7 @@ function Header() {
 function SealedGate({ data, totalMp }: { data: UserData; totalMp: number }) {
   const progress = cycleMp(data, totalMp);
   return (
-    <div className="flex h-full flex-col gap-4 p-3 animate-in fade-in duration-700 lg:p-5">
+    <div className="flex h-full flex-col gap-4 short:gap-2 p-3 animate-in fade-in duration-700 lg:p-5">
       <Header />
       <Card className="mx-auto my-auto w-full max-w-md items-center gap-3 px-6 text-center">
         <Lock className="size-6 text-muted-foreground" strokeWidth={1.25} />
@@ -94,7 +94,7 @@ function Zenith({ data, totalMp }: { data: UserData; totalMp: number }) {
     <>
       {/* 昇った階層の分だけ濃くなる星天 */}
       <ZenithSky floor={floor} className="pointer-events-none fixed inset-0 -z-[5] overflow-hidden" />
-      <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 p-3 animate-in fade-in duration-700 lg:p-5">
+      <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 animate-in fade-in duration-700 lg:p-5">
         <Header />
         <div className="grid min-h-0 flex-1 grid-cols-12 gap-3 lg:gap-4">
           <Card className="col-span-5 min-h-0 items-center gap-3 px-4 text-center">
