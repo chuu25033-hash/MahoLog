@@ -125,7 +125,8 @@ export function MagicRadar({
         <CelestialBackdrop />
       </div>
       <ResponsiveContainer width="100%" height="100%">
-        <RadarChart data={chartData} outerRadius="66%">
+        {/* 眺めるだけの図なので、キーボード操作の層（フォーカスと枠）を持たせない */}
+        <RadarChart data={chartData} outerRadius="66%" accessibilityLayer={false}>
           <defs>
             <radialGradient id={`fill-${gradientId}`} cx="50%" cy="50%" r="60%">
               <stop offset="0%" stopColor="#a882fb" stopOpacity={0.5} />

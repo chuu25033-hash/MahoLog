@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type Dispatch, type MouseEvent, type SetStateAction } from "react";
 import { ChevronRight, Gift, Hourglass, MapPinned, Sparkles } from "lucide-react";
 import { ArrowGlyph, RankSigil } from "@/components/arcane-icons";
 import { ItemArt, TreasureChest } from "@/components/item-art";
@@ -61,12 +61,13 @@ const RARITY_TONE = {
 type Step = "result" | "level" | "rank" | "unlock" | "zenith" | "ending";
 
 /**
- * リザルト: 「次へ」で1枚ずつ切り替える。成果と試練報酬は必ず、探求度の上昇・魔術階級の昇格・
+ * リザルト: 「次へ」で1枚ずつ切り替える。成果の宝箱も自動では開かず、タップで開けてから先へ進む。成果と試練報酬は必ず、探求度の上昇・魔術階級の昇格・
  * 新たな領域の解放は起きたときだけ挟む。試練報酬で得た MP も成長の判定に含める
  */
 export function ResultDialog({ result, subjects, onClose }: { result: StudyResult; subjects: Subject[]; onClose: () => void }) {
   const [claimedMp, setClaimedMp] = useState(0);
   const [index, setIndex] = useState(0);
+  const [chest, setChest] = useState<ChestStage>("hidden");
 
   const beforeMp = result.beforeMp;
   const afterMp = result.afterMp + claimedMp;
@@ -90,6 +91,14 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
   ];
   const step = steps[Math.min(index, steps.length - 1)];
   const last = index >= steps.length - 1;
+  // 宝箱を開けるまでは成果の幕に留まる
+  const waitingChest = step === "result" && chest !== "open";
+
+  /** 画面のどこをタップしても、宝箱の演出を一段進める（ボタンの操作はそれぞれに任せる） */
+  function advanceChest(e: MouseEvent) {
+    if (!waitingChest || (e.target as HTMLElement).closest("button, a")) return;
+    setChest((c) => (c === "hidden" ? "closed" : "open"));
+  }
 
   // 各パネルが開いた瞬間に、その出来事の音を鳴らす
   useEffect(() => {
@@ -101,15 +110,28 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
   }, [step]);
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open
+      onOpenChange={(open, { reason }) => {
+        if (open) return;
+        // 宝箱を開けるまでは、枠の外をタップしても閉じずに演出を進める（× と Esc では閉じられる）
+        if (reason === "outside-press" && waitingChest) {
+          setChest((c) => (c === "hidden" ? "closed" : "open"));
+          return;
+        }
+        onClose();
+      }}
+    >
       <DialogContent
+        onClick={advanceChest}
         className={cn(
-          "flex max-h-[calc(100dvh-1rem)] flex-col gap-4 scroll-area rounded-2xl p-6 ring-starlight/25 backdrop-blur-xl short:gap-3 short:p-4",
-          step === "result" ? "max-w-2xl! sm:max-w-2xl!" : "max-w-md! sm:max-w-md!",
+          "flex max-h-[calc(100dvh-1rem)] flex-col gap-4 scroll-area rounded-2xl p-6 ring-starlight/25 backdrop-blur-xl short:gap-3 short:p-4 max-sm:p-5",
+          // 画面幅いっぱいに広がらないよう、狭い画面でも左右に余白を残す
+          step === "result" ? "max-w-[min(42rem,calc(100%-2rem))]!" : "max-w-[min(28rem,calc(100%-2rem))]!",
         )}
       >
         <div key={step} className="animate-in fade-in duration-700">
-          {step === "result" && <ResultPanel result={result} subjects={subjects} onClaimed={(mp) => setClaimedMp((v) => v + mp)} />}
+          {step === "result" && <ResultPanel result={result} subjects={subjects} chest={chest} onChestChange={setChest} onClaimed={(mp) => setClaimedMp((v) => v + mp)} />}
           {step === "level" && <LevelPanel beforeLevel={beforeLevel} afterMp={afterMp} />}
           {step === "rank" && <RankPanel level={afterLevel} />}
           {step === "unlock" && <UnlockPanel areas={unlocked} />}
@@ -130,7 +152,9 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
                 />
               ))}
           </div>
-          {last ? (
+          {waitingChest ? (
+            <p className="text-[11px] tracking-[0.3em] text-starlight/70 glimmer">タップして進む</p>
+          ) : last ? (
             <Button onClick={onClose}>
               <Sparkles /> 閉じる
             </Button>
@@ -146,24 +170,35 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
 }
 
 /** Step 1: 詠唱成果（時間・獲得MP・魔法陣・宝箱）と、達成した試練の報酬受取 */
-function ResultPanel({ result, subjects, onClaimed }: { result: StudyResult; subjects: Subject[]; onClaimed: (mp: number) => void }) {
+function ResultPanel({
+  result,
+  subjects,
+  chest,
+  onChestChange,
+  onClaimed,
+}: {
+  result: StudyResult;
+  subjects: Subject[];
+  chest: ChestStage;
+  onChestChange: Dispatch<SetStateAction<ChestStage>>;
+  onClaimed: (mp: number) => void;
+}) {
   const [radarData, setRadarData] = useState(result.beforeTotals);
-  const [chest, setChest] = useState<ChestStage>("hidden");
   const capped = result.savedMinutes < result.requestedMinutes;
 
+  // 魔法陣が育ち、宝箱が現れるまでは見せる。宝箱を開けるのはタップしてから
   useEffect(() => {
     const grow = setTimeout(() => setRadarData(result.afterTotals), 600);
-    const appear = setTimeout(() => setChest("closed"), 1600);
-    const open = setTimeout(() => setChest("open"), 2800);
+    // 先にタップして進めていたら、その段階を戻さない
+    const appear = setTimeout(() => onChestChange((c) => (c === "hidden" ? "closed" : c)), 1600);
     return () => {
       clearTimeout(grow);
       clearTimeout(appear);
-      clearTimeout(open);
     };
-  }, [result]);
+  }, [result, onChestChange]);
 
   return (
-    <div className="grid grid-cols-2 items-center gap-4">
+    <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-2">
       <div className="flex flex-col items-center gap-2 text-center">
         <DialogTitle className="text-sm font-normal tracking-[0.4em] text-aqua/80">詠唱完了</DialogTitle>
         <p className="flex items-center gap-1.5 text-xs tracking-[0.2em] text-muted-foreground">
@@ -201,7 +236,7 @@ function ResultPanel({ result, subjects, onClaimed }: { result: StudyResult; sub
         {capped && <p className="text-xs text-destructive">一夜に刻める詠唱は12時間まで。超えた分は星に届きません</p>}
 
         {chest !== "hidden" && (
-          <DropReveal stage={chest} drop={result.drop} area={result.area} onOpen={() => setChest("open")} />
+          <DropReveal stage={chest} drop={result.drop} area={result.area} onOpen={() => onChestChange("open")} />
         )}
       </div>
 
@@ -398,7 +433,7 @@ function DropReveal({
           />
         )}
       </button>
-      {!opened && <p className="text-[11px] tracking-[0.3em] text-starlight/70 glimmer">宝箱を見つけた…</p>}
+      {!opened && <p className="text-[11px] tracking-[0.3em] text-starlight/70 glimmer">宝箱を見つけた…タップして開ける</p>}
       {opened &&
         (drop ? (
           <div className="flex animate-in flex-col items-center gap-0.5 fade-in duration-1000">

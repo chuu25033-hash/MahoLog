@@ -62,13 +62,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Smartphone className="size-10 rotate-90 text-starlight" strokeWidth={1.25} />
           <p className="text-lg tracking-widest">端末を横向きにしてください</p>
           <p className="text-sm text-muted-foreground">マホログは横画面に最適化されています</p>
-          {/* 詠唱画面だけは縦持ち用の作りがある */}
-          <Link
-            href="/timer"
-            className="mt-4 rounded-full border border-starlight/40 px-5 py-2 text-sm tracking-[0.25em] text-starlight transition-colors hover:bg-starlight/10"
-          >
-            縦のまま詠唱する
-          </Link>
+          {/* 魔術書庫と詠唱画面には縦持ち用の作りがある */}
+          <div className="mt-4 flex flex-col items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="rounded-full border border-starlight/40 px-5 py-2 text-sm tracking-[0.25em] text-starlight transition-colors hover:bg-starlight/10"
+            >
+              縦のまま魔術書庫へ
+            </Link>
+            <Link href="/timer" className="text-xs tracking-[0.25em] text-muted-foreground transition-colors hover:text-starlight">
+              縦のまま詠唱する
+            </Link>
+          </div>
         </div>
       </body>
     </html>
