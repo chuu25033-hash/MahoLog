@@ -45,7 +45,7 @@ export function CraftPanel({ data }: { data: UserData }) {
           </span>
         </h2>
         <p className="mb-3 text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
-          星屑の原石と指定の秘宝を捧げ、宝箱からは決して見つからない神話遺物（SS）を錬成します。捧げた秘宝の加護は、神話遺物の加護へと受け継がれます
+          星屑の原石と指定の秘宝を捧げ、流れ星が運ぶことのない神話遺物（SS）を錬成します。捧げた秘宝の加護は、神話遺物の加護へと受け継がれます
         </p>
         <ul className="grid grid-cols-2 gap-2 portrait:grid-cols-1">
           {MYTHICS.map((mythic) => (
@@ -73,7 +73,7 @@ export function CraftPanel({ data }: { data: UserData }) {
           <p className="ml-auto shrink-0 font-display text-2xl text-aqua text-glow-aqua">{ore}</p>
         </div>
         <p className="mb-2 text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
-          触媒はすべて、断片・伝承の品・スキン・秘宝は2つ目以降（余剰）だけを還元できます。未復元の文書の断片は1葉ずつ手元に残ります
+          触媒はすべて、断片・伝承の品・陣の意匠・秘宝は2つ目以降（余剰）だけを還元できます。未復元の文書の断片は1葉ずつ手元に残ります
         </p>
         {list.length === 0 ? (
           <p className="my-auto py-6 text-center text-xs tracking-wider text-muted-foreground">還元できる余剰の遺物はありません</p>

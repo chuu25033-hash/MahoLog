@@ -65,7 +65,7 @@ export const STAGES: Stage[] = [
   { id: 2, name: "樹海の図書室", requiredHours: 10, description: "苔むした書架が森に溶け込む秘密の図書室", gradient: "from-emerald-300/12 via-teal-400/[0.03] to-transparent" },
   { id: 3, name: "星空の観測塔", requiredHours: 30, description: "星の運行から魔力の流れを読み解く塔", gradient: "from-indigo-300/14 via-violet-400/[0.04] to-transparent" },
   { id: 4, name: "蒼氷の大回廊", requiredHours: 60, description: "凍てつく静寂が集中を研ぎ澄ます回廊", gradient: "from-sky-200/12 via-cyan-300/[0.04] to-transparent" },
-  { id: 5, name: "紅蓮の魔導炉", requiredHours: 100, description: "膨大な魔力を練り上げる灼熱の炉", gradient: "from-rose-300/10 via-orange-300/[0.03] to-transparent" },
+  { id: 5, name: "紅蓮の魔導炉", requiredHours: 100, description: "落ちた星を薪に、膨大な魔力を練り上げる炉", gradient: "from-rose-300/10 via-orange-300/[0.03] to-transparent" },
   { id: 6, name: "天空の大聖堂", requiredHours: 200, description: "秘術を解き明かした者だけが辿り着く雲上の聖域", gradient: "from-amber-100/14 via-violet-300/[0.05] to-transparent" },
 ];
 

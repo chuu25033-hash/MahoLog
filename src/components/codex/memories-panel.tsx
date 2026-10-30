@@ -40,7 +40,7 @@ export function MemoriesPanel({ data }: { data: UserData }) {
         </span>
       </h2>
       <p className="mb-3 text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
-        各ステージの宝箱に眠る古代文書の断片（I〜IV）を集め、4葉が揃えば復元できます。復元した文書1冊ごとに、全属性の獲得MPが永久に +1% されます
+        各ステージに降る流れ星が運ぶ古代文書の断片（I〜IV）を集め、4葉が揃えば復元できます。復元した文書1冊ごとに、全属性の獲得MPが永久に +1% されます
       </p>
       <ul className="grid grid-cols-3 gap-2 portrait:grid-cols-1">
         {DOCUMENTS.map((doc) => (

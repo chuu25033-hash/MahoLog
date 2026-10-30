@@ -79,7 +79,7 @@ export function ChapterReveal({ chapter }: { chapter: Chapter }) {
   const theme = THEME_LABEL[chapter.theme];
   const gifts = [
     `周天の刻印 — 全属性の獲得MP ×${Number(cycleMarkMultiplier(chapter.cycle).toFixed(2))}`,
-    ...(skin ? [`魔法陣スキン『${skin.name}』を授かった`] : []),
+    ...(skin ? [`魔法陣の意匠『${skin.name}』を授かった`] : []),
     `UI の色調「${theme.name}」が開かれた（設定から切り替えられます）`,
     ...(chapter.loreVariant ? [`各エリアの伝承の品が${chapter.loreVariant === "shadow" ? "〈影〉" : "〈蒼炎〉"}の姿に変わり、裏の物語が読めるようになる`] : []),
   ];
@@ -144,7 +144,7 @@ export function ZenithPanel({ climb }: { climb: ZenithClimb }) {
                 <p className="text-sm tracking-[0.15em]">{item.kind === "title" ? `【${item.name}】` : `『${item.name}』`}</p>
                 <p className="text-[11px] text-muted-foreground [word-break:auto-phrase]">
                   {item.effect}
-                  {isNew && " ・図鑑に登録された"}
+                  {isNew && " ・図鑑に記された"}
                 </p>
               </div>
             </div>

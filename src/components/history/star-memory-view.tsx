@@ -604,9 +604,9 @@ function NightDetail({ night }: { night: ObservedNight }) {
           </section>
 
           <section>
-            <h3 className="mb-1.5 text-xs tracking-[0.2em] whitespace-nowrap text-muted-foreground">宝箱から見つかった品</h3>
+            <h3 className="mb-1.5 text-xs tracking-[0.2em] whitespace-nowrap text-muted-foreground">流れ星が遺した品</h3>
             {night.drops.length === 0 ? (
-              <p className="text-[11px] tracking-wider text-muted-foreground/70">この夜の宝箱は空でした</p>
+              <p className="text-[11px] tracking-wider text-muted-foreground/70">この夜、流れ星は降りませんでした</p>
             ) : (
               <ul className="flex flex-col gap-1.5">
                 {night.drops.map((item, i) => (

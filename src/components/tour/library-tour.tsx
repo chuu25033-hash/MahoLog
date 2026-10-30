@@ -65,7 +65,7 @@ const STEPS: Step[] = [
     target: "worldlines",
     title: "結びし世界線",
     label: "BOUND WORLDLINES",
-    body: "友と世界線を結び、互いの探求の気配を静かに感じられます。順位を競うことはありません。",
+    body: "遠い世界線の観測者と結ばれ、互いの探求の気配を静かに感じられます。順位を競うことはありません。",
   },
   {
     target: "settings",

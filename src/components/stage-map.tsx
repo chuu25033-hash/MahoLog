@@ -380,7 +380,7 @@ function AreaPanel({ area, totalMp, current }: { area: Area; totalMp: number; cu
               </p>
             </div>
             <div className="border-t border-white/10 pt-2">
-              <p className="mb-1 text-muted-foreground">宝箱のドロップ率</p>
+              <p className="mb-1 text-muted-foreground">流れ星の降る確率</p>
               <ul className="space-y-0.5">
                 {RARITIES.map((r) => (
                   <li key={r} className="flex justify-between">

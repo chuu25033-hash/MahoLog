@@ -210,7 +210,7 @@ function ResultPanel({
           <span className="burst-ring size-16" />
           <span className="burst-ring size-16 [animation-delay:300ms]" />
           <p className="mp-glow font-display text-5xl text-starlight-gradient short:text-4xl">+{result.gainedMp} MP</p>
-          <p className="animate-float-up text-lg tracking-[0.4em] text-glow-gold [animation-delay:200ms]">獲得！</p>
+          <p className="animate-float-up text-lg tracking-[0.4em] text-glow-gold [animation-delay:200ms]">授かりし魔力</p>
         </div>
         {(result.areaBoost > 1 || result.blessing > 1 || result.catalyst || result.cycleMark > 1) && (
           <p className="animate-in text-[11px] tracking-wider text-muted-foreground fade-in duration-700">
@@ -315,13 +315,13 @@ function LevelPanel({ beforeLevel, afterMp }: { beforeLevel: number; afterMp: nu
   return (
     <div className="flex flex-col items-center gap-3 py-2 text-center">
       <DialogTitle className="font-display text-xs font-normal tracking-[0.5em] whitespace-nowrap text-starlight/80">
-        <span className="-mr-[0.5em]">LEVEL UP</span>
+        <span className="-mr-[0.5em]">INSIGHT DEEPENS</span>
       </DialogTitle>
       <div className="relative flex items-center gap-4 py-2 whitespace-nowrap">
         <span className="burst-ring size-20" />
-        <span className="font-display text-3xl text-muted-foreground">Lv.{beforeLevel}</span>
+        <span className="font-display text-3xl text-muted-foreground">{beforeLevel}</span>
         <ChevronRight className="size-5 text-starlight/70" strokeWidth={1.25} />
-        <span className="mp-glow font-display text-5xl text-starlight-gradient">Lv.{progress.level}</span>
+        <span className="mp-glow font-display text-5xl text-starlight-gradient">{progress.level}</span>
       </div>
       <DialogDescription className="tracking-[0.2em]">探求度が高まった</DialogDescription>
       <div className="w-full max-w-64">
@@ -367,10 +367,10 @@ function UnlockPanel({ areas }: { areas: Area[] }) {
     <div className="flex flex-col items-center gap-3 py-2 text-center">
       <DialogTitle className="flex items-center gap-1.5 font-display text-xs font-normal tracking-[0.4em] whitespace-nowrap text-aqua/90">
         <MapPinned className="size-4" strokeWidth={1.25} />
-        <span className="-mr-[0.4em]">{newStage ? "STAGE UNLOCKED" : "AREA UNLOCKED"}</span>
+        <span className="-mr-[0.4em]">{newStage ? "THE SEAL IS BROKEN" : "A NEW PATH OPENS"}</span>
       </DialogTitle>
       <DialogDescription className="tracking-[0.2em]">
-        {newStage ? "新たなステージへの道が開かれた" : "新たなエリアへ足を踏み入れられる"}
+        {newStage ? "封印が解け、奥地への道が開かれた" : "新たな地へ足を踏み入れられる"}
       </DialogDescription>
       <div className="flex w-full flex-col gap-2">
         {areas.map((area) => {
@@ -419,7 +419,7 @@ function DropReveal({
         type="button"
         onClick={onOpen}
         disabled={opened}
-        aria-label="宝箱を開ける"
+        aria-label="流れ星に触れる"
         className={cn("relative size-20 short:size-16", !opened && "chest-shake cursor-pointer")}
       >
         <TreasureChest open={opened} className={cn("absolute inset-0 transition-opacity duration-500", opened && drop && "opacity-25")} />
@@ -433,7 +433,7 @@ function DropReveal({
           />
         )}
       </button>
-      {!opened && <p className="text-[11px] tracking-[0.3em] text-starlight/70 glimmer">宝箱を見つけた…タップして開ける</p>}
+      {!opened && <p className="text-[11px] tracking-[0.3em] text-starlight/70 glimmer">流れ星が降りた…触れて受け取る</p>}
       {opened &&
         (drop ? (
           <div className="flex animate-in flex-col items-center gap-0.5 fade-in duration-1000">
@@ -446,12 +446,12 @@ function DropReveal({
             <span className="text-[11px] text-muted-foreground">
               {drop.item.kind === "lore"
                 ? drop.isNew
-                  ? "図鑑に新しく登録された"
-                  : "図鑑に登録済みの品だ"
+                  ? "魔導図鑑に新たに記された"
+                  : "すでに図鑑に記された品だ"
                 : drop.item.kind === "skin"
                   ? drop.isNew
                     ? `${drop.item.effect}（図鑑から適用できます）`
-                    : "既に所持しているスキンだ"
+                    : "すでに纏える意匠だ"
                   : drop.item.kind === "relic"
                     ? drop.isNew
                       ? `${drop.item.effect}の加護を得た`
@@ -465,7 +465,7 @@ function DropReveal({
           </div>
         ) : (
           <p className="text-[11px] tracking-wider text-muted-foreground">
-            宝箱は空だった…（{area.name}を探索し続けよう）
+            この夜、{area.name}に流れ星は降りなかった
           </p>
         ))}
     </div>

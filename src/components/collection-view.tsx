@@ -86,7 +86,7 @@ export function CollectionView() {
               <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">ARCANE CODEX</span>
             </h1>
             <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">
-              宝箱や星天の導きで見つけた遺物を解読し、古代文書を復元し、錬成陣で神話の遺物を生み出します
+              流れ星や星天の導きで授かった遺物を解読し、古代文書を復元し、錬成陣で神話の遺物を生み出します
             </p>
           </div>
         </div>
@@ -251,15 +251,15 @@ function originHint(item: Item) {
   if (item.kind === "lore") {
     const area = findArea(item.areaId);
     const chapter = item.variant === "shadow" ? "（2周目・影の章）" : item.variant === "azure" ? "（3周目以降・蒼炎の章）" : "";
-    return `AREA ${item.areaId} ${area?.name ?? ""}の宝箱${chapter}`;
+    return `AREA ${item.areaId} ${area?.name ?? ""}に降る流れ星${chapter}`;
   }
   if (item.kind === "title" || (item.kind === "relic" && item.zenithFloor)) return `星天の塔 ${item.zenithFloor}層への到達`;
   if (item.kind === "skin" && item.cycle) return `${chapterOf(item.cycle).name}の幕開け（${item.cycle}周目へ進む）`;
-  if (item.kind === "catalyst") return GUIDANCE_CATALYSTS.includes(item) ? "星天の導き" : "各エリアの宝箱";
+  if (item.kind === "catalyst") return GUIDANCE_CATALYSTS.includes(item) ? "星天の導き" : "各エリアに降る流れ星";
   if (item.kind === "material") return "遺物の還元";
   if (item.kind === "relic" && item.recipe) return `錬成陣（星屑の原石 ${item.recipe.ore}・${recipeRelics(item).map((r) => `『${r.name}』`).join("")}）`;
   const stage = STAGES.find((s) => s.id === item.stageId);
-  return `STAGE ${item.stageId}「${stage?.name ?? ""}」以降の宝箱`;
+  return `STAGE ${item.stageId}「${stage?.name ?? ""}」以降に降る流れ星`;
 }
 
 /** 遺物の解読ダイアログ: 回転する魔法陣の上で、ラインアートがゆっくり浮遊する */
@@ -319,7 +319,7 @@ function DecipherDialog({ item, data, onClose }: { item: Item; data: UserData; o
             variant={data.equipment.skinId === item.id ? "outline" : "default"}
             onClick={() => userActions.setSkin(data.equipment.skinId === item.id ? null : item.id)}
           >
-            <Paintbrush /> {data.equipment.skinId === item.id ? "標準に戻す" : "このスキンを適用"}
+            <Paintbrush /> {data.equipment.skinId === item.id ? "標準に戻す" : "この意匠を纏う"}
           </Button>
         )}
         {owned && item.kind === "catalyst" && (
@@ -345,7 +345,7 @@ function DecipherDialog({ item, data, onClose }: { item: Item; data: UserData; o
           <p className="text-center text-[11px] tracking-[0.2em] text-starlight/80 [word-break:auto-phrase]">
             {hasItem(data, item.id)
               ? "所持しているあいだ、加護が働き続けます"
-              : "錬成陣に捧げたため、いまは手元にありません（宝箱で再び見つかれば加護が戻ります）"}
+              : "錬成陣に捧げたため、いまは手元にありません（流れ星が再び運べば加護が戻ります）"}
           </p>
         )}
       </DialogContent>
