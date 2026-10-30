@@ -1128,21 +1128,22 @@ body {
 
 /* 線にほのかな光をまとわせ、全体をゆっくり脈打たせる */
 .prologue-pulse {
-  filter: drop-shadow(0 0 3px rgba(226, 201, 116, 0.45));
+  filter: drop-shadow(0 0 2px rgba(240, 228, 190, 0.18));
   animation: prologue-pulse 5.5s ease-in-out infinite;
 }
 
 @keyframes prologue-pulse {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.32; }
+  50% { opacity: 0.58; }
 }
 
 /* 主陣はゆっくり巡り、奥の層は迫り、中の層は逆へ漂って奥行きを生む */
 .prologue-spin,
 .prologue-mid,
 .prologue-far {
+  /* view-box では基準の左上が座標の原点に来るので、原点（魔法陣の中心）を軸にする */
   transform-box: view-box;
-  transform-origin: center;
+  transform-origin: 0 0;
 }
 
 .prologue-spin { animation: prologue-spin 120s linear infinite; }
@@ -1173,6 +1174,7 @@ body {
   .prologue-spin,
   .prologue-mid,
   .prologue-far { animation: none; }
+  .prologue-pulse { opacity: 0.45; }
 }
 
 [data-lite] .prologue-spin,

@@ -37,7 +37,7 @@ type Phase = "waiting" | "playing" | "closing";
 /**
  * 初回のプロローグ（創世の記録）。飛ばせず、触れても進まない。
  * 暗闇に 1px の魔法陣が脈打ちながら描かれ、四つの節が静かに浮かんでは消える。
- * 縦持ちのスマホは魔法陣を上に小さく、文字を下に。PC・横画面は魔法陣を画面いっぱいに広げ、文字を中央に置く。
+ * 縦持ちのスマホは主陣を上寄りに置いて文字を下に、PC・横画面は魔法陣を左右に広げて文字を中央に置く。
  * 見届けると印を残し、onDone を呼ぶ
  */
 export function Prologue({ onDone }: { onDone?: () => void }) {
@@ -129,22 +129,34 @@ export function Prologue({ onDone }: { onDone?: () => void }) {
   );
 }
 
-/** 縦持ち: 魔法陣を上にコンパクトに、文字を中央下に読みやすく */
+/**
+ * 縦持ち: PC と同じ三層の魔法陣を、主陣が画面の上寄りに来るよう置き、副陣と楕円は縦に伸ばす。
+ * 文字は中央下に、下へ向かって暗くした闇の上で読ませる
+ */
 function PortraitStage({ line }: { line: number | null }) {
   return (
-    <div className="flex h-full flex-col items-center px-8 pt-[calc(env(safe-area-inset-top)+10dvh)] pb-[calc(env(safe-area-inset-bottom)+8dvh)]">
+    <>
       <svg
-        viewBox="-200 -200 400 400"
-        className="prologue-pulse size-[min(68vw,36dvh)] shrink-0 text-starlight"
+        viewBox="-450 -620 900 1600"
+        preserveAspectRatio="xMidYMid slice"
+        className="prologue-pulse absolute inset-0 size-full text-[#e6dcb8]"
         fill="none"
         aria-hidden
       >
-        <g className="prologue-spin">{COMPACT_SIGIL}</g>
+        <g transform="rotate(90)">
+          <g className="prologue-far">{FAR_LAYER}</g>
+          <g className="prologue-mid">{MID_LAYER}</g>
+        </g>
+        <g className="prologue-spin">{CORE_LAYER}</g>
       </svg>
-      <div className="relative mt-[6dvh] flex w-full flex-1 items-center justify-center">
+      <div
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,transparent_45%,rgba(3,5,11,0.88)_66%,rgba(3,5,11,0.88)_84%,transparent)]"
+        aria-hidden
+      />
+      <div className="absolute inset-x-0 top-[62%] bottom-[8%] flex items-center justify-center px-8 pb-[env(safe-area-inset-bottom)]">
         <Lines line={line} className="text-[15px] leading-[2.2] tracking-[0.2em]" />
       </div>
-    </div>
+    </>
   );
 }
 
@@ -155,7 +167,7 @@ function WideStage({ line }: { line: number | null }) {
       <svg
         viewBox="-800 -450 1600 900"
         preserveAspectRatio="xMidYMid slice"
-        className="prologue-pulse absolute inset-0 size-full text-starlight"
+        className="prologue-pulse absolute inset-0 size-full text-[#e6dcb8]"
         fill="none"
         aria-hidden
       >
@@ -233,44 +245,37 @@ function draw(shapes: Shape[], start: number, span: number, opacity = 1): ReactN
       "--draw-delay": `${start + (shapes.length > 1 ? (i / (shapes.length - 1)) * span : 0)}s`,
       opacity,
     } as CSSProperties;
-    const key = `${start}-${i}`;
-    const common = {
-      className: "prologue-draw",
-      stroke: "currentColor",
-      strokeWidth: 1,
-      vectorEffect: "non-scaling-stroke" as const,
-      pathLength: 1,
-      style,
-    };
-    switch (s.kind) {
-      case "circle":
-        return <circle key={key} {...common} cx={s.cx ?? 0} cy={s.cy ?? 0} r={s.r} />;
-      case "ellipse":
-        return <ellipse key={key} {...common} rx={s.rx} ry={s.ry} />;
-      case "line":
-        return <line key={key} {...common} x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} />;
-      case "polygon":
-        return <polygon key={key} {...common} points={s.points.map((p) => p.join(",")).join(" ")} />;
-    }
+    return (
+      <path
+        key={`${start}-${i}`}
+        d={pathOf(s)}
+        className="prologue-draw"
+        stroke="currentColor"
+        strokeWidth={1}
+        vectorEffect="non-scaling-stroke"
+        pathLength={1}
+        style={style}
+      />
+    );
   });
 }
 
-const circles = (...rs: number[]): Shape[] => rs.map((r) => ({ kind: "circle", r }));
+/** 図形を path に直す（pathLength は path がどのブラウザでもいちばん確かに効く） */
+function pathOf(s: Shape) {
+  switch (s.kind) {
+    case "circle":
+    case "ellipse": {
+      const [cx, cy, rx, ry] = s.kind === "circle" ? [s.cx ?? 0, s.cy ?? 0, s.r, s.r] : [0, 0, s.rx, s.ry];
+      return `M${cx - rx},${cy}A${rx},${ry} 0 1 1 ${cx + rx},${cy}A${rx},${ry} 0 1 1 ${cx - rx},${cy}Z`;
+    }
+    case "line":
+      return `M${s.x1},${s.y1}L${s.x2},${s.y2}`;
+    case "polygon":
+      return `M${s.points.map((p) => p.join(",")).join("L")}Z`;
+  }
+}
 
-/** 縦持ち用: 小さくまとめた一つの魔法陣 */
-const COMPACT_SIGIL = [
-  ...draw(circles(180, 172), 0, 0.6),
-  ...draw(circles(132, 96, 40), 0.6, 1.2),
-  ...draw([{ kind: "polygon", points: ring(3, 132) }, { kind: "polygon", points: ring(3, 132, 60) }], 1.4, 0.5),
-  ...draw(rays(12, 96, 132, 15), 2, 1.2, 0.7),
-  ...draw(rays(24, 172, 180), 2.6, 1, 0.8),
-  ...draw(
-    ring(6, 132).map(([cx, cy]) => ({ kind: "circle", cx, cy, r: 9 })),
-    3,
-    0.8,
-  ),
-  ...draw([{ kind: "polygon", points: star(8, 3, 40) }], 3.4, 0, 0.8),
-];
+const circles = (...rs: number[]): Shape[] => rs.map((r) => ({ kind: "circle", r }));
 
 /** 横画面の奥の層: 画面を横切る楕円と、四隅へ伸びる光の筋 */
 const FAR_LAYER = [
