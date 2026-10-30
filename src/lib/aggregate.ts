@@ -24,7 +24,7 @@ export function dashboardSummary(profile: Profile, subjects: Subject[], logs: St
   const active = subjects.filter((s) => s.is_active);
   const week = startOfJstWeek(now);
   const month = startOfJstMonth(now);
-  const recent = [...logs].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 5);
+  const recent = [...logs].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 6);
 
   return {
     profile,

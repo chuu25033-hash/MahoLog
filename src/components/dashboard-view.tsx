@@ -255,12 +255,12 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
 
           {/* 右: 詠唱開始 & 詠唱の記憶 */}
           <section className="col-span-3 flex min-h-0 flex-col gap-3 short:gap-2">
-            {/* 詠唱の扉を大きく取り、記憶は直近の数件に絞る */}
-            <ChantButton className="min-h-32 flex-1 text-lg short:min-h-0 short:flex-none short:text-base" />
+            {/* 詠唱の扉は大きく取りつつ上限を設け、残りの高さに記憶を収まるだけ並べる */}
+            <ChantButton className="max-h-[36dvh] min-h-32 flex-[1.4] text-lg short:min-h-0 short:flex-none short:text-base" />
 
             {codexButton}
 
-            {memoryCard(3, "shrink-0")}
+            {memoryCard(6, "flex-1 overflow-hidden")}
           </section>
         </div>
       </div>
