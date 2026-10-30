@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { isEmailAuthMode, supabaseKey, supabaseUrl } from "./config";
+import { isCloudSyncEnabled, isEmailAuthMode, supabaseKey, supabaseUrl } from "./config";
 
 // "/" はタイトル画面（誰でも閲覧可）
 const LANDING_PATH = "/";
@@ -8,7 +8,8 @@ const AUTH_PATHS = ["/login"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
-  if (!isEmailAuthMode) return response;
+  // Supabase 未接続（デモモード）では何もしない
+  if (!isEmailAuthMode && !isCloudSyncEnabled) return response;
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
@@ -26,7 +27,10 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
+  // ログインの期限が近ければここで更新する（cookie の書き換えは setAll が担う）
   const { data } = await supabase.auth.getClaims();
+  // Google ログイン（クラウド同期）はログインしなくても使えるので、画面の行き来は制限しない
+  if (!isEmailAuthMode) return response;
   const { pathname } = request.nextUrl;
   const isAuthPage = AUTH_PATHS.some((p) => pathname.startsWith(p));
 

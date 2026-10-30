@@ -4,7 +4,9 @@ import { useEffect, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArcaneLogo } from "@/components/arcane-icons";
+import { GoogleSignInButton } from "@/components/observer/google-sign-in";
 import { RestoreDialog } from "@/components/observer/observer-id";
+import { useObserver } from "@/lib/cloud-sync";
 import { VEIL_COVER_MS, coverScreen } from "@/components/transition-veil";
 import { pendingGuidance } from "@/lib/celestial-guidance";
 import { soundManager } from "@/lib/sound/sound-manager";
@@ -44,6 +46,7 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
   const [leaving, setLeaving] = useState(false);
   const [burst, setBurst] = useState(0);
   const [restoreOpen, setRestoreOpen] = useState(false);
+  const observer = useObserver();
 
   useEffect(() => {
     router.prefetch(DESTINATION);
@@ -197,10 +200,17 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
               ログイン / 新規登録
             </Link>
           ) : isCloudSyncEnabled ? (
-            // 別の端末で始めた旅を、観測者IDで呼び戻す
-            <button type="button" onClick={() => setRestoreOpen(true)} className="transition-colors hover:text-starlight">
-              世界線の復元（ログイン）
-            </button>
+            observer?.account ? (
+              <p>ログイン中 · {observer.account.email ?? "Google アカウント"}</p>
+            ) : (
+              // Google でログインすれば、別の端末で始めた旅もそのまま続けられる。観測者IDでの復元も残しておく
+              <div className="flex flex-col items-center gap-3">
+                <GoogleSignInButton next="/" className="w-60" />
+                <button type="button" onClick={() => setRestoreOpen(true)} className="transition-colors hover:text-starlight">
+                  観測者IDで世界線を復元する
+                </button>
+              </div>
+            )
           ) : (
             <button type="button" onClick={() => start()} className="transition-colors hover:text-starlight">
               デモモードで詠唱する（サンプルデータ）

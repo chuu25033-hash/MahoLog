@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Check, CloudOff, Copy, KeyRound, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, CloudOff, Copy, KeyRound, LogOut, RefreshCw, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { normalizeObserverId, restoreFromObserverId, syncNow, useObserver, type SyncStatus } from "@/lib/cloud-sync";
+import { normalizeObserverId, restoreFromObserverId, signOutAccount, syncNow, useObserver, type ObserverState, type SyncStatus } from "@/lib/cloud-sync";
 import { isCloudSyncEnabled } from "@/lib/supabase/config";
 import { cn } from "@/lib/utils";
+import { GoogleSignInButton } from "./google-sign-in";
 
 const STATUS_LABEL: Record<SyncStatus, { text: string; tone: string }> = {
   disabled: { text: "クラウド未接続（この端末にのみ保存）", tone: "text-muted-foreground" },
@@ -17,13 +19,32 @@ const STATUS_LABEL: Record<SyncStatus, { text: string; tone: string }> = {
   error: { text: "同期できませんでした", tone: "text-destructive" },
 };
 
-/** 設定画面: 観測者IDの確認・コピーと、同期の状態。別端末からの「世界線の復元」もここから */
+/** 同期の状態（失敗したときは再試行できる） */
+function SyncStatusLine({ status }: { status: SyncStatus }) {
+  const label = STATUS_LABEL[status];
+  return (
+    <p className={cn("mt-1.5 flex items-center gap-1 text-[11px] tracking-wider", label.tone)}>
+      {status === "disabled" ? <CloudOff className="size-3 shrink-0" /> : <RefreshCw className={cn("size-3 shrink-0", status === "syncing" && "animate-spin")} />}
+      {label.text}
+      {(status === "error" || status === "offline") && (
+        <button type="button" className="ml-auto underline-offset-2 hover:underline" onClick={() => void syncNow()}>
+          再試行
+        </button>
+      )}
+    </p>
+  );
+}
+
+/**
+ * 設定画面: 記録の預け先。Google でログインしていればアカウント、していなければ観測者ID（確認・コピーと
+ * 別端末からの「世界線の復元」）と、Google ログインへの入口
+ */
 export function ObserverIdField() {
   const observer = useObserver();
   const [copied, setCopied] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
   if (!observer) return null;
-  const status = STATUS_LABEL[observer.status];
+  if (observer.account) return <AccountField observer={observer} />;
 
   async function copy() {
     if (!observer) return;
@@ -51,22 +72,84 @@ export function ObserverIdField() {
           {copied ? <Check /> : <Copy />}
         </Button>
       </div>
-      <p className={cn("mt-1.5 flex items-center gap-1 text-[11px] tracking-wider", status.tone)}>
-        {observer.status === "disabled" ? <CloudOff className="size-3" /> : <RefreshCw className={cn("size-3", observer.status === "syncing" && "animate-spin")} />}
-        {status.text}
-        {(observer.status === "error" || observer.status === "offline") && (
-          <button type="button" className="ml-auto underline-offset-2 hover:underline" onClick={() => void syncNow()}>
-            再試行
-          </button>
-        )}
-      </p>
+      <SyncStatusLine status={observer.status} />
       <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
         別の端末やブラウザでこの ID を入力すると、探求の記録をそのまま引き継げます。ID を知る人は誰でも記録を開けるので、他の人には教えないでください。
       </p>
       <Button variant="secondary" size="sm" className="mt-2.5 w-full" disabled={!isCloudSyncEnabled} onClick={() => setRestoreOpen(true)}>
-        <KeyRound /> 世界線の復元（ログイン）
+        <KeyRound /> 観測者IDで世界線を復元
       </Button>
       {restoreOpen && <RestoreDialog onClose={() => setRestoreOpen(false)} onRestored={() => window.location.reload()} />}
+      {isCloudSyncEnabled && (
+        <div className="mt-3 border-t border-white/10 pt-3">
+          <p className="mb-2 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
+            Google でログインすると、ID を覚えなくても別の端末で記録を引き継げます。他の人に記録を開かれることもありません。
+          </p>
+          <GoogleSignInButton size="sm" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Google でログイン中: アカウントと同期の状態、ログアウト */
+function AccountField({ observer }: { observer: ObserverState }) {
+  const router = useRouter();
+  const [confirm, setConfirm] = useState<"closed" | "open" | "unsynced">("closed");
+  const [busy, setBusy] = useState(false);
+
+  async function signOut(force = false) {
+    setBusy(true);
+    const result = await signOutAccount({ force });
+    setBusy(false);
+    if (result === "unsynced") {
+      setConfirm("unsynced");
+      return;
+    }
+    // 端末の記録は初期化済み（各画面は保存データの変更をそのまま反映する）。タイトルへ戻る
+    router.push("/");
+  }
+
+  return (
+    <div className="rounded-xl border border-starlight/25 bg-starlight/[0.03] p-3">
+      <p className="flex items-center gap-1.5 text-sm tracking-wider whitespace-nowrap">
+        <UserRound className="size-4 shrink-0 text-starlight" strokeWidth={1.25} />
+        <span className="flex flex-col leading-tight">
+          アカウント
+          <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60">ACCOUNT</span>
+        </span>
+      </p>
+      <p className="mt-2 rounded-lg border border-white/10 bg-black/20 px-2.5 py-1.5 text-center text-sm tracking-wider [overflow-wrap:anywhere]">
+        {observer.account?.email ?? "Google アカウント"}
+      </p>
+      <SyncStatusLine status={observer.status} />
+      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
+        探求の記録はこのアカウントに預けています。別の端末でも同じアカウントでログインすれば、記録をそのまま引き継げます。
+      </p>
+      <Button variant="outline" size="sm" className="mt-2.5 w-full" onClick={() => setConfirm("open")}>
+        <LogOut /> ログアウト
+      </Button>
+
+      <Dialog open={confirm !== "closed"} onOpenChange={(open) => !open && !busy && setConfirm("closed")}>
+        <DialogContent className="max-w-[min(28rem,calc(100%-2rem))]!">
+          <DialogHeader>
+            <DialogTitle className="tracking-[0.2em]">ログアウトしますか？</DialogTitle>
+            <DialogDescription className="[word-break:auto-phrase]">
+              {confirm === "unsynced"
+                ? "まだアカウントに預け終えていない変更があります。このままログアウトすると、その変更は失われます。"
+                : "この端末からは探求の記録を消して、はじまりの状態に戻ります。記録はアカウントに残っているので、もう一度ログインすれば戻れます。"}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" disabled={busy} onClick={() => setConfirm("closed")}>
+              やめる
+            </Button>
+            <Button variant={confirm === "unsynced" ? "destructive" : "secondary"} disabled={busy} onClick={() => signOut(confirm === "unsynced")}>
+              <LogOut /> {busy ? "預けています…" : confirm === "unsynced" ? "変更を捨ててログアウト" : "ログアウトする"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
