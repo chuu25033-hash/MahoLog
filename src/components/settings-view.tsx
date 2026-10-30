@@ -1,5 +1,6 @@
 "use client";
 
+import { WhisperText, whisperHost } from "@/components/whisper";
 import { useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, BookOpen, Check, Compass, FlaskConical, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
@@ -93,8 +94,8 @@ export function SettingsView({
                   onClick={() => userActions.setAvatar(id)}
                   aria-pressed={id === userProfile.avatar}
                   aria-label={name}
-                  title={name}
                   className={cn(
+                    whisperHost,
                     "rounded-full transition-all duration-300",
                     id === userProfile.avatar ? "opacity-100" : "opacity-45 grayscale-[0.4] hover:opacity-80",
                   )}
@@ -103,6 +104,7 @@ export function SettingsView({
                     avatar={id}
                     className={cn("size-10 short:size-8", id !== userProfile.avatar && "shadow-none ring-white/15")}
                   />
+                  <WhisperText text={name} />
                 </button>
               ))}
             </div>
@@ -139,8 +141,8 @@ export function SettingsView({
                     key={theme}
                     onClick={() => userActions.updateSettings({ chapterTheme: theme })}
                     aria-pressed={theme === settings.chapterTheme}
-                    title={THEME_LABEL[theme].description}
                     className={cn(
+                      whisperHost,
                       "flex items-center justify-center gap-1.5 rounded-xl border py-1.5 text-xs tracking-[0.2em] transition-all duration-300",
                       theme === settings.chapterTheme
                         ? "border-starlight/55 bg-starlight/[0.08] text-starlight"
@@ -152,6 +154,7 @@ export function SettingsView({
                       style={{ background: THEME_LABEL[theme].swatch, boxShadow: `0 0 6px ${THEME_LABEL[theme].swatch}` }}
                     />
                     {THEME_LABEL[theme].name}
+                    <WhisperText text={THEME_LABEL[theme].description} />
                   </button>
                 ))}
               </div>

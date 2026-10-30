@@ -1,5 +1,6 @@
 "use client";
 
+import { WhisperText, whisperHost } from "@/components/whisper";
 import { useState } from "react";
 import { BookOpenText, Check, ScrollText } from "lucide-react";
 import { ItemArt } from "@/components/item-art";
@@ -111,15 +112,16 @@ function DocumentCard({
           return (
             <span
               key={f.id}
-              title={f.name}
               className={cn(
-                "relative flex h-7 items-center justify-center rounded-md border font-display text-[11px] tracking-wider transition-colors duration-500",
+                whisperHost,
+                "flex h-7 items-center justify-center rounded-md border font-display text-[11px] tracking-wider transition-colors duration-500",
                 lit ? "bg-white/[0.04]" : "border-white/10 text-white/20",
               )}
               style={lit ? { borderColor: `${doc.color}80`, color: doc.color, textShadow: `0 0 8px ${doc.color}80` } : undefined}
             >
               {ROMAN[i]}
               {count > 1 && <span className="absolute -top-1.5 -right-1 font-display text-[9px] text-aqua">×{count}</span>}
+              <WhisperText text={f.name} />
             </span>
           );
         })}

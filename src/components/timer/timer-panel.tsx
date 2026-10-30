@@ -9,6 +9,7 @@ import { ItemArt } from "@/components/item-art";
 import { MagicCircle } from "@/components/magic-circle";
 import { SubjectPicker } from "@/components/subject-picker";
 import { SubjectRuneChip } from "@/components/subject-rune-chip";
+import { WhisperText, whisperHost } from "@/components/whisper";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -457,8 +458,8 @@ export function TimerPanel({
                 key={c.id}
                 disabled={locked}
                 onClick={() => userActions.armCatalyst(armed ? null : c.id)}
-                title={c.effect}
                 className={cn(
+                  whisperHost,
                   "flex items-center gap-1 rounded-full border py-0.5 pr-2 pl-0.5 text-[11px] transition-all duration-300 disabled:opacity-50",
                   armed
                     ? "border-starlight/55 bg-starlight/[0.08] text-starlight shadow-[0_0_10px_-3px_rgba(226,201,116,0.5)]"
@@ -468,6 +469,7 @@ export function TimerPanel({
                 <ItemArt icon={c.svgIcon} rarity={c.rarity} color={c.color} seed={c.id} className="size-5" />
                 ×{c.multiplier}
                 <span className="text-[10px] opacity-70">({data.inventory[c.id]})</span>
+                <WhisperText text={`${c.name}：${c.effect}`} side="top" />
               </button>
             );
           })}

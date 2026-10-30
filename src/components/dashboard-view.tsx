@@ -10,6 +10,7 @@ import { MpBar } from "@/components/mp-bar";
 import { KeyBackupReminder } from "@/components/observer/key-backup";
 import { LibraryTour } from "@/components/tour/library-tour";
 import { PageLoading } from "@/components/page-loading";
+import { WhisperText, whisperHost } from "@/components/whisper";
 import { RadarPanel } from "@/components/radar-panel";
 import { ShareRecordButton } from "@/components/share-record";
 import { StageCard } from "@/components/stage-card";
@@ -17,7 +18,7 @@ import { TrialsDialog, readyCount } from "@/components/trials-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { WizardAvatar } from "@/components/wizard-avatar";
-import { RankSigil } from "@/components/arcane-icons";
+import { ArrowGlyph, RankSigil } from "@/components/arcane-icons";
 import { dashboardSummary, type DashboardSummary } from "@/lib/aggregate";
 import { cycleLabel } from "@/lib/cycles";
 import { formatMinutes, levelProgress, rankOf } from "@/lib/game";
@@ -26,6 +27,7 @@ import { activeSubjectsOf } from "@/lib/subjects";
 import { usePortraitPhone } from "@/lib/use-portrait-phone";
 import type { Subject } from "@/lib/types";
 import { equippedTitle, localProfile, localStudyLogs, useStoredUserData, userActions, useUserData } from "@/lib/user-store";
+import { GLYPHS, type Glyph } from "@/lib/glyphs";
 import { cn } from "@/lib/utils";
 
 const MODE_LABEL = { pomodoro: "律動の詠唱", stopwatch: "無窮の詠唱" } as const;
@@ -68,9 +70,10 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
     <Card data-tour="profile" className="shrink-0 gap-3 px-4 compact:gap-2 compact:py-3 short:py-2">
       <div className="flex items-center gap-3">
         {/* 巡り終えた周天の数だけ、周回リングが外周を回る */}
-        <div className="relative shrink-0" title={laps > 0 ? `${cycleLabel(data.cycle.count)}（${laps}周を巡り終えた）` : undefined}>
+        <div className={cn(whisperHost, "shrink-0")}>
           <WizardAvatar avatar={profile.avatar_url} className="short:size-9" />
           <CycleRings laps={laps} className="absolute -inset-2" />
+          {laps > 0 && <WhisperText text={`${cycleLabel(data.cycle.count)}（${laps}周を巡り終えた）`} />}
         </div>
         <div className="min-w-0">
           <p className="text-base tracking-wider">
@@ -161,18 +164,27 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
     <Link
       href="/collection"
       data-tour="codex"
-      className={cn(buttonVariants({ variant: "outline" }), "h-auto shrink-0 justify-start gap-2 rounded-2xl px-3 py-2 text-sm tracking-[0.2em]")}
+      className={cn(
+        buttonVariants({ variant: "outline" }),
+        "group relative h-auto shrink-0 justify-start gap-3 overflow-hidden rounded-2xl px-4 py-4 text-base tracking-[0.2em] compact:py-2.5 short:py-2",
+      )}
     >
-      <BookMarked className="size-4 text-starlight" strokeWidth={1.25} />
-      <span className="flex flex-col items-start leading-tight">
+      <CornerMarks />
+      <BackdropGlyph glyph="tome" className="-right-[6%] top-1/2 size-[130%] max-w-28 -translate-y-1/2 compact:hidden" />
+      <span className="relative grid size-11 shrink-0 place-items-center rounded-full border border-starlight/30 shadow-[0_0_12px_-4px_rgba(226,201,116,0.5)] compact:size-8">
+        <span className="absolute inset-1 rounded-full border border-dashed border-starlight/20" aria-hidden />
+        <BookMarked className="size-5! text-starlight transition-transform duration-500 group-hover:-rotate-6" strokeWidth={1.25} />
+      </span>
+      <span className="relative flex flex-col items-start leading-tight">
         魔導図鑑
         <span className="font-display text-[9px] tracking-[0.25em] text-starlight/70">CODEX</span>
+        <span className="mt-1 text-[10px] tracking-[0.15em] whitespace-nowrap text-muted-foreground compact:hidden">遺物・古代文書・錬成陣</span>
       </span>
     </Link>
   );
 
-  const memoryCard = (
-    <Card data-tour="memory" size="sm" className="min-h-0 flex-1 px-3">
+  const memoryCard = (limit: number, className?: string) => (
+    <Card data-tour="memory" size="sm" className={cn("min-h-0 px-3", className)}>
       <h2 className="flex flex-col text-sm leading-tight tracking-[0.2em] whitespace-nowrap">
         詠唱の記憶
         <span className="font-display text-[9px] tracking-[0.25em] whitespace-normal text-starlight/60">OBSERVATIONAL MEMORY</span>
@@ -181,7 +193,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
         <p className="text-xs text-muted-foreground">まだ記憶は刻まれていません</p>
       ) : (
         <ul className="flex flex-col text-xs">
-          {recentLogs.map((log) => (
+          {recentLogs.slice(0, limit).map((log) => (
             <li key={log.id} className="flex items-center gap-2 border-b border-white/[0.06] py-1.5 last:border-0">
               <span
                 className="size-1.5 shrink-0 rounded-full"
@@ -196,6 +208,9 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
           ))}
         </ul>
       )}
+      <Link href="/history" className="-mt-1 self-end text-[10px] tracking-[0.2em] text-muted-foreground transition-colors hover:text-starlight">
+        魔導の軌跡で見る <ArrowGlyph />
+      </Link>
     </Card>
   );
 
@@ -210,10 +225,10 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
             {chantButton}
             {stageCard}
             {totalsRow}
-            <MenuTiles subjects={subjects} className="flex-none auto-rows-[4.25rem]" />
+            <MenuTiles subjects={subjects} className="flex-none auto-rows-[8rem]" />
             <div className="aspect-square w-full">{radarCard}</div>
             {codexButton}
-            {memoryCard}
+            {memoryCard(5)}
           </div>
         </div>
       </>
@@ -240,11 +255,12 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
 
           {/* 右: 詠唱開始 & 詠唱の記憶 */}
           <section className="col-span-3 flex min-h-0 flex-col gap-3 short:gap-2">
-            {chantButton}
+            {/* 詠唱の扉を大きく取り、記憶は直近の数件に絞る */}
+            <ChantButton className="min-h-32 flex-1 text-lg short:min-h-0 short:flex-none short:text-base" />
 
             {codexButton}
 
-            {memoryCard}
+            {memoryCard(3, "shrink-0")}
           </section>
         </div>
       </div>
@@ -254,16 +270,25 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
 
 const tileClass = cn(
   buttonVariants({ variant: "outline" }),
-  "group relative h-full min-h-0 flex-col gap-1 rounded-2xl px-2 py-2 text-sm tracking-[0.2em] whitespace-nowrap compact:flex-row compact:gap-2 short:py-1.5",
+  "group relative h-full min-h-0 flex-col gap-1 overflow-hidden rounded-2xl px-2 py-2 text-sm tracking-[0.2em] whitespace-nowrap compact:flex-row compact:gap-2 short:py-1.5",
 );
 
-function TileContent({ icon: Icon, label, sub }: { icon: typeof Swords; label: string; sub: string }) {
+/**
+ * メニューの中身: 飾り角と、隅に淡く敷いた線画の上に、輪で囲んだアイコン・名前・英字・ひとこと。
+ * 低い画面ではアイコンだけを並べ、名前は aria-label で読み上げに伝える（ブラウザの説明の吹き出しは世界観を壊すので出さない）
+ */
+function TileContent({ icon: Icon, label, sub, note, glyph }: { icon: typeof Swords; label: string; sub: string; note: string; glyph: Glyph }) {
   return (
     <>
-      <Icon className="size-5! text-starlight transition-transform duration-500 group-hover:-rotate-6" strokeWidth={1.25} />
-      {/* 低い画面ではアイコンだけを並べ、名前は title で伝える */}
-      <span className="short:sr-only">{label}</span>
-      <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60 compact:hidden">{sub}</span>
+      <CornerMarks />
+      <BackdropGlyph glyph={glyph} className="-right-[14%] -bottom-[22%] size-[78%] compact:hidden" />
+      <span className="relative grid size-11 place-items-center rounded-full border border-starlight/30 shadow-[0_0_12px_-4px_rgba(226,201,116,0.5)] compact:size-8 short:size-auto short:border-0 short:shadow-none">
+        <span className="absolute inset-1 rounded-full border border-dashed border-starlight/20 short:hidden" aria-hidden />
+        <Icon className="size-5! text-starlight transition-transform duration-500 group-hover:-rotate-6" strokeWidth={1.25} />
+      </span>
+      <span className="relative short:sr-only">{label}</span>
+      <span className="relative font-display text-[9px] tracking-[0.25em] text-starlight/60 compact:hidden">{sub}</span>
+      <span className="relative mt-1 text-[10px] tracking-[0.15em] whitespace-nowrap text-muted-foreground compact:hidden">{note}</span>
     </>
   );
 }
@@ -282,22 +307,22 @@ function MenuTiles({ subjects, className }: { subjects: Subject[]; className?: s
 
   return (
     <div className={cn("grid min-h-12 flex-1 grid-cols-2 gap-2 short:min-h-9 short:grid-cols-4", className)}>
-      <button type="button" data-tour="trials" onClick={() => setTrialsOpen(true)} aria-haspopup="dialog" title="星の試練" className={cn(tileClass, ready > 0 && "claim-glow border-starlight/45")}>
-        <TileContent icon={Swords} label="星の試練" sub="TRIALS" />
+      <button type="button" data-tour="trials" onClick={() => setTrialsOpen(true)} aria-haspopup="dialog" aria-label="星の試練" className={cn(tileClass, ready > 0 && "claim-glow border-starlight/45")}>
+        <TileContent icon={Swords} label="星の試練" sub="TRIALS" note="日課の儀式と週間の誓約" glyph="seal" />
         {ready > 0 && (
-          <span className="absolute top-2 right-2 rounded-full border border-starlight/50 bg-starlight/10 px-1.5 font-display text-[10px] tracking-normal text-starlight">
+          <span className="absolute top-3 right-3 rounded-full border short:top-1 short:right-1 border-starlight/50 bg-starlight/10 px-1.5 font-display text-[10px] tracking-normal text-starlight">
             {ready}
           </span>
         )}
       </button>
-      <Link href="/history" data-tour="history" title="魔導の軌跡" className={tileClass}>
-        <TileContent icon={CalendarDays} label="魔導の軌跡" sub="CHRONICLE" />
+      <Link href="/history" data-tour="history" aria-label="魔導の軌跡" className={tileClass}>
+        <TileContent icon={CalendarDays} label="魔導の軌跡" sub="CHRONICLE" note="暦と星の記憶をたどる" glyph="starmap" />
       </Link>
-      <button type="button" data-tour="worldlines" onClick={() => setWorldlinesOpen(true)} aria-haspopup="dialog" title="結びし世界線" className={tileClass}>
-        <TileContent icon={Orbit} label="結びし世界線" sub="BOUND WORLDLINES" />
+      <button type="button" data-tour="worldlines" onClick={() => setWorldlinesOpen(true)} aria-haspopup="dialog" aria-label="結びし世界線" className={tileClass}>
+        <TileContent icon={Orbit} label="結びし世界線" sub="BOUND WORLDLINES" note="遠い観測者の気配" glyph="armillary" />
       </button>
-      <Link href="/settings" data-tour="settings" title="設定" className={tileClass}>
-        <TileContent icon={Settings} label="設定" sub="SETTINGS" />
+      <Link href="/settings" data-tour="settings" aria-label="設定" className={tileClass}>
+        <TileContent icon={Settings} label="設定" sub="SETTINGS" note="名・紋章・音・観測者ID" glyph="gear" />
       </Link>
       {trialsOpen && <TrialsDialog subjects={subjects} onClose={() => setTrialsOpen(false)} />}
       {worldlinesOpen && <BoundWorldlinesDialog onClose={() => setWorldlinesOpen(false)} />}
@@ -323,7 +348,7 @@ function chantStatus(session: ChantSession, now: number) {
 }
 
 /** 詠唱を始める扉。詠唱の途中で書庫に来ていれば、詠唱の間へ戻る扉として様子を映す */
-function ChantButton() {
+function ChantButton({ className }: { className?: string }) {
   const session = useChantSession();
   const ticking = session !== null && session.clock.startedAt !== null;
   const [now, setNow] = useState(() => Date.now());
@@ -339,16 +364,72 @@ function ChantButton() {
       data-tour="chant"
       className={cn(
         buttonVariants({ size: "lg" }),
-        "group h-auto shrink-0 flex-col gap-1.5 rounded-2xl py-5 text-base tracking-[0.3em] compact:py-3 short:py-2",
+        "group relative h-auto shrink-0 flex-col gap-1.5 overflow-hidden rounded-2xl py-5 text-base tracking-[0.3em] compact:py-3 short:py-2",
         session && "shadow-[0_0_18px_-4px_rgba(226,201,116,0.6)]",
+        className,
       )}
     >
-      <Wand2 className="size-6! transition-transform duration-500 group-hover:-rotate-12" strokeWidth={1.25} />
-      {session ? "詠唱の間へ戻る" : "詠唱を開始する"}
-      <span className="font-display text-[10px] tracking-[0.3em] text-starlight/70">
+      {/* 背後でゆっくり巡る魔法陣の輪 */}
+      <ChantRings />
+      <Wand2 className="relative size-6! transition-transform duration-500 group-hover:-rotate-12 lg:size-8!" strokeWidth={1.25} />
+      <span className="relative">{session ? "詠唱の間へ戻る" : "詠唱を開始する"}</span>
+      <span className="relative font-display text-[10px] tracking-[0.3em] text-starlight/70">
         {session ? "RETURN TO THE CHANT" : "BEGIN THE CHANT"}
       </span>
-      {session && <span className="text-[11px] tracking-[0.2em] text-aqua/90 glimmer">{chantStatus(session, now)}</span>}
+      {session && <span className="relative text-[11px] tracking-[0.2em] text-aqua/90 glimmer">{chantStatus(session, now)}</span>}
     </Link>
+  );
+}
+
+/** 詠唱の扉の背後で巡る、淡い魔法陣の輪（ルーンの刻みと六芒星） */
+function ChantRings() {
+  return (
+    <svg
+      viewBox="-100 -100 200 200"
+      // ボタンの「中の SVG を小さく揃える」指定から外すため、大きさは size-auto と style で決める
+      style={{ width: "118%", height: "auto" }}
+      className="pointer-events-none absolute top-1/2 left-1/2 size-auto max-w-none -translate-x-1/2 -translate-y-1/2 animate-spin-slow text-starlight opacity-[0.13] transition-opacity duration-700 group-hover:opacity-25 short:hidden"
+      fill="none"
+      stroke="currentColor"
+      aria-hidden
+    >
+      <circle r="92" vectorEffect="non-scaling-stroke" />
+      <circle r="84" strokeDasharray="1 5" vectorEffect="non-scaling-stroke" />
+      <circle r="58" vectorEffect="non-scaling-stroke" />
+      <polygon points="0,-58 50.2,29 -50.2,29" vectorEffect="non-scaling-stroke" />
+      <polygon points="0,58 50.2,-29 -50.2,-29" vectorEffect="non-scaling-stroke" />
+      {Array.from({ length: 24 }, (_, i) => (
+        <line key={i} y1="-92" y2="-86" transform={`rotate(${i * 15})`} vectorEffect="non-scaling-stroke" />
+      ))}
+    </svg>
+  );
+}
+
+/** 枠の四隅に置く 1px の飾り角 */
+function CornerMarks() {
+  return (
+    <span className="pointer-events-none absolute inset-1.5 short:hidden" aria-hidden>
+      <span className="absolute top-0 left-0 size-2.5 border-t border-l border-starlight/35" />
+      <span className="absolute top-0 right-0 size-2.5 border-t border-r border-starlight/35" />
+      <span className="absolute bottom-0 left-0 size-2.5 border-b border-l border-starlight/35" />
+      <span className="absolute right-0 bottom-0 size-2.5 border-r border-b border-starlight/35" />
+    </span>
+  );
+}
+
+/** 枠の隅に淡く敷く、その場所を表す大きな線画 */
+function BackdropGlyph({ glyph, className }: { glyph: Glyph; className?: string }) {
+  return (
+    <svg
+      viewBox="-34 -34 68 68"
+      className={cn(
+        "pointer-events-none absolute text-starlight opacity-[0.1] transition-all duration-700 group-hover:opacity-[0.2] group-hover:rotate-6 short:hidden",
+        className,
+      )}
+      aria-hidden
+    >
+      <circle r="32" fill="none" stroke="currentColor" strokeDasharray="1 3" vectorEffect="non-scaling-stroke" />
+      <path d={GLYPHS[glyph]} fill="none" stroke="currentColor" vectorEffect="non-scaling-stroke" />
+    </svg>
   );
 }

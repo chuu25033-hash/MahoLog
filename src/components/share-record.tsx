@@ -1,5 +1,6 @@
 "use client";
 
+import { WhisperText, whisperHost } from "@/components/whisper";
 import { useEffect, useRef, useState } from "react";
 import { Download, Share2 } from "lucide-react";
 import { AvatarGlyph } from "@/components/arcane-icons";
@@ -22,8 +23,10 @@ export function ShareRecordButton({ record }: { record: ShareRecord }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="outline" size="icon-sm" onClick={() => setOpen(true)} aria-label="探求の記録を共有" title="探求の記録を共有">
+      <Button variant="outline" size="icon-sm" onClick={() => setOpen(true)} aria-label="探求の記録を共有" className={whisperHost}>
         <Share2 />
+        {/* 枠の右端にあるので、ひとことは右へ寄せる */}
+        <WhisperText text="探求の記録を画像にする" className="right-0 left-auto translate-x-0" />
       </Button>
       {open && <ShareRecordDialog record={record} onClose={() => setOpen(false)} />}
     </>
