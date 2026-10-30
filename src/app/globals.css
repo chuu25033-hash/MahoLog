@@ -7,6 +7,18 @@
 @custom-variant short (@media (max-height: 500px));
 /* 魔術書庫を1画面に収めるため、詰めて表示する高さ */
 @custom-variant compact (@media (max-height: 720px));
+/* 書庫のメニューの枠（container: tile）が低く、ひとことまでは入りきらないとき */
+@custom-variant tile-snug {
+  @container tile (max-height: 72px) {
+    @slot;
+  }
+}
+/* 書庫のメニューの枠がさらに低く、名前のほかは入りきらないとき */
+@custom-variant tile-cramped {
+  @container tile (max-height: 56px) {
+    @slot;
+  }
+}
 /* スマホ・タブレットの縦持ち（.rotate-hint と同じ条件） */
 @custom-variant portrait (@media (orientation: portrait) and (max-width: 1024px));
 

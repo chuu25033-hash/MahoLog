@@ -170,7 +170,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
       )}
     >
       <CornerMarks />
-      <BackdropGlyph glyph="tome" className="-right-[6%] top-1/2 size-[130%] max-w-28 -translate-y-1/2 compact:hidden" />
+      <BackdropGlyph glyph="tome" className="-right-[6%] top-1/2 size-[130%] max-w-28 -translate-y-1/2" />
       <span className="relative grid size-11 shrink-0 place-items-center rounded-full border border-starlight/30 shadow-[0_0_12px_-4px_rgba(226,201,116,0.5)] compact:size-8">
         <span className="absolute inset-1 rounded-full border border-dashed border-starlight/20" aria-hidden />
         <BookMarked className="size-5! text-starlight transition-transform duration-500 group-hover:-rotate-6" strokeWidth={1.25} />
@@ -178,7 +178,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
       <span className="relative flex flex-col items-start leading-tight">
         魔導図鑑
         <span className="font-display text-[9px] tracking-[0.25em] text-starlight/70">CODEX</span>
-        <span className="mt-1 text-[10px] tracking-[0.15em] whitespace-nowrap text-muted-foreground compact:hidden">遺物・古代文書・錬成陣</span>
+        <span className="mt-1 text-[10px] tracking-[0.15em] whitespace-nowrap text-muted-foreground short:hidden">遺物・古代文書・錬成陣</span>
       </span>
     </Link>
   );
@@ -270,25 +270,29 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
 
 const tileClass = cn(
   buttonVariants({ variant: "outline" }),
-  "group relative h-full min-h-0 flex-col gap-1 overflow-hidden rounded-2xl px-2 py-2 text-sm tracking-[0.2em] whitespace-nowrap compact:flex-row compact:gap-2 short:py-1.5",
+  // 枠そのものの高さで、入りきらない行を省く（tile-cramped）。画面の高さだけでは決めない
+  "group relative h-full min-h-0 flex-col gap-1 overflow-hidden rounded-2xl px-2 py-2 text-sm tracking-[0.2em] whitespace-nowrap [container:tile/size] compact:flex-row compact:gap-3 short:py-1.5",
 );
 
 /**
  * メニューの中身: 飾り角と、隅に淡く敷いた線画の上に、輪で囲んだアイコン・名前・英字・ひとこと。
- * 低い画面ではアイコンだけを並べ、名前は aria-label で読み上げに伝える（ブラウザの説明の吹き出しは世界観を壊すので出さない）
+ * 画面が低めのときはアイコンの右に文字を並べる横長の形にし、枠が低くて入りきらないときだけ、ひとこと（tile-snug）・英字（tile-cramped）の順に省く。
+ * とても低い画面ではアイコンだけを並べ、名前は aria-label で読み上げに伝える（ブラウザの説明の吹き出しは世界観を壊すので出さない）
  */
 function TileContent({ icon: Icon, label, sub, note, glyph }: { icon: typeof Swords; label: string; sub: string; note: string; glyph: Glyph }) {
   return (
     <>
       <CornerMarks />
-      <BackdropGlyph glyph={glyph} className="-right-[14%] -bottom-[22%] size-[78%] compact:hidden" />
-      <span className="relative grid size-11 place-items-center rounded-full border border-starlight/30 shadow-[0_0_12px_-4px_rgba(226,201,116,0.5)] compact:size-8 short:size-auto short:border-0 short:shadow-none">
+      <BackdropGlyph glyph={glyph} className="-right-[14%] -bottom-[22%] size-[78%] compact:-right-[6%] compact:-bottom-[35%] compact:size-[60%]" />
+      <span className="relative grid size-11 shrink-0 place-items-center rounded-full border border-starlight/30 shadow-[0_0_12px_-4px_rgba(226,201,116,0.5)] compact:size-10 tile-snug:size-8 short:size-auto short:border-0 short:shadow-none">
         <span className="absolute inset-1 rounded-full border border-dashed border-starlight/20 short:hidden" aria-hidden />
         <Icon className="size-5! text-starlight transition-transform duration-500 group-hover:-rotate-6" strokeWidth={1.25} />
       </span>
-      <span className="relative short:sr-only">{label}</span>
-      <span className="relative font-display text-[9px] tracking-[0.25em] text-starlight/60 compact:hidden">{sub}</span>
-      <span className="relative mt-1 text-[10px] tracking-[0.15em] whitespace-nowrap text-muted-foreground compact:hidden">{note}</span>
+      <span className="relative flex flex-col items-center gap-1 leading-tight compact:items-start short:sr-only">
+        <span>{label}</span>
+        <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60 tile-cramped:hidden">{sub}</span>
+        <span className="mt-1 text-[10px] tracking-[0.15em] whitespace-nowrap text-muted-foreground compact:mt-0 tile-snug:hidden">{note}</span>
+      </span>
     </>
   );
 }
@@ -310,7 +314,7 @@ function MenuTiles({ subjects, className }: { subjects: Subject[]; className?: s
       <button type="button" data-tour="trials" onClick={() => setTrialsOpen(true)} aria-haspopup="dialog" aria-label="星の試練" className={cn(tileClass, ready > 0 && "claim-glow border-starlight/45")}>
         <TileContent icon={Swords} label="星の試練" sub="TRIALS" note="日課の儀式と週間の誓約" glyph="seal" />
         {ready > 0 && (
-          <span className="absolute top-3 right-3 rounded-full border short:top-1 short:right-1 border-starlight/50 bg-starlight/10 px-1.5 font-display text-[10px] tracking-normal text-starlight">
+          <span className="absolute top-3 right-3 rounded-full border compact:top-1.5 compact:right-1.5 short:top-1 short:right-1 border-starlight/50 bg-starlight/10 px-1.5 font-display text-[10px] tracking-normal text-starlight">
             {ready}
           </span>
         )}
