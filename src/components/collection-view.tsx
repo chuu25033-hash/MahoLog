@@ -173,9 +173,10 @@ export function CollectionView() {
                 {items.filter((i) => isDiscovered(data, i.id)).length} / {items.length}
               </span>
             </h2>
-            <ul className="grid grid-cols-6 gap-2 portrait:grid-cols-4 lg:grid-cols-8">
+            {/* 縦持ちは3列にして名前に幅を残し、同じ行の枠は高さを揃える */}
+            <ul className="grid grid-cols-6 gap-2 portrait:grid-cols-3 lg:grid-cols-8">
               {items.map((item) => (
-                <li key={item.id}>
+                <li key={item.id} className="flex">
                   <ItemCard item={item} data={data} onSelect={() => setSelected(item)} />
                 </li>
               ))}
@@ -202,7 +203,7 @@ function ItemCard({ item, data, onSelect }: { item: Item; data: UserData; onSele
       onClick={onSelect}
       aria-label={owned ? item.name : "未解読の遺物"}
       className={cn(
-        "group relative flex w-full flex-col items-center gap-1 rounded-xl border px-1 pt-2 pb-1.5 transition-all duration-300",
+        "group relative flex h-full w-full flex-col items-center gap-1 rounded-xl border px-1 pt-2 pb-1.5 transition-all duration-300",
         owned
           ? "border-white/12 bg-gradient-to-b from-white/[0.04] to-transparent hover:border-starlight/40 hover:shadow-[0_0_14px_-4px_rgba(226,201,116,0.45)]"
           : "border-white/5 bg-black/20 hover:border-white/15",
@@ -224,10 +225,11 @@ function ItemCard({ item, data, onSelect }: { item: Item; data: UserData; onSele
           className="aspect-square w-full max-w-20 transition-transform duration-500 group-hover:scale-105"
         />
       )}
-      <span className={cn("w-full text-center text-[10px] leading-snug tracking-wider", owned ? "text-foreground" : "text-muted-foreground/50")}>
+      {/* 名前は2行ぶんの高さを確保し、長さが違っても枠の大きさを変えない */}
+      <span className={cn("flex min-h-[2.75em] w-full items-center justify-center text-center text-[10px] leading-snug tracking-wider portrait:tracking-normal", owned ? "text-foreground" : "text-muted-foreground/50")}>
         {owned ? item.name : "？？？"}
       </span>
-      <span className="font-display text-[9px] tracking-[0.15em] text-muted-foreground/70">
+      <span className="mt-auto text-center font-display text-[9px] tracking-[0.15em] text-muted-foreground/70 portrait:tracking-[0.05em]">
         {item.kind === "lore"
           ? `AREA ${item.areaId}${item.variant ? (item.variant === "shadow" ? " · 影" : " · 蒼炎") : ""}`
           : item.kind === "title" && owned
