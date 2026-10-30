@@ -7,7 +7,7 @@ import { ItemArt } from "@/components/item-art";
 import { MagicCircle } from "@/components/magic-circle";
 import { CORE_LAYER, FAR_LAYER, LINES, MID_LAYER } from "@/components/prologue/prologue";
 import { CATALYSTS, LORES, RELICS, type Item } from "@/lib/items";
-import { synthAmbience, synthSe } from "@/lib/sound/synth";
+import { forestReverb, owlCall, synthAmbience, synthSe } from "@/lib/sound/synth";
 
 // SNS（縦長 9:16）に載せる予告編。アプリの魔法陣・遺物・階級の印をそのまま使って描く。
 // 時刻 t（ms）だけで画面が決まるように組み、撮影ツール（video/capture.mjs）が1コマずつ時刻を進めて撮る。
@@ -467,7 +467,7 @@ const SE_CUES: [number, Parameters<typeof synthSe>[1]][] = [
   [FINALE.logo[0], "begin"],
 ];
 
-// ---- 遠くの森から届くフクロウの声（モリフクロウ風）。曲と同じく音声ファイルを使わずに合成する ----
+// ---- 遠くの森から届くフクロウの声（アプリの環境音と同じ合成） ----
 
 /** 鳴かせる時刻（ms）と遠さ（0〜1。1 がいちばん遠く小さい） */
 const OWL_CUES: [number, number][] = [
@@ -475,98 +475,6 @@ const OWL_CUES: [number, number][] = [
   [22800, 0.45],
   [SOLITUDE.line[0] + 1600, 0.8],
 ];
-
-/** 減衰していくノイズで作る、夜の森の残響 */
-function forestReverb(ctx: AudioContext, destination: AudioNode) {
-  const seconds = 3.2;
-  const buffer = ctx.createBuffer(2, Math.round(ctx.sampleRate * seconds), ctx.sampleRate);
-  for (let ch = 0; ch < 2; ch++) {
-    const data = buffer.getChannelData(ch);
-    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length) ** 2.6;
-  }
-  const convolver = ctx.createConvolver();
-  convolver.buffer = buffer;
-  const tone = ctx.createBiquadFilter();
-  tone.type = "lowpass";
-  tone.frequency.value = 1400;
-  convolver.connect(tone).connect(destination);
-  return convolver;
-}
-
-/**
- * フクロウのひと声: 少し下がっていく丸い声と、かすかな息。tremolo を付けると震える長い声になる
- */
-function hoot(ctx: AudioContext, out: AudioNode, at: number, o: { freq: number; length: number; level: number; tremolo?: boolean }) {
-  const end = at + o.length;
-  const voice = ctx.createGain();
-  voice.gain.setValueAtTime(0.0001, at);
-  voice.gain.exponentialRampToValueAtTime(o.level, at + Math.min(0.07, o.length * 0.3));
-  voice.gain.setValueAtTime(o.level, Math.max(at + 0.07, end - 0.16));
-  voice.gain.exponentialRampToValueAtTime(0.0001, end);
-  voice.connect(out);
-
-  // 声の芯（わずかに倍音を混ぜて、木の洞に響くような丸みを出す）
-  [
-    [1, 1],
-    [2, 0.07],
-  ].forEach(([mult, gain]) => {
-    const osc = ctx.createOscillator();
-    osc.frequency.setValueAtTime(o.freq * mult * 1.03, at);
-    osc.frequency.exponentialRampToValueAtTime(o.freq * mult * 0.9, end);
-    const level = ctx.createGain();
-    level.gain.value = gain;
-    osc.connect(level).connect(voice);
-    if (o.tremolo) {
-      const lfo = ctx.createOscillator();
-      lfo.frequency.value = 9;
-      const depth = ctx.createGain();
-      depth.gain.value = o.freq * mult * 0.025;
-      lfo.connect(depth).connect(osc.frequency);
-      lfo.start(at);
-      lfo.stop(end);
-    }
-    osc.start(at);
-    osc.stop(end + 0.05);
-  });
-
-  // 息の音
-  const noise = ctx.createBuffer(1, Math.round(ctx.sampleRate * o.length), ctx.sampleRate);
-  const data = noise.getChannelData(0);
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-  const breath = ctx.createBufferSource();
-  breath.buffer = noise;
-  const band = ctx.createBiquadFilter();
-  band.type = "bandpass";
-  band.frequency.value = o.freq * 1.4;
-  band.Q.value = 2.5;
-  const breathLevel = ctx.createGain();
-  breathLevel.gain.value = 0.18;
-  breath.connect(band).connect(breathLevel).connect(voice);
-  breath.start(at);
-}
-
-/** 「ホーー」……「ホッ、ホ、ホーーォ」 */
-function owlCall(ctx: AudioContext, dry: AudioNode, wet: AudioNode, at: number, distance: number) {
-  const out = ctx.createGain();
-  const level = 0.1 * (1 - distance * 0.6);
-  // 遠いほど高い音が削れ、残響に埋もれる
-  const air = ctx.createBiquadFilter();
-  air.type = "lowpass";
-  air.frequency.value = 1800 - distance * 900;
-  out.connect(air);
-  const direct = ctx.createGain();
-  direct.gain.value = 0.55 - distance * 0.35;
-  air.connect(direct).connect(dry);
-  const send = ctx.createGain();
-  send.gain.value = 0.6 + distance * 0.4;
-  air.connect(send).connect(wet);
-
-  const f = 430;
-  hoot(ctx, out, at, { freq: f, length: 0.85, level });
-  hoot(ctx, out, at + 2.1, { freq: f * 1.04, length: 0.16, level: level * 0.7 });
-  hoot(ctx, out, at + 2.45, { freq: f, length: 0.22, level: level * 0.8 });
-  hoot(ctx, out, at + 2.85, { freq: f * 1.02, length: 1.2, level, tremolo: true });
-}
 
 /** 予告編の音を鳴らし始める */
 function playSoundtrack(ctx: AudioContext, destination: AudioNode) {

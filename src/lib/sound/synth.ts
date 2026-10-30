@@ -256,6 +256,117 @@ function soundscape(ctx: AudioContext, out: AudioNode, layer: Layer, key: Exclud
   pianoPiece(ctx, out, layer, { ...STAGE_PIECE, chords: s.chords });
 }
 
+// ---- 遠くの森から届くフクロウの声（モリフクロウ風） ----
+// 夜の外気を感じる地（タイトル・小屋・樹海・観測塔）の環境音に、ときどき遠くから混ぜる
+
+/** 減衰していくノイズで作る、夜の森の残響 */
+export function forestReverb(ctx: AudioContext, destination: AudioNode) {
+  const seconds = 3.2;
+  const buffer = ctx.createBuffer(2, Math.round(ctx.sampleRate * seconds), ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = buffer.getChannelData(ch);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length) ** 2.6;
+  }
+  const convolver = ctx.createConvolver();
+  convolver.buffer = buffer;
+  const tone = ctx.createBiquadFilter();
+  tone.type = "lowpass";
+  tone.frequency.value = 1400;
+  convolver.connect(tone).connect(destination);
+  return convolver;
+}
+
+/**
+ * フクロウのひと声: 少し下がっていく丸い声と、かすかな息。tremolo を付けると震える長い声になる
+ */
+function hoot(ctx: AudioContext, out: AudioNode, at: number, o: { freq: number; length: number; level: number; tremolo?: boolean }) {
+  const end = at + o.length;
+  const voice = ctx.createGain();
+  voice.gain.setValueAtTime(0.0001, at);
+  voice.gain.exponentialRampToValueAtTime(o.level, at + Math.min(0.07, o.length * 0.3));
+  voice.gain.setValueAtTime(o.level, Math.max(at + 0.07, end - 0.16));
+  voice.gain.exponentialRampToValueAtTime(0.0001, end);
+  voice.connect(out);
+
+  // 声の芯（わずかに倍音を混ぜて、木の洞に響くような丸みを出す）
+  [
+    [1, 1],
+    [2, 0.07],
+  ].forEach(([mult, gain]) => {
+    const osc = ctx.createOscillator();
+    osc.frequency.setValueAtTime(o.freq * mult * 1.03, at);
+    osc.frequency.exponentialRampToValueAtTime(o.freq * mult * 0.9, end);
+    const level = ctx.createGain();
+    level.gain.value = gain;
+    osc.connect(level).connect(voice);
+    if (o.tremolo) {
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 9;
+      const depth = ctx.createGain();
+      depth.gain.value = o.freq * mult * 0.025;
+      lfo.connect(depth).connect(osc.frequency);
+      lfo.start(at);
+      lfo.stop(end);
+    }
+    osc.start(at);
+    osc.stop(end + 0.05);
+  });
+
+  // 息の音
+  const noise = ctx.createBuffer(1, Math.round(ctx.sampleRate * o.length), ctx.sampleRate);
+  const data = noise.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  const breath = ctx.createBufferSource();
+  breath.buffer = noise;
+  const band = ctx.createBiquadFilter();
+  band.type = "bandpass";
+  band.frequency.value = o.freq * 1.4;
+  band.Q.value = 2.5;
+  const breathLevel = ctx.createGain();
+  breathLevel.gain.value = 0.18;
+  breath.connect(band).connect(breathLevel).connect(voice);
+  breath.start(at);
+}
+
+/** 「ホーー」……「ホッ、ホ、ホーーォ」。dry に素の声、wet（forestReverb）に残響へ送る声を流す。distance は 0〜1（1 がいちばん遠く小さい） */
+export function owlCall(ctx: AudioContext, dry: AudioNode, wet: AudioNode, at: number, distance: number) {
+  const out = ctx.createGain();
+  const level = 0.1 * (1 - distance * 0.6);
+  // 遠いほど高い音が削れ、残響に埋もれる
+  const air = ctx.createBiquadFilter();
+  air.type = "lowpass";
+  air.frequency.value = 1800 - distance * 900;
+  out.connect(air);
+  const direct = ctx.createGain();
+  direct.gain.value = 0.55 - distance * 0.35;
+  air.connect(direct).connect(dry);
+  const send = ctx.createGain();
+  send.gain.value = 0.6 + distance * 0.4;
+  air.connect(send).connect(wet);
+
+  const f = 430;
+  hoot(ctx, out, at, { freq: f, length: 0.85, level });
+  hoot(ctx, out, at + 2.1, { freq: f * 1.04, length: 0.16, level: level * 0.7 });
+  hoot(ctx, out, at + 2.45, { freq: f, length: 0.22, level: level * 0.8 });
+  hoot(ctx, out, at + 2.85, { freq: f * 1.02, length: 1.2, level, tremolo: true });
+}
+
+/** フクロウが鳴く地 */
+const OWL_AMBIENCES = new Set<AmbienceKey>(["title", "hearth", "forest", "stars"]);
+
+/** 曲が流れ始めて 30 秒前後で最初の一声、その後は 1 分半〜3 分に一度。遠さもその都度変える */
+function owlNights(ctx: AudioContext, out: AudioNode, layer: Layer) {
+  const reverb = forestReverb(ctx, out);
+  const next = (delayMs: number) =>
+    layer.timers.push(
+      setTimeout(() => {
+        owlCall(ctx, out, reverb, ctx.currentTime + 0.1, 0.3 + Math.random() * 0.5);
+        next(90_000 + Math.random() * 90_000);
+      }, delayMs),
+    );
+  next(20_000 + Math.random() * 20_000);
+}
+
 /** 生成した環境音の声部（音量 0 から始まる） */
 export function synthAmbience(ctx: AudioContext, key: AmbienceKey, destination: AudioNode): Voice {
   const output = ctx.createGain();
@@ -264,6 +375,7 @@ export function synthAmbience(ctx: AudioContext, key: AmbienceKey, destination: 
   const layer: Layer = { sources: [], timers: [] };
   if (key === "title") pianoPiece(ctx, output, layer, TITLE_PIECE);
   else soundscape(ctx, output, layer, key);
+  if (OWL_AMBIENCES.has(key)) owlNights(ctx, output, layer);
   return {
     output,
     stop: () => {
