@@ -195,7 +195,7 @@ function StarMemory({ nights }: { nights: ObservedNight[] }) {
               魔導の軌跡
               <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">ARCANE TRACES</span>
             </h1>
-            <p className="text-xs tracking-wider text-muted-foreground short:hidden">詠唱した夜は星となり、日々の学びが夜空に自分だけの星座を描きます</p>
+            <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">詠唱した夜は星となり、今週までの{MEMORY_WEEKS}週間の学びが夜空に自分だけの星座を描きます</p>
           </div>
         </div>
         <dl className="flex shrink-0 gap-4 text-right portrait:justify-between text-[11px] tracking-wider whitespace-nowrap text-muted-foreground">
@@ -632,10 +632,13 @@ function NightDetail({ night }: { night: ObservedNight }) {
 function ConstellationList({ nights, completed }: { nights: ObservedNight[]; completed: boolean[] }) {
   return (
     <section className="glass rounded-2xl p-4">
-      <h2 className="mb-2 flex flex-col text-sm leading-tight tracking-[0.2em] whitespace-nowrap">
-        描かれた星座
-        <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60">CONSTELLATIONS</span>
-      </h2>
+      <div className="mb-2 flex items-end justify-between gap-2">
+        <h2 className="flex flex-col text-sm leading-tight tracking-[0.2em] whitespace-nowrap">
+          描かれた星座
+          <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60">CONSTELLATIONS</span>
+        </h2>
+        <p className="text-[10px] tracking-wider whitespace-nowrap text-muted-foreground">今週までの{MEMORY_WEEKS}週間・1週で1つの星座</p>
+      </div>
       <ul className="flex flex-col text-xs">
         {CONSTELLATIONS.slice(0, MEMORY_WEEKS).map((name, w) => {
           const lit = nights.filter((n) => n.week === w && n.minutes > 0).length;
