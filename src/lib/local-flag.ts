@@ -31,6 +31,18 @@ export function setLocalFlag(key: string, value = true) {
   listeners.forEach((fn) => fn());
 }
 
+/**
+ * 印が付いているか。サーバーと読み込み直後（ハイドレーション中）はまだ分からないので null を返す。
+ * 分からない間に何を描くかは呼ぶ側で決める（プロローグの幕など）
+ */
+export function useLocalFlagOrUnknown(key: string) {
+  return useSyncExternalStore<boolean | null>(
+    subscribe,
+    () => read(key),
+    () => null,
+  );
+}
+
 /** 印が付いているか。サーバーでは付いている扱いにして、いつもの画面を描く */
 export function useLocalFlag(key: string) {
   return useSyncExternalStore(
