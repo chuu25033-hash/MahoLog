@@ -477,11 +477,8 @@ function CelestialChart({
                   <polygon points={diamond(p.x, p.y, 1.4)} stroke={GOLD} strokeOpacity="0.55" {...hairline} />
                 </g>
               ) : (
-                // 休息の夜: 灯らなかった星の跡。冷えた灰の小さな星と、その座を示す細い輪
-                <g>
-                  <circle cx={p.x} cy={p.y} r="2.2" stroke={DIM} strokeOpacity="0.45" {...hairline} />
-                  <polygon points={diamond(p.x, p.y, 1)} fill={DIM} fillOpacity="0.8" />
-                </g>
+                // 休息の夜: 灯らなかった星の跡。冷えた灰の細い輪郭だけを残し、灯った星の邪魔をしない
+                <polygon points={diamond(p.x, p.y, 1.4)} stroke={DIM} strokeOpacity="0.7" {...hairline} />
               )}
               {isSelected && <polygon points={diamond(p.x, p.y, 3.4)} stroke={DIM} strokeOpacity="0.8" {...hairline} />}
             </g>
