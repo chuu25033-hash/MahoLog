@@ -170,6 +170,14 @@ function MemoryDialog({ memory, onClose }: { memory: MemoryItem; onClose: () => 
               {line}
             </p>
           ))}
+          {/* 秘された結び: 4葉の本文が浮かび終えたあと、文書の色で遅れて滲み出る */}
+          <p
+            className="mt-2 animate-in fade-in text-center text-[13px] duration-[2400ms] [animation-fill-mode:both] [word-break:auto-phrase]"
+            style={{ animationDelay: `${600 + memory.memory.length * 900 + 1200}ms`, color: memory.color, textShadow: `0 0 10px ${memory.color}66` }}
+          >
+            <span className="mb-2 block font-display text-[10px] tracking-[0.4em] opacity-70">✦</span>
+            {memory.coda}
+          </p>
         </DialogDescription>
         <div className="rank-line w-full [animation-delay:300ms]" />
         <p className="flex items-center justify-center gap-1.5 text-[11px] tracking-wider text-aqua">
