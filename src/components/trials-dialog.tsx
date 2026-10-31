@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Gem, Sparkles } from "lucide-react";
 import { RankSigil, Sparkle } from "@/components/arcane-icons";
+import { GrowthDialog, growthOf } from "@/components/growth-panels";
 import { ItemArt } from "@/components/item-art";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { GUIDANCE_CYCLE, claimGuidance, pendingGuidance } from "@/lib/celestial-guidance";
@@ -21,6 +22,9 @@ const SCOPES: { key: TaskScope; label: string; sub: string; reset: string }[] = 
 ];
 
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII"];
+
+/** 報酬の光（受け取りの演出）が収まるまで待ってから成長を告げる */
+const GROWTH_DELAY_MS = 1300;
 
 export const claimable = (t: TaskState | undefined) => !!t && !t.isClaimed && t.progress >= t.maxProgress;
 
@@ -41,16 +45,27 @@ export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClo
   }, [subjects]);
   const [scope, setScope] = useState<TaskScope>("daily");
   const [burst, setBurst] = useState<{ taskId: string; claim: TaskClaim; key: number } | null>(null);
+  const [growth, setGrowth] = useState<{ beforeMp: number; afterMp: number; cycleStartMp: number } | null>(null);
+  const growthTimer = useRef<number | undefined>(undefined);
   const totalMp = data.userProfile.totalMp;
   const rank = rankOf(calcLevel(totalMp));
   const current = SCOPES.find((s) => s.key === scope)!;
 
   function claim(def: TaskDef) {
+    const beforeMp = totalMp;
     const result = userActions.claimTask(def.id, subjects);
     if (!result) return;
     soundManager.playSe("reward");
     setBurst((prev) => ({ taskId: def.id, claim: result, key: (prev?.key ?? 0) + 1 }));
+    // 受け取った MP で探求度・階級・領域が進んだら、報酬の光が収まってから結果ダイアログと同じパネルで告げる
+    const afterMp = beforeMp + result.mp;
+    if (growthOf(beforeMp, afterMp, data.cycle.startMp).steps.length > 0) {
+      window.clearTimeout(growthTimer.current);
+      growthTimer.current = window.setTimeout(() => setGrowth({ beforeMp, afterMp, cycleStartMp: data.cycle.startMp }), GROWTH_DELAY_MS);
+    }
   }
+
+  useEffect(() => () => window.clearTimeout(growthTimer.current), []);
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -112,6 +127,7 @@ export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClo
             />
           ))}
         </ul>
+        {growth && <GrowthDialog {...growth} onClose={() => setGrowth(null)} />}
       </DialogContent>
     </Dialog>
   );

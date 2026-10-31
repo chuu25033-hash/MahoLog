@@ -1,19 +1,18 @@
 "use client";
 
 import { useEffect, useState, type Dispatch, type MouseEvent, type SetStateAction } from "react";
-import { ChevronRight, Gift, Hourglass, MapPinned, Sparkles } from "lucide-react";
-import { ArrowGlyph, RankSigil } from "@/components/arcane-icons";
+import { ChevronRight, Gift, Hourglass, Sparkles } from "lucide-react";
+import { ArrowGlyph } from "@/components/arcane-icons";
 import { ItemArt, ShootingStar } from "@/components/item-art";
 import { MagicRadar } from "@/components/magic-radar";
-import { MpBar } from "@/components/mp-bar";
 import { RewardLabel, claimable } from "@/components/trials-dialog";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { EndingPanel, ZenithPanel } from "@/components/cycle/ascension-panels";
-import { AREAS, boostLabel, isAreaUnlocked, stageOfArea, type Area } from "@/lib/areas";
+import { LevelPanel, RankPanel, StepDots, UnlockPanel, growthOf, playGrowthSe } from "@/components/growth-panels";
+import type { Area } from "@/lib/areas";
 import { DROP_SLOT_MINUTES } from "@/lib/drops";
-import { CLEAR_MP } from "@/lib/cycles";
-import { calcLevel, formatMinutes, levelProgress, rankOf } from "@/lib/game";
+import { formatMinutes } from "@/lib/game";
 import { STARDUST_ORE, type CatalystItem, type Item, type ItemRarity } from "@/lib/items";
 import type { MeteorShower } from "@/lib/reward";
 import { soundManager } from "@/lib/sound/sound-manager";
@@ -88,24 +87,11 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
 
   const beforeMp = result.beforeMp;
   const afterMp = result.afterMp + claimedMp;
-  const beforeLevel = calcLevel(beforeMp);
-  const afterLevel = calcLevel(afterMp);
-  const rankUp = rankOf(afterLevel).numeral !== rankOf(beforeLevel).numeral;
-  // エリアの解放と周天の制覇は、この周天での MP で測る
-  const beforeCycleMp = beforeMp - result.cycleStartMp;
-  const afterCycleMp = afterMp - result.cycleStartMp;
-  const unlocked = AREAS.filter((a) => isAreaUnlocked(a, afterCycleMp) && !isAreaUnlocked(a, beforeCycleMp));
-  const cleared = beforeCycleMp < CLEAR_MP && afterCycleMp >= CLEAR_MP;
+  const { beforeLevel, afterLevel, unlocked, steps: growth } = growthOf(beforeMp, afterMp, result.cycleStartMp);
   const ascended = result.climb !== null && result.climb.afterFloor > result.climb.beforeFloor;
 
-  const steps: Step[] = [
-    "result",
-    ...(afterLevel > beforeLevel ? (["level"] as const) : []),
-    ...(rankUp ? (["rank"] as const) : []),
-    ...(unlocked.length > 0 ? (["unlock"] as const) : []),
-    ...(ascended ? (["zenith"] as const) : []),
-    ...(cleared ? (["ending"] as const) : []),
-  ];
+  // 塔の階層は領域の解放の後、周天の終幕の前に挟む
+  const steps: Step[] = ["result", ...growth.filter((s) => s !== "ending"), ...(ascended ? (["zenith"] as const) : []), ...(growth.includes("ending") ? (["ending"] as const) : [])];
   const step = steps[Math.min(index, steps.length - 1)];
   const last = index >= steps.length - 1;
   // 流れ星に触れるまでは成果の幕に留まる（降らなかった詠唱は待たない）
@@ -119,11 +105,7 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
 
   // 各パネルが開いた瞬間に、その出来事の音を鳴らす
   useEffect(() => {
-    if (step === "level") soundManager.playSe("levelUp");
-    if (step === "rank") soundManager.playSe("rankUp");
-    if (step === "unlock") soundManager.playSe("begin");
-    if (step === "zenith") soundManager.playSe("rankUp");
-    if (step === "ending") soundManager.playSe("levelUp");
+    playGrowthSe(step);
   }, [step]);
 
   return (
@@ -157,18 +139,7 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
         </div>
 
         <div className="flex items-center justify-between gap-3">
-          <div className="flex gap-1.5" aria-label={`${index + 1} / ${steps.length}`}>
-            {steps.length > 1 &&
-              steps.map((s, i) => (
-                <span
-                  key={s}
-                  className={cn(
-                    "size-1.5 rounded-full transition-all duration-500",
-                    i === index ? "bg-starlight shadow-[0_0_6px_rgba(226,201,116,0.8)]" : i < index ? "bg-starlight/40" : "bg-white/15",
-                  )}
-                />
-              ))}
-          </div>
+          <StepDots count={steps.length} index={index} />
           {waitingChest ? (
             <p className="text-[11px] tracking-[0.3em] text-starlight/70 glimmer">タップして進む</p>
           ) : last ? (
@@ -330,97 +301,6 @@ function TrialRewards({ subjects, onClaimed }: { subjects: Subject[]; onClaimed:
           報酬を受け取った{received.length > 0 && `（${received.join("・")}）`}
         </p>
       )}
-    </div>
-  );
-}
-
-/** Step 2: 探求度（レベル）の上昇 */
-function LevelPanel({ beforeLevel, afterMp }: { beforeLevel: number; afterMp: number }) {
-  const progress = levelProgress(afterMp);
-  return (
-    <div className="flex flex-col items-center gap-3 py-2 text-center">
-      <DialogTitle className="font-display text-xs font-normal tracking-[0.5em] whitespace-nowrap text-starlight/80">
-        <span className="-mr-[0.5em]">INSIGHT DEEPENS</span>
-      </DialogTitle>
-      <div className="relative flex items-center gap-4 py-2 whitespace-nowrap">
-        <span className="burst-ring size-20" />
-        <span className="font-display text-3xl text-muted-foreground">{beforeLevel}</span>
-        <ChevronRight className="size-5 text-starlight/70" strokeWidth={1.25} />
-        <span className="mp-glow font-display text-5xl text-starlight-gradient">{progress.level}</span>
-      </div>
-      <DialogDescription className="tracking-[0.2em]">探求度が高まった</DialogDescription>
-      <div className="w-full max-w-64">
-        <MpBar ratio={progress.ratio} />
-        <p className="mt-1.5 text-[11px] tracking-wider text-muted-foreground">
-          次なる感応まで <span className="font-display text-aqua">{progress.remaining}</span>
-          <span className="font-display"> MP</span>
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/** Step 3: 魔術階級の昇格。1px の光の線が静かに伸び、新たな階級の名を浮かび上がらせる */
-function RankPanel({ level }: { level: number }) {
-  const rank = rankOf(level);
-  return (
-    <div className="flex flex-col items-center gap-4 py-4 text-center">
-      <DialogTitle className="font-display text-xs font-normal tracking-[0.5em] whitespace-nowrap text-starlight/80">
-        <span className="-mr-[0.5em]">RANK UP</span>
-      </DialogTitle>
-      <div className="rank-line w-full" />
-      <div className="flex animate-in flex-col items-center gap-2 fade-in slide-in-from-bottom-2 duration-1000 [animation-delay:700ms] [animation-fill-mode:both]">
-        <RankSigil numeral={rank.numeral} animate className="size-24 text-starlight drop-shadow-[0_0_6px_rgba(226,201,116,0.5)] short:size-16" />
-        <p className="font-display text-sm tracking-[0.4em] whitespace-nowrap text-starlight/80">
-          <span className="-mr-[0.4em]">RANK {rank.numeral}</span>
-        </p>
-        <p className="text-2xl tracking-[0.3em] whitespace-nowrap text-starlight-gradient">
-          <span className="-mr-[0.3em]">{rank.title}</span>
-        </p>
-        <DialogDescription className="tracking-[0.2em]">魔術階級が昇格した</DialogDescription>
-      </div>
-      <div className="rank-line w-full [animation-delay:300ms]" />
-    </div>
-  );
-}
-
-/** Step 4: 新たな領域（ステージ・エリア）の解放 */
-function UnlockPanel({ areas }: { areas: Area[] }) {
-  // 大ステージの入口が開いたら「新ステージ」、同じステージ内なら「新エリア」
-  const newStage = areas.some((a) => a.stageId > 1 && a.id.endsWith("-1"));
-  return (
-    <div className="flex flex-col items-center gap-3 py-2 text-center">
-      <DialogTitle className="flex items-center gap-1.5 font-display text-xs font-normal tracking-[0.4em] whitespace-nowrap text-aqua/90">
-        <MapPinned className="size-4" strokeWidth={1.25} />
-        <span className="-mr-[0.4em]">{newStage ? "THE SEAL IS BROKEN" : "A NEW PATH OPENS"}</span>
-      </DialogTitle>
-      <DialogDescription className="tracking-[0.2em]">
-        {newStage ? "封印が解け、奥地への道が開かれた" : "新たな地へ足を踏み入れられる"}
-      </DialogDescription>
-      <div className="flex w-full flex-col gap-2">
-        {areas.map((area) => {
-          const stage = stageOfArea(area)!;
-          return (
-            <div
-              key={area.id}
-              className="relative overflow-hidden rounded-xl border border-aqua/35 bg-white/[0.03] p-3 text-left shadow-[0_0_18px_-6px_rgba(113,226,239,0.5)]"
-            >
-              <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br", stage.gradient)} />
-              <p className="relative font-display text-[10px] tracking-[0.3em] text-starlight/70">
-                STAGE {stage.id} · AREA {area.id}
-                <span className="ml-2 font-serif tracking-wider text-muted-foreground">{stage.name}</span>
-              </p>
-              <p className="relative mt-1 text-lg tracking-[0.15em]">{area.name}</p>
-              <p className="relative mt-0.5 text-xs leading-relaxed text-muted-foreground [word-break:auto-phrase]">{area.description}</p>
-              <p className="relative mt-1.5 text-[11px] tracking-wider text-muted-foreground">
-                属性ブースト {boostLabel(area)}
-                <span className="ml-1 font-display text-aqua">MP ×{area.boost.multiplier}</span>
-              </p>
-            </div>
-          );
-        })}
-      </div>
-      <p className="text-[11px] tracking-wider text-muted-foreground">魔術書庫の「エリア選択」から移り住めます</p>
     </div>
   );
 }
