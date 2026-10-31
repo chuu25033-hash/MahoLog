@@ -31,6 +31,13 @@ function heptagram(r: number) {
 /** 週ごとに浮かび上がる星座 */
 const CONSTELLATIONS = ["暁の竪琴座", "蒼銀の白鳥座", "紫晶の天秤座", "星冠座"];
 
+/** その週（月曜 0 時）の星座の名前。暦の週の通し番号で巡るので、同じ週はいつ見ても同じ名前になる */
+function constellationName(weekStart: Date | undefined) {
+  if (!weekStart) return CONSTELLATIONS[0];
+  const week = Math.floor((weekStart.getTime() + 9 * 60 * 60 * 1000) / (7 * 24 * 60 * 60 * 1000));
+  return CONSTELLATIONS[((week % CONSTELLATIONS.length) + CONSTELLATIONS.length) % CONSTELLATIONS.length];
+}
+
 type Attribute = "cyan" | "aqua" | "purple";
 
 /** 属性ごとの星のグラデーション（芯 → 中間 → 縁） */
@@ -649,7 +656,9 @@ function ConstellationList({ nights, completed }: { nights: ObservedNight[]; com
         <p className="text-[10px] tracking-wider whitespace-nowrap text-muted-foreground">今週までの{MEMORY_WEEKS}週間・1週で1つの星座</p>
       </div>
       <ul className="flex flex-col text-xs">
-        {CONSTELLATIONS.slice(0, MEMORY_WEEKS).map((name, w) => {
+        {Array.from({ length: MEMORY_WEEKS }, (_, w) => {
+          // 名前は暦の週で決める（並びの位置で決めると、週が進むたびに同じ星座の名前が入れ替わる）
+          const name = constellationName(nights.find((n) => n.week === w)?.date);
           const lit = nights.filter((n) => n.week === w && n.minutes > 0).length;
           // 今週は、今日がまだ終わっていなければ（未来の日か今日が残っていれば）途切れたとは言わない
           const inProgress = nights.some((n) => n.week === w && (n.future || n.today));
