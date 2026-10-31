@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { FastForward, Hourglass, MapPin, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
 import { saveStudyLog } from "@/app/actions/study";
 import { ArrowGlyph } from "@/components/arcane-icons";
@@ -294,6 +294,13 @@ export function TimerPanel({
       setPhase("break");
     },
     [startAt],
+  );
+
+  // リザルトの間も静息の時計は刻み続け、この画面は 0.25 秒ごとに描き直される。
+  // リザルトまで描き直すと魔法陣のレーダーが作り直されてちかちかするので、結果が変わったときだけ組み立てる
+  const resultDialog = useMemo(
+    () => result && <ResultDialog key={result.id} result={result} subjects={subjects} onClose={() => setResult(null)} />,
+    [result, subjects],
   );
 
   // 詠唱の途中を端末に書き留め、画面を閉じても呼び戻せるようにする
@@ -696,7 +703,7 @@ export function TimerPanel({
         </DialogContent>
       </Dialog>
 
-      {result && <ResultDialog key={result.id} result={result} subjects={subjects} onClose={() => setResult(null)} />}
+      {resultDialog}
     </>
   );
 
