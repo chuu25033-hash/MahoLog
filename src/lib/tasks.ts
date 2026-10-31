@@ -25,7 +25,7 @@ export type TaskDef = {
   reward: TaskReward;
 };
 
-/** 回数・科目・日数を数える試練で1回と数える詠唱の長さ。短い詠唱を細切れにして数を稼げないよう、最短の詠唱時間に揃える */
+/** 回数・科目を数える試練で1回と数える詠唱の長さ（日数は1日の合計で見る）。短い詠唱を細切れにして数を稼げないよう、最短の詠唱時間に揃える */
 export const COUNTED_CHANT_MIN_MINUTES = 15;
 
 export const TASKS: TaskDef[] = [
@@ -48,7 +48,7 @@ export const TASKS: TaskDef[] = [
     unit: "領域",
     reward: { kind: "catalyst", rare: true },
   },
-  { id: "w-days", scope: "weekly", title: "継続の印", description: `週のうち4日以上、${COUNTED_CHANT_MIN_MINUTES}分以上の詠唱を行う`, unit: "日", reward: { kind: "mp", mp: 150 } },
+  { id: "w-days", scope: "weekly", title: "継続の印", description: `週のうち4日以上、1日合計${COUNTED_CHANT_MIN_MINUTES}分以上の詠唱を行う`, unit: "日", reward: { kind: "mp", mp: 150 } },
 ];
 
 export type TaskContext = {
@@ -90,8 +90,15 @@ export function measureTask(def: TaskDef, { history, activeSubjectIds, mainSubje
         return [minutes, 120];
       case "w-all":
         return [new Set(countedChants.map((r) => r.subjectId).filter((id) => activeSubjectIds.includes(id))).size, activeSubjectIds.length];
-      case "w-days":
-        return [new Set(countedChants.map((r) => jstDateKey(new Date(r.date)))).size, 4];
+      case "w-days": {
+        // 1日の合計で見る。10分を2回でも、その日に学んだことに変わりはない
+        const perDay = new Map<string, number>();
+        for (const r of records) {
+          const day = jstDateKey(new Date(r.date));
+          perDay.set(day, (perDay.get(day) ?? 0) + r.minutes);
+        }
+        return [[...perDay.values()].filter((m) => m >= COUNTED_CHANT_MIN_MINUTES).length, 4];
+      }
       default:
         return [0, 1];
     }
