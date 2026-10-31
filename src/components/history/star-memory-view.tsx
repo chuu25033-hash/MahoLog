@@ -59,31 +59,30 @@ function polar(r: number, deg: number) {
 }
 
 /** 星を並べる天球図盤の同心円軌道（内側から外側へ） */
-const ORBITS = [40, 56, 72];
-/** 星座（週）の中心が乗る軌道 */
+const ORBITS = [48, 60, 72];
+/** 中央の軌道 */
 const ORBIT_MID = ORBITS[1];
+/** 星座（週）の中心と、7夜が揃ったときに浮かぶ紋章の中心の半径。紋章が外周の目盛りにかからないよう、軌道より少し内側 */
+const WEEK_CENTER_R = 56;
 /** 各週が占める円弧の広がり（度）。7夜を等間隔に並べる */
 const WEEK_SPAN = 76;
 
 /** 星座の中心: 左上から時計回りに週を四象限へ並べる */
 const WEEK_CENTERS = Array.from({ length: MEMORY_WEEKS }, (_, w) => {
   const angle = -135 + w * 90;
-  return { ...polar(ORBIT_MID, angle), angle };
+  return { ...polar(WEEK_CENTER_R, angle), angle };
 });
 
-/** 夜ごとに乗る軌道。ときおり隣の軌道へ一段揺らぐので、星は円弧に沿いながら緩やかにうねって進む */
-const WEEK_ORBITS = Array.from({ length: MEMORY_WEEKS }, (_, w) => {
-  let ring = Math.floor(rand(w * 31 + 7) * ORBITS.length);
-  return Array.from({ length: 7 }, (_, d) => {
-    if (d > 0) {
-      // 跳ぶのは5夜に2夜ほど。跳びすぎると星が散らばって見える
-      const roll = rand(w * 7 + d + 11);
-      const step = roll < 0.2 ? -1 : roll > 0.8 ? 1 : 0;
-      ring = Math.min(ORBITS.length - 1, Math.max(0, ring + step));
-    }
-    return ORBITS[ring];
-  });
-});
+/**
+ * 夜ごとに乗る軌道。週ごとに位相をずらした緩やかな波で軌道を渡るので、どの週も外側から内側まで図盤を広く使い、
+ * 星は円弧に沿いながらうねって進む。外側の軌道に長く留まり、内側へは時折だけ沈む
+ */
+const WEEK_ORBITS = Array.from({ length: MEMORY_WEEKS }, (_, w) =>
+  Array.from({ length: 7 }, (_, d) => {
+    const wave = Math.sin(w * 1.3 + 0.6 + d * 0.95);
+    return ORBITS[wave > 0.2 ? 2 : wave > -0.75 ? 1 : 0];
+  }),
+);
 
 function starPolar(week: number, weekday: number) {
   return { r: WEEK_ORBITS[week][weekday], angle: WEEK_CENTERS[week].angle - WEEK_SPAN / 2 + (weekday * WEEK_SPAN) / 6 };
