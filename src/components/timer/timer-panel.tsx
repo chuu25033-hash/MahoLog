@@ -50,6 +50,7 @@ import { ComboIndicator, MeteorSign } from "./combo-indicator";
 import { PortraitTimer } from "./portrait-timer";
 import { ResultDialog, type StudyResult } from "./result-dialog";
 import { notifyFinish, requestRestNoticePermission, showRestEndNotification, useClock } from "./use-clock";
+import { useWakeLock, wakeLockNotice } from "./use-wake-lock";
 
 const BREAK_OPTIONS = [5, 10, 20] as const;
 const IDLE_CHECK_MS = 2 * 60 * 60 * 1000; // ストップウォッチの放置確認（2時間）
@@ -160,6 +161,9 @@ export function TimerPanel({
   const skin = activeSkin(data);
   const catalyst = armedCatalyst(data);
   const portrait = usePortraitPhone();
+  // 魔力を集束している間だけ、画面の自動消灯を止める（一時停止・終了・満了で解く）
+  const wakeLock = useWakeLock(phase === "focus" && running);
+  const wakeNotice = wakeLockNotice(wakeLock);
 
   // 設定で選択中の科目が外されたら、詠唱に使う科目の先頭に切り替える
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0];
@@ -663,6 +667,9 @@ export function TimerPanel({
       )}
       {phase === "focus" && <MeteorSign elapsedMs={elapsedMs} />}
       <ComboIndicator phase={phase} />
+      {phase === "focus" && wakeNotice && (
+        <p className="text-[10px] tracking-wider text-muted-foreground/70 [word-break:auto-phrase]">{wakeNotice}</p>
+      )}
       {saving && <p className="text-xs tracking-wider text-aqua/70 glimmer">魔力を記録中…</p>}
       {notice && !message && <p className="text-xs tracking-wider text-aqua/80">{notice}</p>}
       {message && <p className="text-xs text-destructive">{message}</p>}
