@@ -77,7 +77,15 @@ export type TitleCondition =
   /** そのレア度の遺物をすべて図鑑に登録した */
   | { kind: "rarityComplete"; rarity: ItemRarity }
   /** 図鑑解読率（0〜1） */
-  | { kind: "codexRate"; rate: number };
+  | { kind: "codexRate"; rate: number }
+  /** 正式な公開の前（EARLY_ACCESS_OPEN の間）にアプリを開いた。開いただけで満たす */
+  | { kind: "earlyAccess" };
+
+/**
+ * 公開前の来訪者に『黎明の観測者』を授ける受付。正式に公開するときに false にする
+ * （それまでに授かった称号は残り、以後に始めた人には一覧にも出さない）
+ */
+export const EARLY_ACCESS_OPEN = true;
 
 export interface Title {
   /** "ach-" で始まる（星天の塔の称号 "t-" と重ならない） */
@@ -93,6 +101,8 @@ export interface Title {
   flavorText?: string;
   /** 解放するまで名前と条件を伏せる */
   hidden?: boolean;
+  /** 期間限定。解放していなければ一覧にも数にも出さない（もう手に入らないため） */
+  limited?: boolean;
 }
 
 /** 判定に使う詠唱1回分（後から書き留めた記録は含めない） */
@@ -117,6 +127,8 @@ export interface UserStats {
   dissolved: number;
   /** 星脈との同調の最長（この項目より前の保存データには無い） */
   bestCombo?: number;
+  /** 公開前の来訪者の受付が開いているか（titleStatsOf で EARLY_ACCESS_OPEN を入れる） */
+  earlyAccess?: boolean;
   /** レア度ごとの図鑑登録（1周目の道で出会える遺物。周回限定・星天の塔の報酬は含めない） */
   rarity: Record<ItemRarity, Tally>;
   /** 図鑑解読率（図鑑の画面と同じ数え方） */
@@ -198,12 +210,14 @@ export function describeCondition(c: TitleCondition): string {
       return `${rarityLabel(c.rarity)}の遺物をすべて図鑑に登録`;
     case "codexRate":
       return `図鑑解読率${Math.round(c.rate * 100)}%を達成`;
+    case "earlyAccess":
+      return "正式な公開の前に、この世界を訪れた";
   }
 }
 
 // ---- 称号の一覧 ----
 
-type Extra = { flavorText?: string; hidden?: boolean };
+type Extra = { flavorText?: string; hidden?: boolean; limited?: boolean };
 
 const define =
   (category: TitleCategory) =>
@@ -227,6 +241,14 @@ const hours = (h: number) => h * 60;
 
 /** ① 継続: 詠唱の回数・連続日数・通算日数・累計時間 */
 const CONTINUOUS_TITLES: Title[] = [
+  continuous(
+    "early-observer",
+    "黎明の観測者",
+    "S",
+    { kind: "earlyAccess" },
+    "星図がまだ描きかけだった黎明に、陣はあなたを呼んだ。後から来るどの観測者の夜空にも、その頃に灯った光が残っている。",
+    { limited: true },
+  ),
   continuous("first-chant", "はじめての詠唱", "C", { kind: "chants", count: 1, minMinutes: 1 }, "凍った星脈に、初めて自分の刻を流した。夜空のどこかで、星がひとつ瞬きを思い出す。"),
   continuous("chants-10", "灯を絶やさぬ者", "C", { kind: "chants", count: 10 }, "十度灯した机の蝋燭は、もう少しのことでは消えない。"),
   continuous("chants-50", "星脈に愛されし者", "B", { kind: "chants", count: 50 }, "幾度も刻を注がれた星脈は、あなたの詠唱の調子を覚えはじめた。"),
@@ -549,6 +571,8 @@ function measure(c: TitleCondition, s: ChantSummary, stats: UserStats): TitlePro
       const { found, total } = stats.codex;
       return progress(found, Math.ceil(total * c.rate), total > 0 && found >= Math.ceil(total * c.rate));
     }
+    case "earlyAccess":
+      return progress(stats.earlyAccess ? 1 : 0, 1);
   }
 }
 

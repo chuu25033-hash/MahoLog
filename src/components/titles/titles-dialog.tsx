@@ -49,9 +49,11 @@ export function TitlesDialog({ onClose }: { onClose: () => void }) {
   const progress = useMemo(() => titleProgressMap(titleStatsOf(data)), [data]);
   const { unlocked } = data.titles;
   const equipped = equippedTitle(data);
-  const unlockedCount = ACHIEVEMENT_TITLES.filter((t) => t.id in unlocked).length;
+  // 期間限定の称号は、授かっていなければ一覧にも数にも出さない
+  const shown = ACHIEVEMENT_TITLES.filter((t) => !t.limited || t.id in unlocked);
+  const unlockedCount = shown.filter((t) => t.id in unlocked).length;
   // 同じ格の中は一覧の定義順（条件の軽い順）のまま
-  const list = ACHIEVEMENT_TITLES.filter((t) => t.category === category && (!onlyUnlocked || t.id in unlocked)).sort((a, b) => {
+  const list = shown.filter((t) => t.category === category && (!onlyUnlocked || t.id in unlocked)).sort((a, b) => {
     const diff = GRADE_ASC.indexOf(a.grade) - GRADE_ASC.indexOf(b.grade);
     return highFirst ? -diff : diff;
   });
@@ -81,7 +83,7 @@ export function TitlesDialog({ onClose }: { onClose: () => void }) {
           <p className="shrink-0 text-right text-[10px] tracking-[0.2em] whitespace-nowrap text-muted-foreground">
             解放
             <span className="ml-1.5 font-display text-base text-starlight">{unlockedCount}</span>
-            <span className="font-display"> / {ACHIEVEMENT_TITLES.length}</span>
+            <span className="font-display"> / {shown.length}</span>
           </p>
         </div>
 

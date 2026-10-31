@@ -103,6 +103,11 @@ describe("称号の解放判定", () => {
     expect(ids).not.toContain("ach-complete-s");
   });
 
+  it("公開前の受付が開いていれば、記録が無くても『黎明の観測者』", () => {
+    expect(unlocked({ earlyAccess: true })).toEqual(["ach-early-observer"]);
+    expect(unlocked({ earlyAccess: false })).not.toContain("ach-early-observer");
+  });
+
   it("進捗は目標で頭打ちになる", () => {
     const progress = titleProgressMap({ ...EMPTY, dissolved: 70 });
     expect(progress.get("ach-dissolved-50")).toEqual({ current: 50, target: 50, met: true });

@@ -32,7 +32,7 @@ import {
 import { mockObservedNights } from "./star-memory";
 import { activeSubjectsOf } from "./subjects";
 import { comboOnFinish, comboOnStart, initialCombo, type ComboState } from "./combo";
-import { ACHIEVEMENT_TITLES, checkUnlockedTitles, findTitle, type Tally, type Title, type UserStats, type UserTitleState } from "./titles";
+import { ACHIEVEMENT_TITLES, EARLY_ACCESS_OPEN, checkUnlockedTitles, findTitle, type Tally, type Title, type UserStats, type UserTitleState } from "./titles";
 import { TASKS, drawCatalyst, measureTask, periodKey, type TaskBoard, type TaskScope } from "./tasks";
 import { generateWorldlineCode } from "./worldlines";
 import type { Profile, StudyLog, StudyMode, Subject } from "./types";
@@ -267,6 +267,7 @@ export function titleStatsOf(data: UserData): UserStats {
     documents: { found: restoredCount(data), total: DOCUMENTS.length },
     dissolved: data.dissolvedTotal,
     bestCombo: data.combo.best,
+    earlyAccess: EARLY_ACCESS_OPEN,
     rarity: Object.fromEntries(CODEX_RARITIES.map((r) => [r, tally(RARITY_SET.filter((i) => i.rarity === r), data)])) as Record<ItemRarity, Tally>,
     codex: tally(codexOf(data), data),
   };
@@ -378,7 +379,8 @@ function load(): UserData {
     }
   } catch {}
   // 未保存（初回起動）なら初期値で永続化を始める
-  state = migrateLegacy();
+  // 開いただけで授かる称号（黎明の観測者）もここで解放する
+  state = withUnlockedTitles(migrateLegacy());
   persist();
   return state;
 }
