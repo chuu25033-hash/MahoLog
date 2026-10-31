@@ -249,10 +249,19 @@ function useRemotePulses() {
   useSyncExternalStore(subscribeRemote, remoteSnapshot, () => REMOTE_SERVER_SNAPSHOT);
 }
 
+/**
+ * 結びし世界線を開いているか。本物の相手と結べるのはメール認証モード（DB）だけなので、
+ * それ以外では入口を「準備中」として閉じ、端末内の模擬の相手（デモモード）は表に出さない
+ */
+export const WORLDLINES_OPEN = isEmailAuthMode;
+
 export const useWorldlines: () => WorldlinesView = isEmailAuthMode ? useRemoteWorldlines : useDemoWorldlines;
 
-/** 結ばれた相手の詠唱の開始・完了を onWorldlinePulse へ流す（画面に一つだけ置く） */
-export const useWorldlinePulseSource: () => void = isEmailAuthMode ? useRemotePulses : useDemoPulses;
+/**
+ * 結ばれた相手の詠唱の開始・完了を onWorldlinePulse へ流す（画面に一つだけ置く）。
+ * 閉じている間は、前に模擬の相手と結んでいても光の知らせを流さない
+ */
+export const useWorldlinePulseSource: () => void = !WORLDLINES_OPEN ? () => {} : isEmailAuthMode ? useRemotePulses : useDemoPulses;
 
 /** 自分の詠唱の開始・中断を、結ばれた相手に気配として残す（デモモードでは何もしない） */
 export function setChantPresence(chanting: boolean, stageId?: string) {

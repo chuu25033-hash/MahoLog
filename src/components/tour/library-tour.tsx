@@ -7,6 +7,7 @@ import { ArrowGlyph } from "@/components/arcane-icons";
 import { Button } from "@/components/ui/button";
 import { markLibraryTourDone, useLibraryTourDone } from "@/lib/onboarding";
 import { useStoredUserData } from "@/lib/user-store";
+import { WORLDLINES_OPEN } from "@/lib/worldline-store";
 import { usePortraitPhone } from "@/lib/use-portrait-phone";
 import { cn } from "@/lib/utils";
 
@@ -65,7 +66,9 @@ const STEPS: Step[] = [
     target: "worldlines",
     title: "結びし世界線",
     label: "BOUND WORLDLINES",
-    body: "遠い世界線の観測者と結ばれ、互いの探求の気配を静かに感じられます。順位を競うことはありません。",
+    body: WORLDLINES_OPEN
+      ? "遠い世界線の観測者と結ばれ、互いの探求の気配を静かに感じられます。順位を競うことはありません。"
+      : "遠い世界線の観測者と結ばれ、互いの探求の気配を静かに感じられる場所です。いまは準備中で、開くまでもうしばらくお待ちください。",
   },
   {
     target: "settings",

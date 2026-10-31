@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BookMarked, CalendarDays, Crown, Moon, Orbit, Settings, Sparkles, Sun, Swords, Wand2 } from "lucide-react";
 import { AreaAmbience } from "@/components/area-ambience";
 import { BoundWorldlinesDialog } from "@/components/bound-worldlines-dialog";
+import { WORLDLINES_OPEN } from "@/lib/worldline-store";
 import { CycleRings } from "@/components/cycle/cycle-rings";
 import { MpBar } from "@/components/mp-bar";
 import { KeyBackupReminder } from "@/components/observer/key-backup";
@@ -335,8 +336,17 @@ function MenuTiles({ subjects, className }: { subjects: Subject[]; className?: s
       <Link href="/history" data-tour="history" aria-label="魔導の軌跡" className={tileClass}>
         <TileContent icon={CalendarDays} label="魔導の軌跡" sub="CHRONICLE" note="暦と星の記憶をたどる" glyph="starmap" />
       </Link>
-      <button type="button" data-tour="worldlines" onClick={() => setWorldlinesOpen(true)} aria-haspopup="dialog" aria-label="結びし世界線" className={tileClass}>
-        <TileContent icon={Orbit} label="結びし世界線" sub="BOUND WORLDLINES" note="遠い観測者の気配" glyph="armillary" />
+      {/* 本物の相手と結べるようになるまでは押せないようにし、「準備中」と添える */}
+      <button
+        type="button"
+        data-tour="worldlines"
+        onClick={() => setWorldlinesOpen(true)}
+        disabled={!WORLDLINES_OPEN}
+        aria-haspopup="dialog"
+        aria-label={WORLDLINES_OPEN ? "結びし世界線" : "結びし世界線（準備中）"}
+        className={tileClass}
+      >
+        <TileContent icon={Orbit} label="結びし世界線" sub="BOUND WORLDLINES" note={WORLDLINES_OPEN ? "遠い観測者の気配" : "準備中"} glyph="armillary" />
       </button>
       <Link href="/settings" data-tour="settings" aria-label="設定" className={tileClass}>
         <TileContent icon={Settings} label="設定" sub="SETTINGS" note="名・紋章・音・観測者ID" glyph="gear" />
