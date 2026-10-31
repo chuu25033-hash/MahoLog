@@ -1186,6 +1186,60 @@ body {
   }
 }
 
+/*
+ * 称号の名前の色: 格が上がるほど豪華にする（titles-dialog.tsx の GRADE_NAME_TONE から使う）
+ * C 控えめな白銀 → B 水色 → A 淡く光る紫 → S 光る金 → SS 光の筋が流れる金の濃淡
+ */
+.title-tone-c {
+  color: color-mix(in srgb, var(--foreground) 72%, transparent);
+}
+
+.title-tone-b {
+  color: var(--aqua);
+}
+
+.title-tone-a {
+  color: var(--amethyst);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--amethyst) 45%, transparent);
+}
+
+.title-tone-s {
+  color: var(--starlight);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--starlight) 55%, transparent), 0 0 2px color-mix(in srgb, var(--starlight) 40%, transparent);
+}
+
+/* 背景で塗る文字に text-shadow は上から重なるので、光は drop-shadow で添える */
+.title-tone-ss {
+  background: linear-gradient(
+    100deg,
+    var(--starlight-lo) 0%,
+    var(--starlight) 30%,
+    var(--starlight-hi) 45%,
+    #ffffff 50%,
+    var(--starlight-hi) 55%,
+    var(--starlight) 70%,
+    var(--starlight-lo) 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--starlight) 60%, transparent)) drop-shadow(0 0 14px color-mix(in srgb, var(--starlight) 30%, transparent));
+  animation: title-sheen 4.5s ease-in-out infinite;
+}
+
+@keyframes title-sheen {
+  0% { background-position: 100% 0; }
+  60%, 100% { background-position: 0% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-tone-ss {
+    animation: none;
+    background-position: 50% 0;
+  }
+}
+
 @keyframes presence-glow {
   0%, 100% { box-shadow: 0 0 3px rgba(113, 226, 239, 0.5); }
   50% { box-shadow: 0 0 9px 1px rgba(113, 226, 239, 0.9); }

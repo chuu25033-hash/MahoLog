@@ -19,25 +19,25 @@ import {
 import { equippedTitle, titleStatsOf, userActions, useUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
-/** 称号の格の色（図鑑のレア度と同じ色合い） */
+/** 称号の格の札（RARE ○）の色。名前の色（GRADE_NAME_TONE）と同じ色相で、格が上がるほど明るく光る */
 export const GRADE_TONE: Record<ItemRarity, string> = {
   SS: "text-starlight text-glow-gold",
   S: "text-starlight",
   A: "text-amethyst",
-  B: "text-starlight/80",
-  C: "text-aqua",
+  B: "text-aqua/85",
+  C: "text-muted-foreground",
 };
 
 /**
- * 称号の名前そのものの色。RARE の札と同じ色合いで、S は光を帯び、SS は金の濃淡で塗る
- * （背景で塗る文字に text-shadow は上から重なるので、SS の光は drop-shadow で添える）
+ * 称号の名前そのものの色。格が上がるほど豪華にする（中身は globals.css の .title-tone-*）:
+ * C 控えめな白銀 → B 水色 → A 淡く光る紫 → S 光る金 → SS 光の筋が流れる金の濃淡
  */
 export const GRADE_NAME_TONE: Record<ItemRarity, string> = {
-  SS: "text-starlight-gradient drop-shadow-[0_0_6px_color-mix(in_srgb,var(--starlight)_55%,transparent)]",
-  S: "text-starlight text-glow-gold",
-  A: "text-amethyst",
-  B: "text-starlight/80",
-  C: "text-aqua",
+  SS: "title-tone-ss",
+  S: "title-tone-s",
+  A: "title-tone-a",
+  B: "title-tone-b",
+  C: "title-tone-c",
 };
 
 /** 称号の格（実績の称号は grade、星天の塔の称号は遺物のレア度） */

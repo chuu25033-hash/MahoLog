@@ -27,34 +27,41 @@ export type ShareCardInput = {
 };
 
 /**
- * 称号の名前の色。画面の GRADE_NAME_TONE（titles-dialog.tsx）と同じ色合いを、既定の配色の値で描く。
- * S と SS は光を帯び、SS は金の濃淡で塗る。baseline は文字のベースライン、size は文字の大きさ
+ * 称号の名前の色。画面の .title-tone-*（globals.css）と同じ段階を、既定の配色の値で描く:
+ * C 控えめな白銀 → B 水色 → A 淡く光る紫 → S 光る金 → SS 光の筋の入った金の濃淡（画像なので筋は止めて真ん中に置く）。
+ * x は文字列の中央、width はおおよその幅、baseline は文字のベースライン
  */
-function paintTitle(ctx: CanvasRenderingContext2D, grade: ItemRarity, baseline: number, size: number) {
+function paintTitle(ctx: CanvasRenderingContext2D, grade: ItemRarity, x: number, width: number, baseline: number) {
   switch (grade) {
     case "SS": {
-      const g = ctx.createLinearGradient(0, baseline - size, 0, baseline + size * 0.2);
-      g.addColorStop(0, "#fbf3d4");
-      g.addColorStop(0.55, GOLD);
+      const g = ctx.createLinearGradient(x - width / 2, baseline, x + width / 2, baseline);
+      g.addColorStop(0, "#b89645");
+      g.addColorStop(0.3, GOLD);
+      g.addColorStop(0.45, "#fbf3d4");
+      g.addColorStop(0.5, "#ffffff");
+      g.addColorStop(0.55, "#fbf3d4");
+      g.addColorStop(0.7, GOLD);
       g.addColorStop(1, "#b89645");
       ctx.fillStyle = g;
-      ctx.shadowColor = "rgba(226, 201, 116, 0.6)";
-      ctx.shadowBlur = 12;
+      ctx.shadowColor = "rgba(226, 201, 116, 0.75)";
+      ctx.shadowBlur = 16;
       break;
     }
     case "S":
       ctx.fillStyle = GOLD;
-      ctx.shadowColor = "rgba(226, 201, 116, 0.45)";
+      ctx.shadowColor = "rgba(226, 201, 116, 0.55)";
       ctx.shadowBlur = 10;
       break;
     case "A":
       ctx.fillStyle = "#a882fb";
+      ctx.shadowColor = "rgba(168, 130, 251, 0.45)";
+      ctx.shadowBlur = 8;
       break;
     case "B":
-      ctx.fillStyle = "rgba(226, 201, 116, 0.8)";
+      ctx.fillStyle = "#71e2ef";
       break;
     case "C":
-      ctx.fillStyle = "#71e2ef";
+      ctx.fillStyle = "rgba(230, 234, 242, 0.72)";
       break;
   }
 }
@@ -234,8 +241,10 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob> {
   ctx.font = `22px ${serif}`;
   if (input.title) {
     ctx.save();
-    paintTitle(ctx, input.titleGrade ?? "S", 358, 22);
-    spacedText(ctx, `【${input.title}】`, lx, 358, 4);
+    const text = `【${input.title}】`;
+    const width = ctx.measureText(text).width + 4 * ([...text].length - 1);
+    paintTitle(ctx, input.titleGrade ?? "S", lx, width, 358);
+    spacedText(ctx, text, lx, 358, 4);
     ctx.restore();
   } else {
     ctx.fillStyle = GOLD;
