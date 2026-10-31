@@ -15,7 +15,10 @@ export default function LoginPage() {
           <ArcaneLogo className="mx-auto size-12 text-starlight drop-shadow-[0_0_8px_rgba(226,201,116,0.45)]" />
           <h1 className="mt-2 text-4xl tracking-[0.3em] text-starlight-gradient">マホログ</h1>
           <p className="font-display text-xs tracking-[0.5em] text-starlight/60">MAHOLOG</p>
-          <p className="mt-3 text-sm tracking-wider text-muted-foreground">孤独な世界の奥地に眠る秘術を解き明かし、己の実力を高める旅へ</p>
+          {/* iOS Safari は auto-phrase を解さないので、keep-all と <wbr> で文節の切れ目だけを折り返し点にする */}
+          <p className="mt-3 text-sm tracking-wider text-balance text-muted-foreground [word-break:keep-all]">
+            孤独な<wbr />世界の<wbr />奥地に<wbr />眠る<wbr />秘術を<wbr />解き明かし、<wbr />己の<wbr />実力を<wbr />高める<wbr />旅へ
+          </p>
         </div>
       </div>
       <AuthForm />

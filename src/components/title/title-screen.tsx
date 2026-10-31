@@ -132,16 +132,17 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
         </div>
 
         <p
-          className="title-rise text-lg tracking-[0.3em] text-foreground/85 short:text-base"
+          className="title-rise text-lg tracking-[0.3em] text-balance text-foreground/85 [word-break:keep-all] short:text-base"
           style={{ "--rise-delay": "1.1s" } as CSSProperties}
         >
-          日々の学びは、夜空を彩る星となる。
+          {/* iOS Safari は auto-phrase を解さないので、keep-all と <wbr> で文節の切れ目だけを折り返し点にする */}
+          日々の学びは、<wbr />夜空を<wbr />彩る<wbr />星となる。
         </p>
         <p
-          className="title-rise mt-2 text-xs tracking-[0.25em] text-muted-foreground"
+          className="title-rise mt-2 text-xs tracking-[0.25em] text-balance text-muted-foreground [word-break:keep-all]"
           style={{ "--rise-delay": "1.4s" } as CSSProperties}
         >
-          孤独な世界の奥地に眠る秘術を解き明かし、己の実力を高める旅へ
+          孤独な<wbr />世界の<wbr />奥地に<wbr />眠る<wbr />秘術を<wbr />解き明かし、<wbr />己の<wbr />実力を<wbr />高める<wbr />旅へ
         </p>
 
         <div className="title-rise mt-10 short:mt-5" style={{ "--rise-delay": "1.8s" } as CSSProperties}>
