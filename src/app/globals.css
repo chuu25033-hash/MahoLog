@@ -1169,6 +1169,23 @@ body {
   animation: worldline-note 4.2s ease-out forwards;
 }
 
+/* 称号の解放: 霞から結ぶように浮かび、しばらく留まってから静かに薄れる（title-unlock-notice.tsx と同じ 5.6 秒） */
+@keyframes title-notice {
+  0% { opacity: 0; transform: translateY(-6px); filter: blur(3px); }
+  12%, 82% { opacity: 1; transform: none; filter: none; }
+  100% { opacity: 0; filter: blur(2px); }
+}
+
+.title-notice {
+  animation: title-notice 5.6s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-notice {
+    animation: none;
+  }
+}
+
 @keyframes presence-glow {
   0%, 100% { box-shadow: 0 0 3px rgba(113, 226, 239, 0.5); }
   50% { box-shadow: 0 0 9px 1px rgba(113, 226, 239, 0.9); }

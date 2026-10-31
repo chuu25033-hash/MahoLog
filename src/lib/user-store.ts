@@ -8,23 +8,30 @@ import { jstDateKey, startOfJstDay } from "./date";
 import { demoProfile } from "./demo";
 import { DAILY_LIMIT_MINUTES, calcLevel, rankOf } from "./game";
 import { CLEAR_MP, chapterOf, milestonesBetween, zenithFloor, type Chapter, type ChapterTheme } from "./cycles";
-import { canCraft, canRestore, dissolveValue, fragmentsOf, memoryOf, surplusCount } from "./crafting";
+import { canCraft, canRestore, dissolveValue, fragmentsOf, memoryOf, restoredCount, surplusCount } from "./crafting";
 import {
   ALL_ITEMS,
+  CODEX_RARITIES,
   DEFAULT_SKIN,
+  DOCUMENTS,
   FRAGMENTS,
   MEMORIES,
   MYTHICS,
   STARDUST_ORE,
+  cycleOfItem,
   findItem,
+  isZenithReward,
   type CatalystItem,
   type Item,
+  type ItemRarity,
   type MemoryItem,
   type RelicItem,
   type Skin,
+  type TitleItem,
 } from "./items";
 import { mockObservedNights } from "./star-memory";
 import { activeSubjectsOf } from "./subjects";
+import { checkUnlockedTitles, findTitle, type Tally, type Title, type UserStats, type UserTitleState } from "./titles";
 import { TASKS, drawCatalyst, measureTask, periodKey, type TaskBoard, type TaskScope } from "./tasks";
 import { generateWorldlineCode } from "./worldlines";
 import type { Profile, StudyLog, StudyMode, Subject } from "./types";
@@ -123,6 +130,13 @@ export type UserData = {
   zenith: { minutes: number };
   /** 星の余韻: 25分の区切りに届かなかった端数（分、0〜24）。次の詠唱に足して流れ星を数える（lib/drops.ts） */
   starEcho: number;
+  /**
+   * 実績で解放した観測者の称号（lib/titles.ts）: 称号ID → 解放した日時と、まだ解放を告げていない称号ID。
+   * 掲げる称号は equipment.titleId
+   */
+  titles: { unlocked: Record<string, string>; unseen: string[] };
+  /** 錬成陣で還元した遺物の累計数（称号の判定に使う） */
+  dissolvedTotal: number;
 };
 
 const unlockedAt = (totalMp: number) => AREAS.filter((a) => isAreaUnlocked(a, totalMp)).map((a) => a.id);
@@ -142,6 +156,8 @@ export function initialUserData(): UserData {
     cycle: { count: 1, startMp: 0 },
     zenith: { minutes: 0 },
     starEcho: 0,
+    titles: { unlocked: {}, unseen: [] },
+    dissolvedTotal: 0,
   };
 }
 
@@ -152,7 +168,7 @@ function normalize(saved: Partial<UserData>): UserData {
   const { mainSubjectId, ...settings } = (saved.settings ?? {}) as Partial<UserSettings> & { mainSubjectId?: string | null };
   const userProfile = { ...base.userProfile, ...saved.userProfile };
   userProfile.subject ??= mainSubjectId ?? null;
-  return {
+  return withUnlockedTitles({
     ...base,
     ...saved,
     userProfile,
@@ -163,7 +179,8 @@ function normalize(saved: Partial<UserData>): UserData {
     worldlines: { ...base.worldlines, ...saved.worldlines },
     cycle: { ...base.cycle, ...saved.cycle },
     zenith: { ...base.zenith, ...saved.zenith },
-  };
+    titles: { ...base.titles, ...saved.titles },
+  });
 }
 
 /** 試練の進捗を詠唱履歴から測り直す。期間が変わっていれば受取状況も巡り直す */
@@ -216,9 +233,55 @@ export function isCycleCleared(data: UserData, totalMp: number) {
   return cycleMp(data, totalMp) >= CLEAR_MP;
 }
 
-export function equippedTitle(data: UserData) {
-  const item = findItem(data.equipment.titleId);
+/** 掲げている称号: 実績で解放した観測者の称号か、星天の塔で授かった称号 */
+export function equippedTitle(data: UserData): Title | TitleItem | null {
+  const id = data.equipment.titleId;
+  const achieved = findTitle(id);
+  if (achieved) return achieved.id in data.titles.unlocked ? achieved : null;
+  const item = findItem(id);
   return item?.kind === "title" && isDiscovered(data, item.id) ? item : null;
+}
+
+/**
+ * 図鑑（秘術図鑑の一覧）に載る遺物。
+ * 星天の塔の報酬は塔が開くまで、周回限定の品（影・蒼炎）はその周に入るまで、図鑑に存在ごと載せない
+ */
+export function codexOf(data: UserData): Item[] {
+  const zenithKnown = knowsZenith(data);
+  return ALL_ITEMS.filter((i) => (zenithKnown || !isZenithReward(i)) && (cycleOfItem(i) <= data.cycle.count || isDiscovered(data, i.id)));
+}
+
+/** レア度ごとのコンプリートを数える遺物: 1周目の道で出会えるもの（称号・周回限定・星天の塔の報酬は除く） */
+const RARITY_SET = ALL_ITEMS.filter((i) => i.kind !== "title" && cycleOfItem(i) === 1 && !isZenithReward(i));
+
+const tally = (items: Item[], data: UserData): Tally => ({ found: items.filter((i) => isDiscovered(data, i.id)).length, total: items.length });
+
+/** 称号の判定に使う記録。後から書き留めた記録は、試練と同じく数えない */
+export function titleStatsOf(data: UserData): UserStats {
+  return {
+    chants: data.chantHistory
+      .filter((r) => !r.manual)
+      .map((r) => ({ endedAt: r.date, minutes: r.minutes, areaId: r.stageId, subjectId: r.subjectId, mode: r.mode })),
+    documents: { found: restoredCount(data), total: DOCUMENTS.length },
+    dissolved: data.dissolvedTotal,
+    rarity: Object.fromEntries(CODEX_RARITIES.map((r) => [r, tally(RARITY_SET.filter((i) => i.rarity === r), data)])) as Record<ItemRarity, Tally>,
+    codex: tally(codexOf(data), data),
+  };
+}
+
+export function titleStateOf(data: UserData): UserTitleState {
+  return { unlocked: data.titles.unlocked, equippedId: data.equipment.titleId };
+}
+
+/** 新たに条件を満たした称号を解放済みにする（何も増えなければ同じデータを返す） */
+function withUnlockedTitles(data: UserData, now = new Date()): UserData {
+  const ids = checkUnlockedTitles(titleStatsOf(data), titleStateOf(data));
+  if (ids.length === 0) return data;
+  const at = now.toISOString();
+  return {
+    ...data,
+    titles: { unlocked: { ...data.titles.unlocked, ...Object.fromEntries(ids.map((id) => [id, at])) }, unseen: [...data.titles.unseen, ...ids] },
+  };
 }
 
 /**
@@ -329,7 +392,8 @@ export function onLocalChange(hook: () => void) {
 
 /** local: この端末での変更か（クラウドから取り込んだときは false にして、預け直しの合図を出さない） */
 function update(next: (s: UserData) => UserData, local = true) {
-  state = next(load());
+  // 詠唱・還元・錬成など、どの変化でも称号の解放を確かめる
+  state = withUnlockedTitles(next(load()));
   persist();
   listeners.forEach((l) => l());
   if (local) localChangeHooks.forEach((h) => h());
@@ -470,6 +534,11 @@ export const userActions = {
   /** プロフィールに掲げる称号 */
   setTitle(id: string | null) {
     update((s) => ({ ...s, equipment: { ...s.equipment, titleId: id } }));
+  },
+
+  /** 解放を告げ終えた称号を、未告知の一覧から外す */
+  markTitlesSeen(ids: string[]) {
+    update((s) => ({ ...s, titles: { ...s.titles, unseen: s.titles.unseen.filter((id) => !ids.includes(id)) } }));
   },
 
   /** 星天の塔で詠唱した時間を刻み、階層を昇る。節目を越えたら天界遺物・称号を授ける */
@@ -684,6 +753,7 @@ export const userActions = {
       return {
         ...s,
         inventory: { ...s.inventory, [item.id]: left, [STARDUST_ORE.id]: (s.inventory[STARDUST_ORE.id] ?? 0) + ore },
+        dissolvedTotal: s.dissolvedTotal + n,
         // 装備中の触媒を使い切ったら装備も外す
         equipment: { ...s.equipment, catalystId: s.equipment.catalystId === item.id && left <= 0 ? null : s.equipment.catalystId },
       };

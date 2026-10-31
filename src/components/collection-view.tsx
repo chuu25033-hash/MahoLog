@@ -14,19 +14,17 @@ import { oreCount, recipeRelics, restoredCount } from "@/lib/crafting";
 import { chapterOf } from "@/lib/cycles";
 import { STAGES } from "@/lib/game";
 import {
-  ALL_ITEMS,
   CODEX_RARITIES,
   DOCUMENTS,
   GUIDANCE_CATALYSTS,
   ITEM_TYPES,
-  cycleOfItem,
   isZenithReward,
   RARITY_LABEL,
   type Item,
   type ItemRarity,
   type ItemType,
 } from "@/lib/items";
-import { armedCatalyst, hasItem, isDiscovered, knowsZenith, userActions, useUserData, type UserData } from "@/lib/user-store";
+import { armedCatalyst, codexOf, hasItem, isDiscovered, knowsZenith, userActions, useUserData, type UserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 /** 拡大縮小しても 1px を保つ光の線 */
@@ -65,11 +63,8 @@ export function CollectionView() {
   const data = useUserData();
   const [filter, setFilter] = useState<Filter>("すべて");
   const [selected, setSelected] = useState<Item | null>(null);
-  // 星天の塔の報酬は塔が開くまで、周回限定の品（影・蒼炎）はその周に入るまで、図鑑に存在ごと載せない
   const zenithKnown = knowsZenith(data);
-  const codex = ALL_ITEMS.filter(
-    (i) => (zenithKnown || !isZenithReward(i)) && (cycleOfItem(i) <= data.cycle.count || isDiscovered(data, i.id)),
-  );
+  const codex = codexOf(data);
   const found = codex.filter((i) => isDiscovered(data, i.id)).length;
   const rate = found / codex.length;
   const visible = codex.filter((i) => filter === "すべて" || i.type === filter);

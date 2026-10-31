@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BookMarked, CalendarDays, Moon, Orbit, Settings, Sparkles, Sun, Swords, Wand2 } from "lucide-react";
+import { BookMarked, CalendarDays, Crown, Moon, Orbit, Settings, Sparkles, Sun, Swords, Wand2 } from "lucide-react";
 import { AreaAmbience } from "@/components/area-ambience";
 import { BoundWorldlinesDialog } from "@/components/bound-worldlines-dialog";
 import { CycleRings } from "@/components/cycle/cycle-rings";
@@ -14,6 +14,7 @@ import { WhisperText, whisperHost } from "@/components/whisper";
 import { RadarPanel } from "@/components/radar-panel";
 import { ShareRecordButton } from "@/components/share-record";
 import { StageCard } from "@/components/stage-card";
+import { TitlesDialog } from "@/components/titles/titles-dialog";
 import { TrialsDialog, readyCount } from "@/components/trials-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -63,6 +64,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
   const level = levelProgress(profile.total_study_time);
   const rank = rankOf(level.level);
   const title = equippedTitle(data);
+  const [titlesOpen, setTitlesOpen] = useState(false);
   const laps = data.cycle.count - 1;
   const portrait = usePortraitPhone();
 
@@ -76,14 +78,22 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
           {laps > 0 && <WhisperText text={`${cycleLabel(data.cycle.count)}（${laps}周を巡り終えた）`} />}
         </div>
         <div className="min-w-0">
-          <p className="text-base tracking-wider">
+          {/* 称号と名前に触れると、掲げる称号を選べる */}
+          <button
+            type="button"
+            onClick={() => setTitlesOpen(true)}
+            aria-haspopup="dialog"
+            className={cn(whisperHost, "text-left text-base tracking-wider transition-colors duration-300 hover:text-starlight")}
+          >
             {title ? (
               <span className="mr-1 text-[11px] tracking-[0.15em] text-starlight text-glow-gold">【{title.name}】</span>
             ) : (
               <span className="text-[11px] tracking-[0.2em] text-muted-foreground">秘術探究者・</span>
             )}
             {profile.username}
-          </p>
+            <Crown className="ml-1.5 inline size-3 align-baseline text-starlight/50" strokeWidth={1.25} aria-hidden />
+            <WhisperText text="掲げる称号を選ぶ" side="top" />
+          </button>
           <div className="flex items-center gap-1 text-[11px] tracking-[0.2em] whitespace-nowrap text-starlight/85">
             <RankSigil numeral={rank.numeral} className="size-5 shrink-0 text-starlight" />
             {/* 階級名の下に英語の階位を小さく添える */}
@@ -112,6 +122,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
         </div>
         <MpBar ratio={level.ratio} />
       </div>
+      {titlesOpen && <TitlesDialog onClose={() => setTitlesOpen(false)} />}
     </Card>
   );
 

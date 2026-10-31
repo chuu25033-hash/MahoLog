@@ -1,4 +1,5 @@
 import { isCloudSyncEnabled, isEmailAuthMode } from "@/lib/supabase/config";
+import { TitleUnlockNotice } from "./titles/title-unlock-notice";
 import { WorldlinePulses } from "./worldline-pulses";
 
 /** 各画面の枠。行き来は魔術書庫を拠点にし、他の画面は左上の「魔術書庫」から戻る */
@@ -14,6 +15,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="relative min-h-0 flex-1">{children}</div>
       </main>
       <WorldlinePulses />
+      <TitleUnlockNotice />
     </div>
   );
 }
