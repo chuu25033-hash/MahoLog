@@ -1208,19 +1208,19 @@ body {
   text-shadow: 0 0 10px color-mix(in srgb, var(--starlight) 55%, transparent), 0 0 2px color-mix(in srgb, var(--starlight) 40%, transparent);
 }
 
-/* 背景で塗る文字に text-shadow は上から重なるので、光は drop-shadow で添える */
+/*
+ * SS: 止まった金の濃淡（下の層）の上を、白い光の筋（上の層）だけが左から右へ通り抜ける。
+ * 筋の層は文字幅の3倍で、位置 100% では文字の左の外、0% では右の外に筋があるので、
+ * 外から入って外へ抜け、見えないところで左へ戻る（途中で止まったり跳ねたりして見えない）。
+ * 背景で塗る文字に text-shadow は上から重なるので、光は drop-shadow で添える
+ */
 .title-tone-ss {
-  background: linear-gradient(
-    100deg,
-    var(--starlight-lo) 0%,
-    var(--starlight) 30%,
-    var(--starlight-hi) 45%,
-    #ffffff 50%,
-    var(--starlight-hi) 55%,
-    var(--starlight) 70%,
-    var(--starlight-lo) 100%
-  );
-  background-size: 250% 100%;
+  background-image:
+    linear-gradient(105deg, transparent 40%, color-mix(in srgb, #ffffff 85%, transparent) 50%, transparent 60%),
+    linear-gradient(180deg, var(--starlight-hi) 0%, var(--starlight) 55%, var(--starlight-lo) 100%);
+  background-size: 300% 100%, 100% 100%;
+  background-position: 100% 0, 0 0;
+  background-repeat: no-repeat;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -1228,15 +1228,16 @@ body {
   animation: title-sheen 4.5s ease-in-out infinite;
 }
 
+/* 前半で通り抜け、後半は文字の外で休む */
 @keyframes title-sheen {
-  0% { background-position: 100% 0; }
-  60%, 100% { background-position: 0% 0; }
+  0% { background-position: 100% 0, 0 0; }
+  55%, 100% { background-position: 0% 0, 0 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .title-tone-ss {
     animation: none;
-    background-position: 50% 0;
+    background-position: 50% 0, 0 0;
   }
 }
 
