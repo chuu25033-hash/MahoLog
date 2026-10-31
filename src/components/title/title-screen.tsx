@@ -183,8 +183,9 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
                 ))}
               </span>
             )}
+            {/* 押すと星天の導きか魔術書庫へ進む（詠唱そのものは書庫から始める）。プロローグの結び「観測を、始めよう。」と揃える */}
             <span className="relative block text-base tracking-[0.4em] text-[#f6e9bd] short:text-sm">
-              詠唱を始める
+              観測を始める
             </span>
             <span className="relative mt-1 block font-display text-[10px] tracking-[0.5em] text-starlight/70">
               PRESS TO START
