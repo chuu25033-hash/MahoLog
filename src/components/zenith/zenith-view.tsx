@@ -73,7 +73,7 @@ function SealedGate({ data, totalMp }: { data: UserData; totalMp: number }) {
         <div className="w-full">
           <MpBar ratio={progress / CLEAR_MP} variant="stage" />
           <p className="mt-1.5 text-xs tracking-wider text-muted-foreground">
-            扉が開くまで あと<span className="mx-1 text-starlight text-glow-gold">{formatMinutes(Math.max(0, CLEAR_MP - progress))}</span>
+            扉が開くまで あと<span className="mx-1 text-starlight text-glow-gold">{formatMinutes(Math.max(0, CLEAR_MP - progress))}</span>ぶんの魔力
           </p>
         </div>
       </Card>
@@ -230,7 +230,7 @@ function CycleRite({ data, totalMp }: { data: UserData; totalMp: number }) {
           <p className="shrink-0 text-right text-[11px] tracking-wider text-muted-foreground">
             この周天の制覇まで
             <br />
-            あと<span className="mx-1 text-starlight">{formatMinutes(Math.max(0, CLEAR_MP - progress))}</span>
+            あと<span className="mx-1 text-starlight">{formatMinutes(Math.max(0, CLEAR_MP - progress))}</span>ぶんの魔力
           </p>
         )}
       </div>
