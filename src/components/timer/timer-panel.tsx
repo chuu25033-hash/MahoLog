@@ -161,8 +161,8 @@ export function TimerPanel({
   const skin = activeSkin(data);
   const catalyst = armedCatalyst(data);
   const portrait = usePortraitPhone();
-  // 魔力を集束している間だけ、画面の自動消灯を止める（一時停止・終了・満了で解く）
-  const wakeLock = useWakeLock(phase === "focus" && running);
+  // 詠唱と静息の時計が動いている間は、画面の自動消灯を止める（一時停止・静息明け・静息を終えたときに解く）
+  const wakeLock = useWakeLock(phase !== "idle" && running);
   const wakeNotice = wakeLockNotice(wakeLock);
 
   // 設定で選択中の科目が外されたら、詠唱に使う科目の先頭に切り替える
@@ -674,7 +674,7 @@ export function TimerPanel({
       )}
       {phase === "focus" && <MeteorSign elapsedMs={elapsedMs} />}
       <ComboIndicator phase={phase} />
-      {phase === "focus" && wakeNotice && (
+      {phase !== "idle" && wakeNotice && (
         <p className="text-[10px] tracking-wider text-muted-foreground/70 [word-break:auto-phrase]">{wakeNotice}</p>
       )}
       {saving && <p className="text-xs tracking-wider text-aqua/70 glimmer">魔力を記録中…</p>}
