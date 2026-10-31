@@ -291,11 +291,11 @@ export const SKINS: SkinItem[] = [
 /** 周天の章で授かる魔法陣スキン（宝箱からは出ない） */
 export const CYCLE_SKINS: SkinItem[] = [
   {
-    ...skin("a-eclipse", 6, "黒曜の蝕環", "eclipse", "#b9b2d4", "魔法陣が光を呑む漆黒の蝕に沈む", "影の章の始まりに、祭壇の灯が一度だけ蝕まれて生まれた環。光の輪郭だけを銀に残し、魔法陣を深い闇へ沈める。", { lineColor: "#b9b2d4", particleColor: "#7a68b0", aura: "rgba(6,4,18,0.5)" }),
+    ...skin("a-eclipse", 6, "黒曜の蝕環", "eclipse", "#b9b2d4", "魔法陣が光を呑む漆黒の蝕に沈む", "一度灯した星脈がまた細ってゆく夜、祭壇の灯が一度だけ蝕まれて生まれた環。光の輪郭だけを銀に残し、魔法陣を大沈黙の頃の闇へ沈める。", { lineColor: "#b9b2d4", particleColor: "#7a68b0", aura: "rgba(6,4,18,0.5)" }),
     cycle: 2,
   },
   {
-    ...skin("a-azureflame", 6, "蒼炎の聖火", "flame", "#6fb6ff", "魔法陣が青白い蒼炎に燃え上がる", "三度目の祈りで灯った、熱を超えて蒼く澄んだ聖火。燃やすものを持たず、探究者の意志だけを糧に燃え続ける。", { lineColor: "#6fb6ff", particleColor: "#bfe6ff", aura: "rgba(70,140,255,0.14)" }),
+    ...skin("a-azureflame", 6, "蒼炎の聖火", "flame", "#6fb6ff", "魔法陣が青白い蒼炎に燃え上がる", "三度目の周天で、先人の熱にあなたの刻が重なって灯った聖火。燃やすものを持たず、ひとりで詠唱を続ける意志だけを糧に、蒼く澄んで燃え続ける。", { lineColor: "#6fb6ff", particleColor: "#bfe6ff", aura: "rgba(70,140,255,0.14)" }),
     cycle: 3,
   },
 ];
@@ -555,10 +555,10 @@ export const MYTHICS: RelicItem[] = [
 
 /** 天界遺物（SS）: 星天の塔の節目の階層でのみ授かる */
 export const CELESTIAL_RELICS: RelicItem[] = [
-  { ...relic("ss-zenith-lantern", "SS", "装置", 6, "天梯の星灯", "lantern", "#cfe9ff", { mp: { rate: 0.1 }, drop: 0.1 }, "塔の二十五層の窓辺に吊るされていた灯。下から昇ってくる者の足もとを、一段先だけ照らし続ける。"), zenithFloor: 25 },
-  { ...relic("ss-zenith-spire", "SS", "装置", 6, "星天の尖塔儀", "tower", "#a882fb", { mp: { rate: 0.2 } }, "星天の塔そのものを掌に収めた縮尺の模型。覗き込むと、まだ誰も辿り着いていない上層が淡く灯っている。"), zenithFloor: 50 },
-  { ...relic("ss-zenith-crown", "SS", "伝承", 6, "天頂の冠星", "ring", "#fbf3d4", { mp: { rate: 0.25 }, drop: 0.2 }, "百層の天頂で、星々が自ら輪を成して生まれた冠。戴く者の頭上ではなく、これから学ぶ誰かの頭上で輝く。"), zenithFloor: 100 },
-  { ...relic("ss-zenith-halo", "SS", "触媒", 6, "無窮の天環", "armillary", "#9ef0c9", { mp: { rate: 0.3 } }, "二百層を越えた先で、天球の環がほどけて一本の光になったもの。終わりのない学びの形を、ただ静かに回り続ける。"), zenithFloor: 200 },
+  { ...relic("ss-zenith-lantern", "SS", "装置", 6, "天梯の星灯", "lantern", "#cfe9ff", { mp: { rate: 0.1 }, drop: 0.1 }, "塔の二十五層の窓辺に吊るされていた灯。前に昇った観測者が置いていったもので、これから昇る者の足もとを一段先だけ照らし続ける。"), zenithFloor: 25 },
+  { ...relic("ss-zenith-spire", "SS", "装置", 6, "星天の尖塔儀", "tower", "#a882fb", { mp: { rate: 0.2 } }, "星天の塔を掌に収めた縮尺の模型。層の一つひとつが星になった人々の光で組まれ、覗き込むと、まだ誰も灯していない上層が暗く口を開けている。"), zenithFloor: 50 },
+  { ...relic("ss-zenith-crown", "SS", "伝承", 6, "天頂の冠星", "ring", "#fbf3d4", { mp: { rate: 0.25 }, drop: 0.2 }, "百層の天頂で、灯し直した星々が自ら輪を成して生まれた冠。戴く者の頭上ではなく、いつかこの塔を昇る次の観測者の夜空で輝く。"), zenithFloor: 100 },
+  { ...relic("ss-zenith-halo", "SS", "触媒", 6, "無窮の天環", "armillary", "#9ef0c9", { mp: { rate: 0.3 } }, "二百層を越えた先で、天球の環がほどけて一本の光になったもの。アルマが止めた調律器の、最後の環だという。終わりのない学びの形を、ただ静かに回り続ける。"), zenithFloor: 200 },
 ];
 
 const title = (id: string, rarity: TitleItem["rarity"], zenithFloor: number, name: string, color: string, flavorText: string): TitleItem => ({
@@ -576,10 +576,10 @@ const title = (id: string, rarity: TitleItem["rarity"], zenithFloor: number, nam
 
 /** 星天の塔の節目で授かる称号 */
 export const TITLES: TitleItem[] = [
-  title("t-wayfarer", "S", 10, "天梯の旅人", "#cfe9ff", "星天の塔の十層に至った者の称号。足もとの雲は、もう遥か下に見える。"),
-  title("t-observer", "SS", 50, "星界の観測者", "#a882fb", "五十層の観測窓から、星界のすべてを見渡した者の称号。星は見上げるものから、見守るものに変わった。"),
-  title("t-apex", "SS", 100, "天頂に至る者", "#fbf3d4", "百層の天頂に立った者の称号。ここより上は、もう誰の地図にも描かれていない。"),
-  title("t-boundless", "SS", 200, "無窮を昇る者", "#9ef0c9", "二百層を越えてなお昇り続ける者の称号。塔に終わりがないことを知って、それでも一段を踏む。"),
+  title("t-wayfarer", "S", 10, "天梯の旅人", "#cfe9ff", "星天の塔の十層に至った者の称号。足もとの雲は遥か下にあり、この高さまで届く足音は、もう自分のものだけだ。"),
+  title("t-observer", "SS", 50, "星界の観測者", "#a882fb", "五十層の観測窓から、灯し直した星界を見渡した者の称号。星は見上げるものから見守るものに変わった。そのどれもが、かつて誰かだった光だ。"),
+  title("t-apex", "SS", 100, "天頂に至る者", "#fbf3d4", "百層の天頂に立った者の称号。アルマの記した地図はここで途切れ、余白に一行だけ『この先は、あなたが描く』とある。"),
+  title("t-boundless", "SS", 200, "無窮を昇る者", "#9ef0c9", "二百層を越えてなお昇り続ける者の称号。塔に終わりがないことを知って、それでも一段を踏む。その一段が、次の誰かの最初の段になる。"),
 ];
 
 /** 図鑑（秘術図鑑の一覧）に並ぶ遺物。断片・記憶・素材はそれぞれ専用の場所で扱う */
