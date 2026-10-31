@@ -59,7 +59,7 @@ function polar(r: number, deg: number) {
 }
 
 /** 星を並べる天球図盤の同心円軌道（内側から外側へ） */
-const ORBITS = [42, 56, 70];
+const ORBITS = [40, 56, 72];
 /** 星座（週）の中心が乗る軌道 */
 const ORBIT_MID = ORBITS[1];
 /** 各週が占める円弧の広がり（度）。7夜を等間隔に並べる */
@@ -473,12 +473,12 @@ function CelestialChart({
               {n.future ? (
                 // まだ訪れていない夜: 星が灯るのを待つ座。淡い金の破線がゆっくり呼吸する
                 <g className="memory-socket">
-                  <circle cx={p.x} cy={p.y} r="2.6" stroke={GOLD} strokeOpacity="0.35" strokeDasharray="1 1.6" {...hairline} />
-                  <polygon points={diamond(p.x, p.y, 1.4)} stroke={GOLD} strokeOpacity="0.55" {...hairline} />
+                  <circle cx={p.x} cy={p.y} r="2.2" stroke={GOLD} strokeOpacity="0.3" strokeDasharray="0.8 1.6" {...hairline} />
+                  <polygon points={diamond(p.x, p.y, 1.1)} stroke={GOLD} strokeOpacity="0.55" {...hairline} />
                 </g>
               ) : (
                 // 休息の夜: 灯らなかった星の跡。冷えた灰の細い輪郭だけを残し、灯った星の邪魔をしない
-                <polygon points={diamond(p.x, p.y, 1.4)} stroke={DIM} strokeOpacity="0.7" {...hairline} />
+                <polygon points={diamond(p.x, p.y, 1)} stroke={DIM} strokeOpacity="0.7" {...hairline} />
               )}
               {isSelected && <polygon points={diamond(p.x, p.y, 3.4)} stroke={DIM} strokeOpacity="0.8" {...hairline} />}
             </g>
