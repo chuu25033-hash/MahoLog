@@ -1,7 +1,7 @@
 // 音声ファイルが無いときに Web Audio API で組み立てる環境音・効果音。
 // 音の軸は詠唱開始音（低くから昇る光と、ゆっくり開く和音）。すべて低音〜中音域に寄せ、柔らかい残響で包む。
 // 環境音（BGM）はノイズを使わず、柔らかいピアノとオルゴールの静かなコード進行で作る。
-// タイトルとステージごとに調と進行を変え、ステージでは空気のゆらぎ（超低域ドローン）を下に薄く敷く。
+// タイトルとステージごとに調と進行を変える。
 import type { AmbienceKey, SeKey } from "./sound-files";
 
 export type Voice = {
@@ -15,17 +15,6 @@ const SILENT = 0.0001;
 const midi = (note: number) => 440 * 2 ** ((note - 69) / 12);
 
 type Layer = { sources: AudioScheduledSourceNode[]; timers: ReturnType<typeof setTimeout>[] };
-
-/** ゆっくり揺らす低周波 */
-function lfo(ctx: AudioContext, rate: number, depth: number, target: AudioParam, layer: Layer) {
-  const osc = ctx.createOscillator();
-  osc.frequency.value = rate;
-  const gain = ctx.createGain();
-  gain.gain.value = depth;
-  osc.connect(gain).connect(target);
-  osc.start();
-  layer.sources.push(osc);
-}
 
 /** 残響の素: 減衰していくノイズを、時間とともに暗くなるよう均して作る */
 function impulseResponse(ctx: BaseAudioContext, seconds: number) {
@@ -58,35 +47,6 @@ function reverbSend(ctx: AudioContext, out: AudioNode, o: { seconds: number; wet
   input.connect(out);
   input.connect(reverb).connect(tone).connect(wet).connect(out);
   return input;
-}
-
-/**
- * 空気のゆらぎ: 超低域のサイン波を、わずかにずらした音と重ねてゆっくりうねらせる。
- * 小さなスピーカーでも気配が伝わるよう、1オクターブ上をごく薄く添える
- */
-function airDrone(ctx: AudioContext, out: AudioNode, layer: Layer, o: { root: number; level: number }) {
-  const gain = ctx.createGain();
-  gain.gain.value = o.level;
-  const filter = ctx.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = 260;
-  gain.connect(filter).connect(out);
-  const partials: [ratio: number, amp: number, detune: number][] = [
-    [1, 1, 0],
-    [1, 0.7, 0.18],
-    [2, 0.3, 0.11],
-    [3, 0.07, 0],
-  ];
-  for (const [ratio, amp, beat] of partials) {
-    const osc = ctx.createOscillator();
-    osc.frequency.value = o.root * ratio + beat;
-    const g = ctx.createGain();
-    g.gain.value = amp;
-    osc.connect(g).connect(gain);
-    osc.start();
-    layer.sources.push(osc);
-  }
-  lfo(ctx, 0.023, o.level * 0.3, gain.gain, layer);
 }
 
 /** 柔らかいピアノ: 弱めの打鍵でふくらみ、高い倍音から先に消えていく */
@@ -220,8 +180,7 @@ const TITLE_PIECE: Piece = {
 
 /**
  * 滞在する地ごとの曲。タイトルと同じピアノとオルゴールで、調と和音進行を変え、
- * 少しゆっくり・控えめに奏でる。オルゴールはタイトルより1オクターブ低く、高域も丸めて落ち着かせる。
- * 下には空気のゆらぎ（超低域ドローン）を薄く敷く
+ * 少しゆっくり・控えめに奏でる。オルゴールはタイトルより1オクターブ低く、高域も丸めて落ち着かせる
  */
 const STAGE_PIECE = {
   barSec: 5.6,
@@ -233,26 +192,25 @@ const STAGE_PIECE = {
   boxCutoff: 1800,
 } satisfies Omit<Piece, "chords">;
 
-const SOUNDSCAPES: Record<Exclude<AmbienceKey, "title">, { root: number; chords: Chord[] }> = {
+const SOUNDSCAPES: Record<Exclude<AmbienceKey, "title">, { chords: Chord[] }> = {
   // 旅立ちの前（星天の導き）: C の明るい進行 Cmaj7 → Am7 → Fmaj7 → G6
-  prelude: { root: midi(24), chords: [ch(36, [55, 59, 64]), ch(33, [55, 60, 64]), ch(41, [57, 60, 64]), ch(43, [59, 62, 64])] },
+  prelude: { chords: [ch(36, [55, 59, 64]), ch(33, [55, 60, 64]), ch(41, [57, 60, 64]), ch(43, [59, 62, 64])] },
   // 小屋: G の温かな下行 Cmaj7 → Bm7 → Am7 → Gmaj7
-  hearth: { root: midi(31), chords: [ch(36, [55, 59, 64]), ch(35, [54, 57, 62]), ch(33, [55, 60, 64]), ch(31, [54, 59, 62])] },
+  hearth: { chords: [ch(36, [55, 59, 64]), ch(35, [54, 57, 62]), ch(33, [55, 60, 64]), ch(31, [54, 59, 62])] },
   // 樹海・図書室: D の深い響き Dm9 → B♭maj7 → Fmaj7 → C(add9)
-  forest: { root: midi(26), chords: [ch(38, [57, 60, 64]), ch(34, [57, 62, 65]), ch(41, [57, 60, 64]), ch(36, [55, 62, 64])] },
+  forest: { chords: [ch(38, [57, 60, 64]), ch(34, [57, 62, 65]), ch(41, [57, 60, 64]), ch(36, [55, 62, 64])] },
   // 観測塔・星空: E の澄んだ下行 Amaj7 → G♯m7 → F♯m7 → Emaj7
-  stars: { root: midi(28), chords: [ch(45, [61, 64, 68]), ch(44, [59, 63, 66]), ch(42, [57, 61, 64]), ch(40, [59, 63, 68])] },
+  stars: { chords: [ch(45, [61, 64, 68]), ch(44, [59, 63, 66]), ch(42, [57, 61, 64]), ch(40, [59, 63, 68])] },
   // 氷の回廊: B マイナーの静けさ Gmaj7 → F♯m7 → Em7 → Bm(add9)
-  frost: { root: midi(35), chords: [ch(43, [59, 62, 66]), ch(42, [57, 61, 64]), ch(40, [59, 62, 67]), ch(35, [59, 61, 62])] },
+  frost: { chords: [ch(43, [59, 62, 66]), ch(42, [57, 61, 64]), ch(40, [59, 62, 67]), ch(35, [59, 61, 62])] },
   // 魔導炉: E マイナーの重み Cmaj7 → Am7 → Bm7 → Em7
-  forge: { root: midi(28), chords: [ch(36, [55, 59, 64]), ch(33, [55, 60, 64]), ch(35, [54, 57, 62]), ch(40, [55, 59, 62])] },
+  forge: { chords: [ch(36, [55, 59, 64]), ch(33, [55, 60, 64]), ch(35, [54, 57, 62]), ch(40, [55, 59, 62])] },
   // 大聖堂: F の荘厳な進行 B♭maj7 → C6 → Am7 → Dm7
-  sanctum: { root: midi(29), chords: [ch(34, [57, 62, 65]), ch(36, [57, 60, 64]), ch(33, [55, 60, 64]), ch(38, [57, 60, 65])] },
+  sanctum: { chords: [ch(34, [57, 62, 65]), ch(36, [57, 60, 64]), ch(33, [55, 60, 64]), ch(38, [57, 60, 65])] },
 };
 
 function soundscape(ctx: AudioContext, out: AudioNode, layer: Layer, key: Exclude<AmbienceKey, "title">) {
   const s = SOUNDSCAPES[key];
-  airDrone(ctx, out, layer, { root: s.root, level: 0.18 });
   pianoPiece(ctx, out, layer, { ...STAGE_PIECE, chords: s.chords });
 }
 
