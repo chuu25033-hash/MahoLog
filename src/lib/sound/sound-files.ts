@@ -21,7 +21,10 @@ export type SeKey =
   | "dissolve"
   | "craft"
   | "prologueOpen"
-  | "prologueLine";
+  | "prologueLine"
+  | "mannaCharge"
+  | "mannaAbsorb"
+  | "memoryUnlock";
 
 export const SOUND_FILES: {
   ambience: Partial<Record<AmbienceKey, string>>;
@@ -46,6 +49,9 @@ export const SOUND_FILES: {
     // begin: "/sounds/se/begin.mp3",                       //                     旅立ち・新しい地の解放
     // prologueOpen: "/sounds/se/prologue-open.mp3",        //                     プロローグの幕開け
     // prologueLine: "/sounds/se/prologue-line.mp3",        //                     プロローグの一節
+    // mannaCharge: "/sounds/se/manna-charge.mp3",          //                     結果: 授かった魔力が数え上がる（静かな共鳴のクレッシェンド）
+    // mannaAbsorb: "/sounds/se/manna-absorb.mp3",          //                     結果: 魔力の粒子が魔法陣（星脈）へ吸い込まれる（深い吸入の風）
+    // memoryUnlock: "/sounds/se/memory-unlock.mp3",        //                     結果: 流れ星がほどけ、観測した品が現れる（澄んだ水晶の鐘）
   },
 };
 

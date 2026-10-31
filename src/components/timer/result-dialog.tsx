@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type Dispatch, type MouseEvent, type SetStateAction } from "react";
+import { useEffect, useRef, useState, type Dispatch, type MouseEvent, type SetStateAction } from "react";
 import { ChevronRight, Gift, Hourglass, Sparkles } from "lucide-react";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { ItemArt, ShootingStar } from "@/components/item-art";
@@ -61,6 +61,98 @@ export type StudyResult = {
   /** この周天を始めた時点の累積MP（エリアの解放はここからの MP で測る） */
   cycleStartMp: number;
 };
+
+/** 魔力の演出の段階: 数え上げ → 魔法陣へ吸い込まれる → 星脈が満ちた */
+type MannaPhase = "charge" | "absorb" | "filled";
+
+/** 結果を開いてからの魔力の演出の時刻（ミリ秒）。詠唱完了の音と重ならないよう、少し間を置いて数え始める */
+const TIMELINE = { countAt: 350, countMs: 1100, absorbAt: 1650, filledAt: 2650, meteorAt: 3200 } as const;
+
+const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** 0 から target まで、始めは速く終わりはゆっくり数え上げる（動きを減らす設定では一度に出す） */
+function useCountUp(target: number, running: boolean, duration: number) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (!running) return;
+    if (reducedMotion() || target <= 0) {
+      setValue(target);
+      return;
+    }
+    const start = performance.now();
+    let frame = requestAnimationFrame(function step(now) {
+      const t = Math.min(1, (now - start) / duration);
+      setValue(Math.round(target * (1 - (1 - t) ** 3)));
+      if (t < 1) frame = requestAnimationFrame(step);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [target, running, duration]);
+  return value;
+}
+
+/**
+ * 数え上がる MP。数え上げの間に結果パネル全体（魔法陣）を毎フレーム描き直すと科目の文字がちらつくので、数字だけをここで描き直す。
+ * 最後の値の幅を見えない文字で先に取っておき、桁が増えても幅が揺れないようにする
+ */
+function CountUpMp({ target, running }: { target: number; running: boolean }) {
+  const value = useCountUp(target, running, TIMELINE.countMs);
+  return (
+    <span className="inline-grid">
+      <span className="invisible [grid-area:1/1]">+{target} MP</span>
+      <span className="[grid-area:1/1]">+{value} MP</span>
+    </span>
+  );
+}
+
+/** 吸い込まれる光の粒子の数 */
+const MANNA_PARTICLES = 16;
+
+/**
+ * 魔力の数字から光の粒子をこぼし、ゆるい弧を描いて魔法陣の中心へ吸い込ませる。
+ * 位置は root（結果パネル）基準で測るので、横並び・縦並び（スマホ）のどちらの配置でも陣へ向かう。動きを減らす設定では描かない
+ */
+function launchManna(root: HTMLElement, from: HTMLElement, to: HTMLElement) {
+  if (reducedMotion() || typeof root.animate !== "function") return;
+  const base = root.getBoundingClientRect();
+  const a = from.getBoundingClientRect();
+  const b = to.getBoundingClientRect();
+  const sx = a.left + a.width / 2 - base.left;
+  const sy = a.top + a.height / 2 - base.top;
+  const tx = b.left + b.width / 2 - base.left;
+  const ty = b.top + b.height / 2 - base.top;
+  // 進む向きに垂直な向き（弧のふくらみに使う）
+  const len = Math.hypot(tx - sx, ty - sy) || 1;
+  const nx = -(ty - sy) / len;
+  const ny = (tx - sx) / len;
+  for (let i = 0; i < MANNA_PARTICLES; i++) {
+    const dot = document.createElement("span");
+    const size = 2 + Math.random() * 3;
+    const gold = i % 3 !== 0;
+    dot.className = "manna-particle";
+    dot.style.width = dot.style.height = `${size}px`;
+    dot.style.background = gold ? "#f6f1dc" : "#cfe9ff";
+    dot.style.boxShadow = gold ? "0 0 8px 1px rgba(226,201,116,0.75)" : "0 0 8px 1px rgba(113,226,239,0.7)";
+    root.appendChild(dot);
+    const x0 = sx + (Math.random() - 0.5) * a.width * 0.8;
+    const y0 = sy + (Math.random() - 0.5) * a.height * 0.6;
+    const bend = (Math.random() - 0.5) * Math.min(160, len * 0.6);
+    const mx = (x0 + tx) / 2 + nx * bend;
+    const my = (y0 + ty) / 2 + ny * bend;
+    const x1 = tx + (Math.random() - 0.5) * 10;
+    const y1 = ty + (Math.random() - 0.5) * 10;
+    const at = (x: number, y: number, scale: number) => `translate(${x - size / 2}px, ${y - size / 2}px) scale(${scale})`;
+    const animation = dot.animate(
+      [
+        { transform: at(x0, y0, 0.6), opacity: 0 },
+        { transform: at(x0, y0 - 6, 1), opacity: 1, offset: 0.15 },
+        { transform: at(mx, my, 0.9), opacity: 0.9, offset: 0.6 },
+        { transform: at(x1, y1, 0.3), opacity: 0 },
+      ],
+      { duration: 850 + Math.random() * 250, delay: i * 35, easing: "cubic-bezier(0.5, 0, 0.75, 1)", fill: "both" },
+    );
+    animation.onfinish = animation.oncancel = () => dot.remove();
+  }
+}
 
 /** 宝箱演出の段階 */
 type ChestStage = "hidden" | "closed" | "open";
@@ -172,21 +264,45 @@ function ResultPanel({
   onClaimed: (mp: number) => void;
 }) {
   const [radarData, setRadarData] = useState(result.beforeTotals);
+  const [phase, setPhase] = useState<MannaPhase>("charge");
+  const [counting, setCounting] = useState(false);
   const capped = result.savedMinutes < result.requestedMinutes;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const mpRef = useRef<HTMLDivElement>(null);
+  const radarRef = useRef<HTMLDivElement>(null);
 
-  // 魔法陣が育ち、宝箱が現れるまでは見せる。宝箱を開けるのはタップしてから
+  // 魔力の演出: 数え上げ（蓄積の音）→ 光の粒子が魔法陣へ吸い込まれる（吸入の音）→ 陣が育って脈打ち → 流れ星が降りる。
+  // 流れ星を開けるのはタップしてから（開いた瞬間に解放の音）
   useEffect(() => {
-    const grow = setTimeout(() => setRadarData(result.afterTotals), 600);
-    // 先にタップして進めていたら、その段階を戻さない
-    const appear = setTimeout(() => onChestChange((c) => (c === "hidden" ? "closed" : c)), 1600);
-    return () => {
-      clearTimeout(grow);
-      clearTimeout(appear);
-    };
+    const timers = [
+      setTimeout(() => {
+        setCounting(true);
+        soundManager.playMannaCharge();
+      }, TIMELINE.countAt),
+      setTimeout(() => {
+        setPhase("absorb");
+        soundManager.playMannaAbsorb();
+        if (rootRef.current && mpRef.current && radarRef.current) launchManna(rootRef.current, mpRef.current, radarRef.current);
+      }, TIMELINE.absorbAt),
+      setTimeout(() => {
+        setPhase("filled");
+        setRadarData(result.afterTotals);
+      }, TIMELINE.filledAt),
+      // 先にタップして進めていたら、その段階を戻さない
+      setTimeout(() => onChestChange((c) => (c === "hidden" ? "closed" : c)), TIMELINE.meteorAt),
+    ];
+    return () => timers.forEach(clearTimeout);
   }, [result, onChestChange]);
 
   return (
-    <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-2">
+    <div ref={rootRef} className="relative grid grid-cols-1 items-center gap-4 sm:grid-cols-2">
+      {/* 魔力が星脈を満たした瞬間、画面の暗がりが一度だけ静かに脈打つ */}
+      {phase === "filled" && (
+        <span
+          className="manna-glow pointer-events-none absolute -inset-4 bg-[radial-gradient(60%_55%_at_50%_45%,rgba(113,226,239,0.07),rgba(168,130,251,0.04)_45%,transparent_75%)]"
+          aria-hidden
+        />
+      )}
       <div className="flex flex-col items-center gap-2 text-center">
         <DialogTitle className="text-sm font-normal tracking-[0.4em] text-aqua/80">詠唱完了</DialogTitle>
         <p className="flex items-center gap-1.5 text-xs tracking-[0.2em] text-muted-foreground">
@@ -197,7 +313,12 @@ function ResultPanel({
           {/* 獲得の瞬間に広がる光輪 */}
           <span className="burst-ring size-16" />
           <span className="burst-ring size-16 [animation-delay:300ms]" />
-          <p className="mp-glow font-display text-5xl text-starlight-gradient short:text-4xl">+{result.gainedMp} MP</p>
+          {/* 数え上げてから、光の粒子となって魔法陣へ流れ出す間だけ淡くなる（浮かび上がりのアニメーションと重ならないよう外側で薄める） */}
+          <div ref={mpRef} className={cn("transition-[opacity,scale] duration-700", phase === "absorb" && "scale-95 opacity-45")}>
+            <p className="mp-glow font-display text-5xl tabular-nums text-starlight-gradient short:text-4xl" aria-label={`+${result.gainedMp} MP`}>
+              <CountUpMp target={result.gainedMp} running={counting} />
+            </p>
+          </div>
           <p className="animate-float-up text-lg tracking-[0.4em] text-glow-gold [animation-delay:200ms]">授かりし魔力</p>
         </div>
         {(result.areaBoost > 1 || result.blessing > 1 || result.catalyst || result.cycleMark > 1 || result.comboMp > 1) && (
@@ -223,6 +344,16 @@ function ResultPanel({
           </span>{" "}
           の魔力が高まった
         </DialogDescription>
+        {/* 場所は最初から取っておき、満ちたときに浮かび上がらせる（枠の大きさを途中で変えない） */}
+        <p
+          className={cn(
+            "text-[11px] tracking-[0.2em] text-aqua/80 transition-opacity duration-1000 [word-break:auto-phrase]",
+            phase === "filled" ? "opacity-100" : "opacity-0",
+          )}
+          aria-hidden={phase !== "filled"}
+        >
+          {result.drops.length > 0 ? "魔力が星脈を満たし、流れ星が引き寄せられた…" : "魔力が星脈を満たした"}
+        </p>
         {capped && <p className="text-xs text-destructive">一夜に刻める詠唱は12時間まで。超えた分は星に届きません</p>}
 
         {result.drops.length === 0 ? (
@@ -230,14 +361,19 @@ function ResultPanel({
             流れ星は、{DROP_SLOT_MINUTES}分以上続けた詠唱にだけ降る
           </p>
         ) : (
-          chest !== "hidden" && (
-            <DropReveal stage={chest} drops={result.drops} ore={result.ore} echo={result.echo} meteor={result.meteor} onOpen={() => onChestChange("open")} />
-          )
+          <DropReveal stage={chest} drops={result.drops} ore={result.ore} echo={result.echo} meteor={result.meteor} onOpen={() => onChestChange("open")} />
         )}
       </div>
 
       <div className="flex min-w-0 flex-col gap-3">
-        <div className="mx-auto aspect-square w-full max-w-64 short:max-w-44">
+        <div ref={radarRef} className="relative mx-auto aspect-square w-full max-w-64 short:max-w-44">
+          {/* 粒子を受け止めた陣の奥が、一度だけ光る */}
+          {phase === "filled" && (
+            <span
+              className="manna-pulse pointer-events-none absolute inset-[8%] rounded-full bg-[radial-gradient(circle,rgba(226,201,116,0.22),rgba(113,226,239,0.08)_45%,transparent_70%)]"
+              aria-hidden
+            />
+          )}
           <MagicRadar data={radarData} highlightSubjectId={result.subject.id} animationDuration={1200} />
         </div>
         <TrialRewards subjects={subjects} onClaimed={onClaimed} />
@@ -308,7 +444,11 @@ function TrialRewards({ subjects, onClaimed }: { subjects: Subject[]; onClaimed:
 /** 鐘の音で告げる格（秘宝・至宝・神話） */
 const RARE_DROP = new Set<ItemRarity>(["A", "S", "SS"]);
 
-/** 流れ星が降りて明滅し、触れるとほどけて、降った品（1〜4つ）と星屑の原石が浮かび上がる */
+/**
+ * 流れ星が降りて明滅し、触れるとほどけて、降った品（1〜4つ）と星屑の原石が浮かび上がる。
+ * 開いた後の中身は最初から見えないまま場所を取っておき、閉じた流れ星を同じ場所に重ねる。
+ * 現れる前・触れる前・開いた後で枠の大きさが変わらないようにする
+ */
 function DropReveal({
   stage,
   drops,
@@ -317,7 +457,7 @@ function DropReveal({
   meteor,
   onOpen,
 }: {
-  stage: Exclude<ChestStage, "hidden">;
+  stage: ChestStage;
   drops: StudyResult["drops"];
   ore: number;
   echo: number;
@@ -325,79 +465,77 @@ function DropReveal({
   onOpen: () => void;
 }) {
   const opened = stage === "open";
-  // 流れ星がほどけた瞬間に、降った品のいちばん高い格で音を分ける（秘宝・至宝が混じれば鐘、常品・稀品だけなら水晶）
+  // 流れ星がほどけた瞬間に、記憶の解放の音を鳴らす（秘宝・至宝が混じれば深い鐘、常品・稀品だけなら澄んだ水晶の鐘）
   const rare = drops.some((d) => RARE_DROP.has(d.item.rarity));
   useEffect(() => {
-    if (opened) soundManager.playSe(rare ? "dropRare" : "dropNormal");
+    if (opened) soundManager.playMemoryUnlock(rare);
   }, [opened, rare]);
   return (
-    <div className="flex w-full animate-in flex-col items-center gap-1 fade-in slide-in-from-bottom-2 duration-700">
-      <button
-        type="button"
-        onClick={onOpen}
-        disabled={opened}
-        aria-label="流れ星に触れる"
-        className={cn("relative transition-all duration-700", opened ? "size-10" : "star-arrive size-20 cursor-pointer short:size-16")}
-      >
-        <ShootingStar open={opened} className={cn("absolute inset-0 transition-opacity duration-500", opened && "opacity-40")} />
-      </button>
-      {!opened ? (
-        <>
+    <div className="grid w-full">
+      {/* 開いた後の中身: 開くまでは見えないまま場所だけ取る。開いたときに描き直して、浮かび上がりの動きを始めから見せる */}
+      <div key={opened ? "open" : "closed"} className={cn("flex flex-col items-center gap-1 [grid-area:1/1]", !opened && "invisible")} aria-hidden={!opened}>
+        <span className="relative size-10">
+          <ShootingStar open className="absolute inset-0 opacity-40" />
+        </span>
+        {meteor && (
+          <div className="mb-1 flex flex-col items-center gap-0.5 animate-in fade-in duration-1000">
+            <p className="text-xs tracking-[0.3em] whitespace-nowrap text-starlight text-glow-gold">流星群の接近 ― 特別観測</p>
+            <p className="font-display text-[9px] tracking-[0.3em] whitespace-nowrap text-starlight/60">METEOR SHOWER</p>
+            <p className="text-[10px] leading-snug tracking-wider text-muted-foreground [word-break:auto-phrase]">
+              長き詠唱に星脈がゆらぎ、古代の記憶が地上へ手繰り寄せられた
+            </p>
+          </div>
+        )}
+        <ul className={cn("grid w-full gap-2", drops.length === 1 ? "grid-cols-1" : drops.length === 3 ? "grid-cols-3" : "grid-cols-2", drops.length === 4 && "sm:grid-cols-4")}>
+          {drops.map((drop, i) => (
+            <li
+              key={i}
+              className="flex animate-in flex-col items-center gap-0.5 text-center fade-in slide-in-from-bottom-4 duration-1000 [animation-fill-mode:both]"
+              style={{ animationDelay: `${i * 250}ms` }}
+            >
+              <ItemArt icon={drop.item.svgIcon} rarity={drop.item.rarity} color={drop.item.color} seed={drop.item.id} className="size-14 short:size-12" />
+              <span className={cn("rounded-full border px-2 text-[10px] tracking-[0.2em] whitespace-nowrap", RARITY_TONE[drop.item.rarity])}>
+                RARE {drop.item.rarity}
+                {drops.length === 1 && ` · ${drop.item.type}`}
+              </span>
+              <span className={cn("tracking-[0.1em] text-foreground [word-break:auto-phrase]", drops.length === 1 ? "text-sm" : "text-xs")}>
+                {drop.item.kind === "fragment" ? drop.item.name : `『${drop.item.name}』`}
+              </span>
+              {meteor?.upgradedIndex === i && (
+                <span className="text-[10px] tracking-wider whitespace-nowrap text-starlight">流星群の輝きで秘宝以上に</span>
+              )}
+              <span className="text-[10px] leading-snug text-muted-foreground [word-break:auto-phrase]">{dropNote(drop)}</span>
+            </li>
+          ))}
+        </ul>
+        {ore > 0 && (
+          <p
+            className="mt-1 animate-in text-[11px] tracking-wider text-aqua fade-in duration-1000 [animation-fill-mode:both]"
+            style={{ animationDelay: `${drops.length * 250}ms` }}
+          >
+            {STARDUST_ORE.name} ×{ore} も添えられていた
+            {meteor && ore > meteor.ore && <span className="text-muted-foreground">（うち流星群 ×{meteor.ore}）</span>}
+          </p>
+        )}
+        {echo > 0 && (
+          <p
+            className="animate-in text-[10px] tracking-wider text-muted-foreground fade-in duration-1000 [animation-fill-mode:both]"
+            style={{ animationDelay: `${drops.length * 250 + 250}ms` }}
+          >
+            星の余韻 {echo}分は、次の詠唱へ持ち越された
+          </p>
+        )}
+      </div>
+      {/* 閉じた流れ星: 現れてから触れるまで、同じ場所の上に重ねる */}
+      {stage === "closed" && (
+        <div className="flex animate-in flex-col items-center gap-1 fade-in slide-in-from-bottom-2 duration-700 [grid-area:1/1]">
+          <button type="button" onClick={onOpen} aria-label="流れ星に触れる" className="star-arrive relative size-20 cursor-pointer short:size-16">
+            <ShootingStar open={false} className="absolute inset-0" />
+          </button>
           <p className="text-[11px] tracking-[0.3em] text-starlight/70 glimmer">
             {meteor ? "流星群が降りた" : drops.length > 1 ? `流れ星が${drops.length}つ降りた` : "流れ星が降りた"}…触れて受け取る
           </p>
-        </>
-      ) : (
-        <>
-          {meteor && (
-            <div className="mb-1 flex flex-col items-center gap-0.5 animate-in fade-in duration-1000">
-              <p className="text-xs tracking-[0.3em] whitespace-nowrap text-starlight text-glow-gold">流星群の接近 ― 特別観測</p>
-              <p className="font-display text-[9px] tracking-[0.3em] whitespace-nowrap text-starlight/60">METEOR SHOWER</p>
-              <p className="text-[10px] leading-snug tracking-wider text-muted-foreground [word-break:auto-phrase]">
-                長き詠唱に星脈がゆらぎ、古代の記憶が地上へ手繰り寄せられた
-              </p>
-            </div>
-          )}
-          <ul className={cn("grid w-full gap-2", drops.length === 1 ? "grid-cols-1" : drops.length === 3 ? "grid-cols-3" : "grid-cols-2", drops.length === 4 && "sm:grid-cols-4")}>
-            {drops.map((drop, i) => (
-              <li
-                key={i}
-                className="flex animate-in flex-col items-center gap-0.5 text-center fade-in slide-in-from-bottom-4 duration-1000 [animation-fill-mode:both]"
-                style={{ animationDelay: `${i * 250}ms` }}
-              >
-                <ItemArt icon={drop.item.svgIcon} rarity={drop.item.rarity} color={drop.item.color} seed={drop.item.id} className="size-14 short:size-12" />
-                <span className={cn("rounded-full border px-2 text-[10px] tracking-[0.2em] whitespace-nowrap", RARITY_TONE[drop.item.rarity])}>
-                  RARE {drop.item.rarity}
-                  {drops.length === 1 && ` · ${drop.item.type}`}
-                </span>
-                <span className={cn("tracking-[0.1em] text-foreground [word-break:auto-phrase]", drops.length === 1 ? "text-sm" : "text-xs")}>
-                  {drop.item.kind === "fragment" ? drop.item.name : `『${drop.item.name}』`}
-                </span>
-                {meteor?.upgradedIndex === i && (
-                  <span className="text-[10px] tracking-wider whitespace-nowrap text-starlight">流星群の輝きで秘宝以上に</span>
-                )}
-                <span className="text-[10px] leading-snug text-muted-foreground [word-break:auto-phrase]">{dropNote(drop)}</span>
-              </li>
-            ))}
-          </ul>
-          {ore > 0 && (
-            <p
-              className="mt-1 animate-in text-[11px] tracking-wider text-aqua fade-in duration-1000 [animation-fill-mode:both]"
-              style={{ animationDelay: `${drops.length * 250}ms` }}
-            >
-              {STARDUST_ORE.name} ×{ore} も添えられていた
-              {meteor && ore > meteor.ore && <span className="text-muted-foreground">（うち流星群 ×{meteor.ore}）</span>}
-            </p>
-          )}
-          {echo > 0 && (
-            <p
-              className="animate-in text-[10px] tracking-wider text-muted-foreground fade-in duration-1000 [animation-fill-mode:both]"
-              style={{ animationDelay: `${drops.length * 250 + 250}ms` }}
-            >
-              星の余韻 {echo}分は、次の詠唱へ持ち越された
-            </p>
-          )}
-        </>
+        </div>
       )}
     </div>
   );

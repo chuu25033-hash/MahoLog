@@ -604,6 +604,30 @@ const SE: Record<SeKey, (ctx: AudioContext, out: AudioNode) => void> = {
       tone(ctx, out, { freq, at: 2 + i * 0.5, attack: 0.8, decay: 4, peak: 0.025 });
     });
   },
+  // 魔力の蓄積: 数え上がる魔力に合わせ、低い共鳴がゆっくりふくらんでいく（約1.3秒のクレッシェンド）
+  mannaCharge: (ctx, out) => {
+    tone(ctx, out, { freq: 196, attack: 1.1, decay: 1.6, peak: 0.05 });
+    tone(ctx, out, { freq: 293.7, at: 0.15, attack: 1, decay: 1.5, peak: 0.035 });
+    tone(ctx, out, { freq: 392, at: 0.35, attack: 0.9, decay: 1.4, peak: 0.028 });
+    tone(ctx, out, { freq: 587.3, at: 0.6, attack: 0.7, decay: 1.3, peak: 0.014 });
+    whoosh(ctx, out, { from: 260, to: 900, duration: 1.3, peak: 0.012 });
+  },
+  // 魔力の吸入: 高みから深みへ吸い込まれていく風と、底で受け止める低い霊的な響き
+  mannaAbsorb: (ctx, out) => {
+    whoosh(ctx, out, { from: 1800, to: 220, duration: 1.1, peak: 0.03 });
+    tone(ctx, out, { freq: 523.25, toFreq: 130.8, attack: 0.08, decay: 1.1, peak: 0.03 });
+    tone(ctx, out, { freq: 98, at: 0.55, attack: 0.5, decay: 2.4, peak: 0.06 });
+    tone(ctx, out, { freq: 196, at: 0.6, attack: 0.5, decay: 2, peak: 0.022, type: "triangle" });
+  },
+  // 記憶の解放: 澄んだ水晶の鐘がひとつ鳴り、細かな光が昇っていく
+  memoryUnlock: (ctx, out) => {
+    tone(ctx, out, { freq: 1046.5, attack: 0.004, decay: 2.2, peak: 0.05 });
+    tone(ctx, out, { freq: 1046.5 * 1.003, attack: 0.004, decay: 1.8, peak: 0.018 });
+    tone(ctx, out, { freq: 1046.5 * 2.76, attack: 0.004, decay: 0.5, peak: 0.006 });
+    tone(ctx, out, { freq: 523.25, attack: 0.02, decay: 1.6, peak: 0.02 });
+    tone(ctx, out, { freq: 784, at: 0.12, attack: 0.05, decay: 2, peak: 0.022 });
+    sparkle(ctx, out, { at: 0.2, count: 8, span: 0.9, peak: 0.01, falling: false });
+  },
   // プロローグの一節: 遠くで一度だけ鳴る、低く澄んだ鐘
   prologueLine: (ctx, out) => {
     tone(ctx, out, { freq: 146.8, attack: 0.4, decay: 3.2, peak: 0.05 });

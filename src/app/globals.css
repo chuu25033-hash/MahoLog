@@ -492,6 +492,43 @@ body {
   animation: burst-ring 1.6s ease-out both;
 }
 
+/*
+ * 結果: 魔力の粒子が魔法陣（星脈）へ吸い込まれた瞬間、陣の奥と画面の暗がりが一度だけ静かに脈打つ。
+ * 粒子そのものは result-dialog.tsx で Web Animations API により動かす
+ */
+@keyframes manna-pulse {
+  0% { opacity: 0; transform: scale(0.85); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+
+.manna-pulse {
+  animation: manna-pulse 1.8s ease-out both;
+}
+
+/* 画面全体の脈動は大きさを変えない（スクロールする枠からはみ出さないように） */
+@keyframes manna-glow {
+  0%, 100% { opacity: 0; }
+  35% { opacity: 1; }
+}
+
+.manna-glow {
+  animation: manna-glow 1.8s ease-out both;
+}
+
+.manna-particle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .manna-pulse, .manna-glow { animation: none; opacity: 0; }
+}
+
 /* 魔術階級の昇格: 1px の光の線が中央から静かに伸び、線上を光の粒が渡っていく */
 @keyframes rank-line {
   0% { transform: scaleX(0); opacity: 0; }

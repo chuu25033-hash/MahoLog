@@ -12,6 +12,8 @@ const DUCK_GAIN = 0.45;
 const DUCK_CUTOFF = 1800;
 /** 環境音の基準の大きさ。音量スライダー 100% でもこの割合までにとどめ、集中を邪魔しない微かな背景音にする */
 const AMBIENCE_LEVEL = 0.45;
+/** 結果の演出（魔力の蓄積・吸入・記憶の解放）の音量。環境音を覆わないよう、効果音の音量のこの割合で鳴らす */
+const CUE_LEVEL = 0.5;
 /** 他の効果音を鳴らした直後のタップ音は重ねない */
 const TAP_SUPPRESS_MS = 120;
 /** タップ音を鳴らす要素 */
@@ -24,6 +26,8 @@ type Bus = {
   master: GainNode;
   bgm: GainNode;
   se: GainNode;
+  /** 演出の効果音を控えめに鳴らす経路（cue → se） */
+  cue: GainNode;
   duck: GainNode;
   duckFilter: BiquadFilterNode;
 };
@@ -108,21 +112,53 @@ class SoundManager {
 
   /** 効果音を鳴らす */
   playSe(key: SeKey) {
+    const bus = this.ensureBus();
+    if (bus) this.play(key, bus.se);
+  }
+
+  /** 結果: 授かった魔力が数え上がる */
+  playMannaCharge() {
+    this.playCue("mannaCharge");
+  }
+
+  /** 結果: 魔力の粒子が魔法陣（星脈）へ吸い込まれる */
+  playMannaAbsorb() {
+    this.playCue("mannaAbsorb");
+  }
+
+  /** 結果: 流れ星がほどけ、観測した品が現れる。秘宝以上が混じれば、今までどおり深い鐘（dropRare）を控えめにせず鳴らす */
+  playMemoryUnlock(rare = false) {
+    if (rare) this.playCue("dropRare", false);
+    else this.playCue("memoryUnlock");
+  }
+
+  /**
+   * 結果の演出の効果音: 控えめな音量（CUE_LEVEL）で鳴らす。
+   * 画面が裏に回っているとき・音が止められているときは鳴らさない（起こし直した瞬間にまとめて鳴り出さないように）
+   */
+  private playCue(key: SeKey, soft = true) {
+    if (typeof document !== "undefined" && document.hidden) return;
+    const bus = this.ensureBus();
+    if (!bus || bus.ctx.state !== "running") return;
+    this.play(key, soft ? bus.cue : bus.se);
+  }
+
+  private play(key: SeKey, out: AudioNode) {
     if (key !== "tap") this.lastCueAt = performance.now();
     else if (performance.now() - this.lastCueAt < TAP_SUPPRESS_MS) return;
     if (!this.enabled || this.volumes.se <= 0) return;
-    const bus = this.ensureBus();
+    const bus = this.bus;
     if (!bus) return;
     const file = SOUND_FILES.se[key];
     if (!file) {
-      synthSe(bus.ctx, key, bus.se);
+      synthSe(bus.ctx, key, out);
       return;
     }
     void this.loadBuffer(file).then((buffer) => {
-      if (!buffer) return synthSe(bus.ctx, key, bus.se);
+      if (!buffer) return synthSe(bus.ctx, key, out);
       const src = bus.ctx.createBufferSource();
       src.buffer = buffer;
-      src.connect(bus.se);
+      src.connect(out);
       src.start();
     });
   }
@@ -186,6 +222,9 @@ class SoundManager {
       const master = ctx.createGain();
       const bgm = ctx.createGain();
       const se = ctx.createGain();
+      const cue = ctx.createGain();
+      cue.gain.value = CUE_LEVEL;
+      cue.connect(se);
       const duck = ctx.createGain();
       const duckFilter = ctx.createBiquadFilter();
       duckFilter.type = "lowpass";
@@ -200,7 +239,7 @@ class SoundManager {
         else void this.keepAlive();
       });
       if (ctx.state === "running") this.unlocked = true;
-      this.bus = { ctx, master, bgm, se, duck, duckFilter };
+      this.bus = { ctx, master, bgm, se, cue, duck, duckFilter };
       this.applyVolumes(true);
       this.preloadSe();
       return this.bus;
