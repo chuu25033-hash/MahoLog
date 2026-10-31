@@ -969,11 +969,24 @@ body {
     memory-silhouette-breath 7s ease-in-out calc(var(--delay, 0s) + 2.4s) infinite;
 }
 
+/* まだ訪れていない夜の座: 灯るのを待つように、ゆっくり淡く呼吸する */
+@keyframes memory-socket-breath {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+.memory-socket {
+  animation: memory-socket-breath 5s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .memory-trace,
   .memory-star,
-  .memory-silhouette { animation: none; }
+  .memory-silhouette,
+  .memory-socket { animation: none; }
 }
+
+[data-lite] .memory-socket { animation: none; }
 
 /* ---------- 原点の記憶（灯火の机）: 質素な蝋燭の灯 ---------- */
 @keyframes candle-flicker {

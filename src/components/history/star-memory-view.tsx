@@ -471,9 +471,17 @@ function CelestialChart({
             >
               <circle cx={p.x} cy={p.y} r="4" fill="transparent" />
               {n.future ? (
-                <polygon points={diamond(p.x, p.y, 1.3)} stroke={DIM} strokeOpacity="0.5" strokeDasharray="0.6 1.2" {...hairline} />
+                // まだ訪れていない夜: 星が灯るのを待つ座。淡い金の破線がゆっくり呼吸する
+                <g className="memory-socket">
+                  <circle cx={p.x} cy={p.y} r="2.6" stroke={GOLD} strokeOpacity="0.35" strokeDasharray="1 1.6" {...hairline} />
+                  <polygon points={diamond(p.x, p.y, 1.4)} stroke={GOLD} strokeOpacity="0.55" {...hairline} />
+                </g>
               ) : (
-                <polygon points={diamond(p.x, p.y, 0.8)} fill={DIM} fillOpacity="0.5" />
+                // 休息の夜: 灯らなかった星の跡。冷えた灰の小さな星と、その座を示す細い輪
+                <g>
+                  <circle cx={p.x} cy={p.y} r="2.2" stroke={DIM} strokeOpacity="0.45" {...hairline} />
+                  <polygon points={diamond(p.x, p.y, 1)} fill={DIM} fillOpacity="0.8" />
+                </g>
               )}
               {isSelected && <polygon points={diamond(p.x, p.y, 3.4)} stroke={DIM} strokeOpacity="0.8" {...hairline} />}
             </g>
