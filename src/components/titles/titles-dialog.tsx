@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Crown } from "lucide-react";
+import { ArrowDownUp, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { jstDateKey } from "@/lib/date";
@@ -29,6 +29,9 @@ export const GRADE_TONE: Record<ItemRarity, string> = {
 };
 
 /** 時間で測る条件は「1時間20分」のように示す */
+/** 格の低い順（常品から神話へ）。降順はこれを逆にたどる */
+const GRADE_ASC: ItemRarity[] = ["C", "B", "A", "S", "SS"];
+
 const MINUTE_KINDS = new Set(["totalMinutes", "longestSession", "dailyMinutes", "weekendMinutes"]);
 
 function progressLabel(title: Title, p: TitleProgress) {
@@ -41,11 +44,17 @@ export function TitlesDialog({ onClose }: { onClose: () => void }) {
   const data = useUserData();
   const [category, setCategory] = useState<TitleCategory>("continuous");
   const [onlyUnlocked, setOnlyUnlocked] = useState(false);
+  /** 初めは格の低い順（C→SS）。押すと高い順（SS→C）に並べ替える */
+  const [highFirst, setHighFirst] = useState(false);
   const progress = useMemo(() => titleProgressMap(titleStatsOf(data)), [data]);
   const { unlocked } = data.titles;
   const equipped = equippedTitle(data);
   const unlockedCount = ACHIEVEMENT_TITLES.filter((t) => t.id in unlocked).length;
-  const list = ACHIEVEMENT_TITLES.filter((t) => t.category === category && (!onlyUnlocked || t.id in unlocked));
+  // 同じ格の中は一覧の定義順（条件の軽い順）のまま
+  const list = ACHIEVEMENT_TITLES.filter((t) => t.category === category && (!onlyUnlocked || t.id in unlocked)).sort((a, b) => {
+    const diff = GRADE_ASC.indexOf(a.grade) - GRADE_ASC.indexOf(b.grade);
+    return highFirst ? -diff : diff;
+  });
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -97,10 +106,21 @@ export function TitlesDialog({ onClose }: { onClose: () => void }) {
           ))}
         </div>
 
-        <label className="-mt-1 flex cursor-pointer items-center justify-end gap-1.5 text-[11px] tracking-wider whitespace-nowrap text-muted-foreground">
-          <input type="checkbox" checked={onlyUnlocked} onChange={(e) => setOnlyUnlocked(e.target.checked)} className="accent-[#e2c974]" />
-          解放した称号だけを表示
-        </label>
+        <div className="-mt-1 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => setHighFirst((v) => !v)}
+            aria-label={highFirst ? "格の低い順に並べ替える" : "格の高い順に並べ替える"}
+            className="flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-0.5 text-[11px] tracking-wider whitespace-nowrap text-muted-foreground transition-colors duration-300 hover:border-starlight/40 hover:text-starlight"
+          >
+            <ArrowDownUp className="size-3" strokeWidth={1.5} aria-hidden />
+            <span className="font-display tracking-[0.15em]">{highFirst ? "RARE SS → C" : "RARE C → SS"}</span>
+          </button>
+          <label className="flex cursor-pointer items-center gap-1.5 text-[11px] tracking-wider whitespace-nowrap text-muted-foreground">
+            <input type="checkbox" checked={onlyUnlocked} onChange={(e) => setOnlyUnlocked(e.target.checked)} className="accent-[#e2c974]" />
+            解放した称号だけを表示
+          </label>
+        </div>
 
         {list.length === 0 ? (
           <p className="py-6 text-center text-xs tracking-wider text-muted-foreground">この分類で解放した称号は、まだありません</p>
