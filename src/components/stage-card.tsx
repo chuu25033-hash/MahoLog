@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Map, MapPin } from "lucide-react";
 import { MpBar } from "@/components/mp-bar";
 import { StageMap } from "@/components/stage-map";
+import { StageScene } from "@/components/stage-scene";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -38,6 +39,8 @@ export function StageCard({ totalMp, className, ...rest }: { totalMp: number; cl
           areaStage?.gradient ?? "from-violet-300/14 via-sky-300/[0.05] to-transparent",
         )}
       />
+      {/* 滞在ステージにちなんだ景色の線画（塔にいるときは星天の塔） */}
+      <StageScene stageId={area.zenith ? "zenith" : (areaStage?.id ?? "zenith")} />
       <div className="relative flex items-center gap-2 font-display text-[11px] tracking-[0.3em] whitespace-nowrap text-starlight/80">
         <Map className="size-3.5 shrink-0 short:hidden" strokeWidth={1.25} />
         <span className="short:tracking-[0.1em]">{area.zenith ? `ZENITH ${zenithFloor(data.zenith.minutes)}F` : `AREA ${area.id}`}</span>
