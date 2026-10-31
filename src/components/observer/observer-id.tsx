@@ -139,7 +139,8 @@ export function ObserverIdField() {
           <p className="mb-2 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
             Google でログインすると、観測者IDや復元キーを保管しなくても、別の端末で記録を引き継げます。
           </p>
-          <GoogleSignInButton size="sm" />
+          {/* リリースまでは Google ログインを開発しないので、押せないようにしておく */}
+          <GoogleSignInButton size="sm" comingSoon />
         </div>
       )}
     </div>

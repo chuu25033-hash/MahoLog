@@ -206,7 +206,8 @@ export function TitleScreen({ authEnabled }: { authEnabled: boolean }) {
             ) : (
               // Google でログインすれば、別の端末で始めた旅もそのまま続けられる。観測者IDでの復元も残しておく
               <div className="flex flex-col items-center gap-3">
-                <GoogleSignInButton next="/" className="w-60" />
+                {/* リリースまでは Google ログインを開発しないので、押せないようにしておく */}
+                <GoogleSignInButton next="/" className="w-60" comingSoon />
                 <button type="button" onClick={() => setRestoreOpen(true)} className="transition-colors hover:text-starlight">
                   観測者IDで世界線を復元する
                 </button>

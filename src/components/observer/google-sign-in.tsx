@@ -17,8 +17,21 @@ function GoogleLogo({ className }: { className?: string }) {
   );
 }
 
-/** Google でログインするボタン。押すと Google の画面へ移り、ログイン後に next の画面へ戻る */
-export function GoogleSignInButton({ next, className, size = "default" }: { next?: string; className?: string; size?: "default" | "sm" }) {
+/**
+ * Google でログインするボタン。押すと Google の画面へ移り、ログイン後に next の画面へ戻る。
+ * comingSoon のときは押せず「準備中」と添える
+ */
+export function GoogleSignInButton({
+  next,
+  className,
+  size = "default",
+  comingSoon = false,
+}: {
+  next?: string;
+  className?: string;
+  size?: "default" | "sm";
+  comingSoon?: boolean;
+}) {
   const [state, setState] = useState<"idle" | "busy" | "error">("idle");
 
   async function signIn() {
@@ -30,9 +43,9 @@ export function GoogleSignInButton({ next, className, size = "default" }: { next
 
   return (
     <div className={cn("flex flex-col items-center gap-1", className)}>
-      <Button variant="outline" size={size} className="w-full gap-2 bg-white/[0.04] tracking-wider" disabled={state === "busy"} onClick={signIn}>
+      <Button variant="outline" size={size} className="w-full gap-2 bg-white/[0.04] tracking-wider" disabled={comingSoon || state === "busy"} onClick={signIn}>
         <GoogleLogo className="size-4" />
-        {state === "busy" ? "Google へ移動しています…" : "Google でログイン"}
+        {comingSoon ? "Google でログイン（準備中）" : state === "busy" ? "Google へ移動しています…" : "Google でログイン"}
       </Button>
       {state === "error" && <p className="text-center text-[11px] tracking-wider text-destructive">Google ログインを始められませんでした。通信状態を確かめてください</p>}
     </div>
