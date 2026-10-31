@@ -10,6 +10,7 @@ import { MpBar } from "@/components/mp-bar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { findArea } from "@/lib/areas";
+import { REWARD_IDS } from "@/lib/celestial-guidance";
 import { oreCount, recipeRelics, restoredCount } from "@/lib/crafting";
 import { chapterOf } from "@/lib/cycles";
 import { STAGES } from "@/lib/game";
@@ -250,7 +251,12 @@ function originHint(item: Item) {
   }
   if (item.kind === "title" || (item.kind === "relic" && item.zenithFloor)) return `星天の塔 ${item.zenithFloor}層への到達`;
   if (item.kind === "skin" && item.cycle) return `${chapterOf(item.cycle).name}の幕開け（${item.cycle}周目へ進む）`;
-  if (item.kind === "catalyst") return GUIDANCE_CATALYSTS.includes(item) ? "星天の導き" : "各エリアに降る流れ星";
+  if (item.kind === "catalyst") {
+    if (GUIDANCE_CATALYSTS.includes(item)) return "星天の導き";
+    // 宝箱の触媒は、星の試練の報酬にもなる。星天の導きで授かるものもある
+    const guidance = (REWARD_IDS as readonly string[]).includes(item.id);
+    return `各エリアに降る流れ星・${guidance ? "星天の導き・" : ""}星の試練`;
+  }
   if (item.kind === "material") return "遺物の還元";
   if (item.kind === "relic" && item.recipe) return `錬成陣（星屑の原石 ${item.recipe.ore}・${recipeRelics(item).map((r) => `『${r.name}』`).join("")}）`;
   const stage = STAGES.find((s) => s.id === item.stageId);

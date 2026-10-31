@@ -10,7 +10,7 @@ const DAY = 24 * 60 * 60 * 1000;
 export const GUIDANCE_CYCLE = 7;
 
 /** 周期の各夜に授かる品（7夜目は極光の輝石） */
-const REWARD_IDS = ["g-stardust", "c-catalyst", "g-stardust", "c-prism", "g-stardust", "c-hourglass", "g-aurora"] as const;
+export const REWARD_IDS = ["g-stardust", "c-catalyst", "g-stardust", "c-prism", "g-stardust", "c-hourglass", "g-aurora"] as const;
 
 export type Guidance = {
   /** 本日が周期内の何夜目か（1〜7） */
