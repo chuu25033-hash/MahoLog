@@ -92,7 +92,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
             )}
             {profile.username}
             <Crown className="ml-1.5 inline size-3 align-baseline text-starlight/50" strokeWidth={1.25} aria-hidden />
-            <WhisperText text="掲げる称号を選ぶ" side="top" />
+            <WhisperText text="掲げる称号を選ぶ" />
           </button>
           <div className="flex items-center gap-1 text-[11px] tracking-[0.2em] whitespace-nowrap text-starlight/85">
             <RankSigil numeral={rank.numeral} className="size-5 shrink-0 text-starlight" />
