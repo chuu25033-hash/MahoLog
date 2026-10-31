@@ -178,6 +178,11 @@ html[data-chapter="azure"] {
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    /* スクロールバーはどこにも出さない（スクロールはそのまま、指やホイールで動かせる） */
+    scrollbar-width: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
   }
   body {
     @apply bg-background text-foreground;
