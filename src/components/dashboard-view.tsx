@@ -105,9 +105,12 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
           </div>
         </div>
         <div className="ml-auto shrink-0 text-right">
-          <p className="text-[10px] tracking-[0.3em] whitespace-nowrap text-muted-foreground">探求度</p>
-          <p className="font-display text-3xl leading-none text-starlight-gradient short:text-2xl">{level.level}</p>
-          <p className="font-display text-[9px] tracking-[0.2em] whitespace-nowrap text-starlight/60 short:hidden">PHASE {level.level}</p>
+          {/* 探求度の英語名（PHASE）は名前の下に小さく添え、数字は一度だけ大きく示す */}
+          <p className="flex flex-col items-end text-[10px] leading-tight tracking-[0.3em] whitespace-nowrap text-muted-foreground">
+            探求度
+            <span className="font-display text-[8px] tracking-[0.2em] text-starlight/60 short:hidden">PHASE</span>
+          </p>
+          <p className="mt-0.5 font-display text-3xl leading-none text-starlight-gradient short:text-2xl">{level.level}</p>
         </div>
       </div>
       <div>
