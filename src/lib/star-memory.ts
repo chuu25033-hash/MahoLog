@@ -21,6 +21,8 @@ export type ObservedNight = {
   weekday: number;
   /** まだ来ていない日 */
   future: boolean;
+  /** 今日（まだ詠唱していなくても、休息の夜とは言わない） */
+  today: boolean;
   sessions: ChantSession[];
   minutes: number;
   mp: number;
@@ -61,8 +63,8 @@ function pickDrop(seed: number): Item | null {
   return pool[Math.floor(rand(seed + 2) * pool.length)];
 }
 
-function night(date: Date, week: number, weekday: number, future: boolean, rest: boolean): ObservedNight {
-  const empty = { date, week, weekday, future, sessions: [], minutes: 0, mp: 0, catalyst: null, drops: [] };
+function night(date: Date, week: number, weekday: number, future: boolean, rest: boolean, today: boolean): ObservedNight {
+  const empty = { date, week, weekday, future, today, sessions: [], minutes: 0, mp: 0, catalyst: null, drops: [] };
   if (future || rest) return empty;
 
   const seed = Math.floor((date.getTime() + JST_OFFSET) / DAY);
@@ -87,7 +89,7 @@ export function mockObservedNights(now = new Date()): ObservedNight[] {
     const date = new Date(first + i * DAY);
     const week = Math.floor(i / 7);
     // 最初の週の土曜だけ休息日にして、星座が途切れた週も見せる
-    return night(date, week, i % 7, date.getTime() > today, week === 0 && i % 7 === 5);
+    return night(date, week, i % 7, date.getTime() > today, week === 0 && i % 7 === 5, date.getTime() === today);
   });
 }
 
@@ -110,6 +112,7 @@ export function observedNightsFrom(history: ChantRecord[], now = new Date()): Ob
       week: Math.floor(i / 7),
       weekday: i % 7,
       future: date.getTime() > today,
+      today: date.getTime() === today,
       sessions: records.map((r) => ({ subjectId: r.subjectId, minutes: r.minutes })),
       minutes: records.reduce((acc, r) => acc + r.minutes, 0),
       mp: records.reduce((acc, r) => acc + r.mp, 0),

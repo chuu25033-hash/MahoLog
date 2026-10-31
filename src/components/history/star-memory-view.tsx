@@ -205,7 +205,7 @@ function StarMemory({ nights }: { nights: ObservedNight[] }) {
         <dl className="flex shrink-0 gap-4 text-right portrait:justify-between text-[11px] tracking-wider whitespace-nowrap text-muted-foreground">
           {[
             { label: "詠唱した夜", value: `${observed.length}` },
-            { label: "総詠唱", value: formatMinutes(totalMinutes) },
+            { label: `${MEMORY_WEEKS}週の詠唱`, value: formatMinutes(totalMinutes) },
             { label: "完成した星座", value: `${completed.filter(Boolean).length}` },
           ].map(({ label, value }) => (
             <div key={label}>
@@ -459,7 +459,7 @@ function CelestialChart({
         const p = starPosition(n.week, n.weekday);
         const isSelected = n === selected;
         const select = () => onSelect(n);
-        const label = `${dateLabel.format(n.date)} ${n.minutes > 0 ? formatMinutes(n.minutes) : n.future ? "未詠唱" : "休息"}`;
+        const label = `${dateLabel.format(n.date)} ${n.minutes > 0 ? formatMinutes(n.minutes) : n.future || n.today ? "未詠唱" : "休息"}`;
 
         if (n.minutes === 0) {
           return (
@@ -554,7 +554,7 @@ function NightDetail({ night }: { night: ObservedNight }) {
       {night.minutes === 0 ? (
         <p className="flex items-center gap-2 text-xs tracking-wider text-muted-foreground">
           <Moon className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.25} />
-          {night.future ? "まだ訪れていない夜です" : "休息の夜。この日に星は灯っていません"}
+          {night.future ? "まだ訪れていない夜です" : night.today ? "今宵はまだ詠唱していません。詠唱すると、この夜に星が灯ります" : "休息の夜。この日に星は灯っていません"}
         </p>
       ) : (
         <>
@@ -651,7 +651,8 @@ function ConstellationList({ nights, completed }: { nights: ObservedNight[]; com
       <ul className="flex flex-col text-xs">
         {CONSTELLATIONS.slice(0, MEMORY_WEEKS).map((name, w) => {
           const lit = nights.filter((n) => n.week === w && n.minutes > 0).length;
-          const inProgress = nights.some((n) => n.week === w && n.future);
+          // 今週は、今日がまだ終わっていなければ（未来の日か今日が残っていれば）途切れたとは言わない
+          const inProgress = nights.some((n) => n.week === w && (n.future || n.today));
           return (
             <li key={name} className="flex items-center gap-2 border-b border-white/[0.06] py-1.5 last:border-0">
               {completed[w] ? (
