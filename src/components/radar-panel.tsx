@@ -5,6 +5,7 @@ import { formatMinutes } from "@/lib/game";
 import type { SubjectTotal } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { MagicRadar } from "./magic-radar";
+import { RadarField } from "./radar-field";
 
 const RANGES = [
   { key: "week", label: "1週間" },
@@ -50,6 +51,8 @@ export function RadarPanel({ data, action }: { data: Record<RangeKey, SubjectTot
         </div>
       </div>
       <div className="relative min-h-0 flex-1">
+        {/* 陣の外に広がる淡い外輪と、札の空の星 */}
+        <RadarField />
         <div className="absolute inset-0">
           <MagicRadar data={current} />
         </div>
