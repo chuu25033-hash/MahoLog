@@ -8,6 +8,7 @@ import { SiteAnalytics } from "@/components/site-analytics";
 import { SoundSync } from "@/components/sound-sync";
 import { StarField } from "@/components/star-field";
 import { TransitionVeil } from "@/components/transition-veil";
+import { ViewportAnchor } from "@/components/viewport-anchor";
 import "./globals.css";
 
 const mincho = Shippori_Mincho({
@@ -66,6 +67,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <LiteModeSync />
         <ChapterThemeSync />
         <CloudSyncStarter />
+        <ViewportAnchor />
         <SoundSync />
         {children}
         <TransitionVeil />
