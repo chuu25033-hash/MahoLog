@@ -113,6 +113,24 @@ export function TimerPanel({
     resumed ? resumed.subSubject : initialSubject ? initialSubSubject : null,
   );
   const [phase, setPhase] = useState<Phase>(resumed?.phase ?? "idle");
+
+  // 画面を離れても状態は残る（Cache Components の Activity）ので、設定が変わったら詠唱前の選択を合わせ直す
+  const [appliedInitial, setAppliedInitial] = useState({ initialSubjectId, initialSubSubject, initialFocusMin });
+  if (
+    appliedInitial.initialSubjectId !== initialSubjectId ||
+    appliedInitial.initialSubSubject !== initialSubSubject ||
+    appliedInitial.initialFocusMin !== initialFocusMin
+  ) {
+    setAppliedInitial({ initialSubjectId, initialSubSubject, initialFocusMin });
+    if (phase === "idle") {
+      const next = subjects.find((s) => s.id === initialSubjectId);
+      if (next) {
+        setSubjectId(next.id);
+        setSubSubjectInput(initialSubSubject);
+      }
+      setFocusMin(initialFocusMin);
+    }
+  }
   const { elapsedMs, running, snapshot, start: resume, pause, reset, read } = useClock(resumed?.clock);
 
   const [totalMp, setTotalMp] = useState(initialTotalMp);
