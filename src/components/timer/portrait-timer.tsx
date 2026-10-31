@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { BackToLibrary } from "@/components/back-to-library";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { ChantPhase } from "@/lib/chant-session";
 import type { Subject } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +28,7 @@ export function PortraitTimer({
   overlays,
 }: {
   locked: boolean;
-  phase: "idle" | "focus" | "breakReady" | "break";
+  phase: ChantPhase;
   subject: Subject | undefined;
   subSubject: string | null;
   modeToggle: ReactNode;

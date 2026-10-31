@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 import { AREAS, isAreaUnlocked, resolveArea } from "./areas";
 import { jstDateKey, startOfJstDay } from "./date";
 import { demoProfile } from "./demo";
-import { DAILY_LIMIT_MINUTES, calcLevel, rankOf } from "./game";
+import { calcLevel, rankOf } from "./game";
 import { CLEAR_MP, chapterOf, milestonesBetween, zenithFloor, type Chapter, type ChapterTheme } from "./cycles";
 import { canCraft, canRestore, dissolveValue, fragmentsOf, memoryOf, restoredCount, surplusCount } from "./crafting";
 import {
@@ -31,6 +31,7 @@ import {
 } from "./items";
 import { mockObservedNights } from "./star-memory";
 import { activeSubjectsOf } from "./subjects";
+import { comboOnFinish, comboOnStart, initialCombo, type ComboState } from "./combo";
 import { ACHIEVEMENT_TITLES, checkUnlockedTitles, findTitle, type Tally, type Title, type UserStats, type UserTitleState } from "./titles";
 import { TASKS, drawCatalyst, measureTask, periodKey, type TaskBoard, type TaskScope } from "./tasks";
 import { generateWorldlineCode } from "./worldlines";
@@ -80,9 +81,6 @@ export type ChantRecord = {
   /** 詠唱の間で計らず、後から書き留めた記録。魔力だけを授け、試練には数えない */
   manual?: boolean;
 };
-
-/** 後から書き留められる日数（今日を含む） */
-export const MANUAL_CHANT_DAYS = 7;
 
 export type DailyReward = {
   /** 最後に星天の導きを受け取った日（JST, YYYY-MM-DD） */
@@ -137,6 +135,8 @@ export type UserData = {
   titles: { unlocked: Record<string, string>; unseen: string[] };
   /** 錬成陣で還元した遺物の累計数（称号の判定に使う） */
   dissolvedTotal: number;
+  /** 星脈との同調（連続詠唱のコンボ。lib/combo.ts） */
+  combo: ComboState;
 };
 
 const unlockedAt = (totalMp: number) => AREAS.filter((a) => isAreaUnlocked(a, totalMp)).map((a) => a.id);
@@ -158,6 +158,7 @@ export function initialUserData(): UserData {
     starEcho: 0,
     titles: { unlocked: {}, unseen: [] },
     dissolvedTotal: 0,
+    combo: initialCombo(),
   };
 }
 
@@ -180,6 +181,7 @@ function normalize(saved: Partial<UserData>): UserData {
     cycle: { ...base.cycle, ...saved.cycle },
     zenith: { ...base.zenith, ...saved.zenith },
     titles: { ...base.titles, ...saved.titles },
+    combo: { ...base.combo, ...saved.combo },
   });
 }
 
@@ -264,6 +266,7 @@ export function titleStatsOf(data: UserData): UserStats {
       .map((r) => ({ endedAt: r.date, minutes: r.minutes, areaId: r.stageId, subjectId: r.subjectId, mode: r.mode })),
     documents: { found: restoredCount(data), total: DOCUMENTS.length },
     dissolved: data.dissolvedTotal,
+    bestCombo: data.combo.best,
     rarity: Object.fromEntries(CODEX_RARITIES.map((r) => [r, tally(RARITY_SET.filter((i) => i.rarity === r), data)])) as Record<ItemRarity, Tally>,
     codex: tally(codexOf(data), data),
   };
@@ -503,6 +506,18 @@ export const userActions = {
     return isNew;
   },
 
+  /** 詠唱を始めた: 静息の猶予を過ぎていれば同調をほどく */
+  startCombo(now = Date.now()): ComboState {
+    update((s) => ({ ...s, combo: comboOnStart(s.combo, now) }));
+    return load().combo;
+  },
+
+  /** 詠唱を終えた: 25分以上なら同調を高め、届かなければほどく。この詠唱を含めた同調の状態を返す */
+  finishCombo(finish: { minutes: number; endedAt: number; breakMin: number }): ComboState {
+    update((s) => ({ ...s, combo: comboOnFinish(s.combo, finish) }));
+    return load().combo;
+  },
+
   /** 星の余韻（流れ星の区切りに届かなかった端数）を書き留める */
   setStarEcho(minutes: number) {
     update((s) => ({ ...s, starEcho: minutes }));
@@ -587,44 +602,6 @@ export const userActions = {
         s.userProfile.totalMp + record.mp,
       ),
     );
-  },
-
-  /**
-   * 詠唱の間で計り忘れた学びを、後から書き留める。daysAgo 日前（0 = 今日）の記録として刻み、
-   * 得る魔力は学んだ分そのまま（エリアの属性・加護・触媒・周天の刻印は乗らず、遺物も見つからない）。
-   * その日の上限を超える分は切り詰め、刻めた分数を返す
-   */
-  recordPastChant(
-    { minutes, subjectId, subSubject, daysAgo }: { minutes: number; subjectId: string; subSubject: string | null; daysAgo: number },
-    now = new Date(),
-  ): number {
-    const days = Math.min(MANUAL_CHANT_DAYS - 1, Math.max(0, Math.floor(daysAgo)));
-    // 過ぎた日は、その日の夜（JST 21時）に詠唱したものとして刻む
-    const date = days === 0 ? now : new Date(startOfJstDay(now).getTime() - days * DAY + 21 * 60 * 60 * 1000);
-    const data = load();
-    const saved = Math.min(Math.floor(minutes), DAILY_LIMIT_MINUTES - todayChantMinutes(data, date));
-    if (saved < 1) return 0;
-    const record: ChantRecord = {
-      id: `m-${now.getTime()}`,
-      date: date.toISOString(),
-      minutes: saved,
-      subjectId,
-      subSubject,
-      mp: saved,
-      stageId: data.userProfile.currentStageId,
-      mode: "stopwatch",
-      catalystId: null,
-      dropId: null,
-      manual: true,
-    };
-    // 詠唱の記録は日時の順に並べておく
-    update((s) =>
-      withProgress(
-        { ...s, chantHistory: [...s.chantHistory, record].sort((a, b) => a.date.localeCompare(b.date)) },
-        s.userProfile.totalMp + saved,
-      ),
-    );
-    return saved;
   },
 
   /** 星天の導きを受け取る: 前日から続いていれば連続日数を加算、途切れていれば1日目から */

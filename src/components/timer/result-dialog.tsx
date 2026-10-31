@@ -15,6 +15,7 @@ import { DROP_SLOT_MINUTES } from "@/lib/drops";
 import { CLEAR_MP } from "@/lib/cycles";
 import { calcLevel, formatMinutes, levelProgress, rankOf } from "@/lib/game";
 import { STARDUST_ORE, type CatalystItem, type Item, type ItemRarity } from "@/lib/items";
+import type { MeteorShower } from "@/lib/reward";
 import { soundManager } from "@/lib/sound/sound-manager";
 import { TASKS } from "@/lib/tasks";
 import type { Subject, SubjectTotal } from "@/lib/types";
@@ -46,6 +47,16 @@ export type StudyResult = {
   ore: number;
   /** 次の詠唱へ持ち越す星の余韻（分） */
   echo: number;
+  /** 流星群の接近による特別観測（30分未満は null） */
+  meteor: MeteorShower | null;
+  /** この詠唱を含めた星脈との同調数 */
+  combo: number;
+  /** 同調による魔力の倍率 */
+  comboMp: number;
+  /** 同調による稀品以上の確率の倍率 */
+  comboDrop: number;
+  /** 「星脈の調律師」に届く同調か */
+  comboTitle: boolean;
   /** 星天の塔での登頂（塔で詠唱したときだけ） */
   climb: ZenithClimb | null;
   /** この周天を始めた時点の累積MP（エリアの解放はここからの MP で測る） */
@@ -218,15 +229,17 @@ function ResultPanel({
           <p className="mp-glow font-display text-5xl text-starlight-gradient short:text-4xl">+{result.gainedMp} MP</p>
           <p className="animate-float-up text-lg tracking-[0.4em] text-glow-gold [animation-delay:200ms]">授かりし魔力</p>
         </div>
-        {(result.areaBoost > 1 || result.blessing > 1 || result.catalyst || result.cycleMark > 1) && (
+        {(result.areaBoost > 1 || result.blessing > 1 || result.catalyst || result.cycleMark > 1 || result.comboMp > 1) && (
           <p className="animate-in text-[11px] tracking-wider text-muted-foreground fade-in duration-700">
             基礎 {result.savedMinutes}
             {result.areaBoost > 1 && <span className="text-aqua"> × エリア {result.areaBoost}</span>}
             {result.blessing > 1 && <span className="text-amethyst"> × 秘宝の加護 {Number(result.blessing.toFixed(2))}</span>}
             {result.catalyst && <span className="text-starlight"> × {result.catalyst.name} {result.catalyst.multiplier}</span>}
             {result.cycleMark > 1 && <span className="text-amethyst"> × 周天の刻印 {Number(result.cycleMark.toFixed(2))}</span>}
+            {result.comboMp > 1 && <span className="text-starlight"> × 同調 {result.combo}連 {Number(result.comboMp.toFixed(2))}</span>}
           </p>
         )}
+        {result.combo > 0 && <ComboNote result={result} />}
         <DialogDescription>
           <span className="text-foreground">
             {result.subject.name}
@@ -247,7 +260,7 @@ function ResultPanel({
           </p>
         ) : (
           chest !== "hidden" && (
-            <DropReveal stage={chest} drops={result.drops} ore={result.ore} echo={result.echo} onOpen={() => onChestChange("open")} />
+            <DropReveal stage={chest} drops={result.drops} ore={result.ore} echo={result.echo} meteor={result.meteor} onOpen={() => onChestChange("open")} />
           )
         )}
       </div>
@@ -421,12 +434,14 @@ function DropReveal({
   drops,
   ore,
   echo,
+  meteor,
   onOpen,
 }: {
   stage: Exclude<ChestStage, "hidden">;
   drops: StudyResult["drops"];
   ore: number;
   echo: number;
+  meteor: MeteorShower | null;
   onOpen: () => void;
 }) {
   const opened = stage === "open";
@@ -449,11 +464,20 @@ function DropReveal({
       {!opened ? (
         <>
           <p className="text-[11px] tracking-[0.3em] text-starlight/70 glimmer">
-            {drops.length > 1 ? `流れ星が${drops.length}つ降りた` : "流れ星が降りた"}…触れて受け取る
+            {meteor ? "流星群が降りた" : drops.length > 1 ? `流れ星が${drops.length}つ降りた` : "流れ星が降りた"}…触れて受け取る
           </p>
         </>
       ) : (
         <>
+          {meteor && (
+            <div className="mb-1 flex flex-col items-center gap-0.5 animate-in fade-in duration-1000">
+              <p className="text-xs tracking-[0.3em] whitespace-nowrap text-starlight text-glow-gold">流星群の接近 ― 特別観測</p>
+              <p className="font-display text-[9px] tracking-[0.3em] whitespace-nowrap text-starlight/60">METEOR SHOWER</p>
+              <p className="text-[10px] leading-snug tracking-wider text-muted-foreground [word-break:auto-phrase]">
+                長き詠唱に星脈がゆらぎ、古代の記憶が地上へ手繰り寄せられた
+              </p>
+            </div>
+          )}
           <ul className={cn("grid w-full gap-2", drops.length === 1 ? "grid-cols-1" : drops.length === 3 ? "grid-cols-3" : "grid-cols-2", drops.length === 4 && "sm:grid-cols-4")}>
             {drops.map((drop, i) => (
               <li
@@ -469,6 +493,9 @@ function DropReveal({
                 <span className={cn("tracking-[0.1em] text-foreground [word-break:auto-phrase]", drops.length === 1 ? "text-sm" : "text-xs")}>
                   {drop.item.kind === "fragment" ? drop.item.name : `『${drop.item.name}』`}
                 </span>
+                {meteor?.upgradedIndex === i && (
+                  <span className="text-[10px] tracking-wider whitespace-nowrap text-starlight">流星群の輝きで秘宝以上に</span>
+                )}
                 <span className="text-[10px] leading-snug text-muted-foreground [word-break:auto-phrase]">{dropNote(drop)}</span>
               </li>
             ))}
@@ -479,6 +506,7 @@ function DropReveal({
               style={{ animationDelay: `${drops.length * 250}ms` }}
             >
               {STARDUST_ORE.name} ×{ore} も添えられていた
+              {meteor && ore > meteor.ore && <span className="text-muted-foreground">（うち流星群 ×{meteor.ore}）</span>}
             </p>
           )}
           {echo > 0 && (
@@ -490,6 +518,25 @@ function DropReveal({
             </p>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+/** 星脈との同調（コンボ）の一言。補正が乗った段階と、調律師に届いたことを添える */
+function ComboNote({ result }: { result: StudyResult }) {
+  const perks = [
+    result.comboMp > 1 && `魔力 +${Math.round((result.comboMp - 1) * 100)}%`,
+    result.comboDrop > 1 && `稀品以上の流れ星 +${Math.round((result.comboDrop - 1) * 100)}%`,
+  ].filter(Boolean);
+  return (
+    <div className="flex animate-in flex-col items-center gap-0.5 fade-in duration-700">
+      <p className="text-xs tracking-[0.25em] whitespace-nowrap text-amethyst">
+        星脈との同調 <span className="font-display text-sm text-starlight text-glow-gold">{result.combo}</span>連
+      </p>
+      {perks.length > 0 && <p className="text-[10px] tracking-wider text-muted-foreground">{perks.join("・")}</p>}
+      {result.comboTitle && (
+        <p className="text-[10px] tracking-wider text-starlight [word-break:auto-phrase]">途切れぬ詠唱が星脈を調律した ― 称号『星脈の調律師』</p>
       )}
     </div>
   );

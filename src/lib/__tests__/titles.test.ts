@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { AREAS } from "../areas";
 import { ACHIEVEMENT_TITLES, checkUnlockedTitles, titleProgressMap, type ChantFact, type UserStats, type UserTitleState } from "../titles";
-import { equippedTitle, getUserData, initialUserData, replaceUserData, titleStatsOf, userActions } from "../user-store";
+import { equippedTitle, getUserData, initialUserData, replaceUserData, userActions } from "../user-store";
 
 const tally = { found: 0, total: 10 };
 const EMPTY: UserStats = {
@@ -144,11 +144,5 @@ describe("保存データとの連携", () => {
   it("まだ解放していない称号は掲げても表示されない", () => {
     userActions.setTitle("ach-chants-1000");
     expect(equippedTitle(getUserData())).toBeNull();
-  });
-
-  it("後から書き留めた記録は称号に数えない", () => {
-    userActions.recordPastChant({ minutes: 30, subjectId: "math", subSubject: null, daysAgo: 0 });
-    expect(titleStatsOf(getUserData()).chants).toHaveLength(0);
-    expect(getUserData().titles.unlocked).not.toHaveProperty("ach-first-chant");
   });
 });

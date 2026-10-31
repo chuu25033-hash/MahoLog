@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { ClockSnapshot } from "@/lib/chant-session";
+import type { RestEndNotice } from "@/lib/combo";
 import { soundManager } from "@/lib/sound/sound-manager";
 
 /**
@@ -28,6 +29,12 @@ export function useClock(initial?: ClockSnapshot) {
     setState((s) => (s.startedAt !== null ? s : { accMs: s.accMs, startedAt: t }));
   }, []);
 
+  /** 過ぎた時刻 t から動いていたことにして始める（裏に回っていた間に詠唱が満了し、静息がそこから始まっていた場合など） */
+  const startAt = useCallback((t: number) => {
+    setNow(Date.now());
+    setState({ accMs: 0, startedAt: Math.min(t, Date.now()) });
+  }, []);
+
   const pause = useCallback(() => {
     setState((s) =>
       s.startedAt === null ? s : { accMs: s.accMs + (Date.now() - s.startedAt), startedAt: null },
@@ -43,7 +50,7 @@ export function useClock(initial?: ClockSnapshot) {
     [state],
   );
 
-  return { elapsedMs, running, snapshot: state, start, pause, reset, read };
+  return { elapsedMs, running, snapshot: state, start, startAt, pause, reset, read };
 }
 
 /** 終了通知（魔力集束のチャイム + 振動）。設定で完了の報せを切っていれば鳴らさない */
@@ -53,4 +60,25 @@ export function notifyFinish(chime = true) {
     navigator.vibrate?.([200, 100, 200]);
   } catch {}
   soundManager.playSe("chantComplete");
+}
+
+/** 端末の通知を出してよいか、詠唱を始めるとき（ユーザーの操作の中）に一度だけ尋ねる */
+export function requestRestNoticePermission() {
+  try {
+    if (typeof Notification !== "undefined" && Notification.permission === "default") void Notification.requestPermission();
+  } catch {}
+}
+
+/**
+ * 静息が明けたことを端末の通知で報せる。詠唱の間を見ていないとき（裏に回っているとき）だけ出す。
+ * ページが生きている間に限る（iOS で画面を閉じている間は届かず、戻ったときにチャイムと一言で報せる）
+ */
+export function showRestEndNotification(notice: RestEndNotice | null, chime = true) {
+  if (!notice || !chime) return;
+  try {
+    if (typeof Notification === "undefined" || Notification.permission !== "granted" || !document.hidden) return;
+    new Notification(notice.title, { body: notice.body, tag: "maholog-rest-end", icon: "/icon.svg" });
+  } catch {
+    // Android の Chrome などページから直接通知を出せない環境では、戻ったときの報せだけにする
+  }
 }

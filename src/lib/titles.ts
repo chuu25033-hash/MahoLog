@@ -54,6 +54,8 @@ export type TitleCondition =
   | { kind: "pomodoro"; count: number }
   /** 1日に、きっかり25分の律動の詠唱を終えた回数の最大 */
   | { kind: "pomodoroDay"; sets: number }
+  /** 星脈との同調（静息を挟んで途切れずに紡いだ25分以上の詠唱）の最長 */
+  | { kind: "combo"; count: number }
   /** 1日に詠唱した属性（科目）の数の最大 */
   | { kind: "subjectsInDay"; count: number }
   /** そのエリア（星天の塔は "zenith"）での詠唱回数 */
@@ -113,6 +115,8 @@ export interface UserStats {
   documents: Tally;
   /** 錬成陣で還元した遺物の累計数 */
   dissolved: number;
+  /** 星脈との同調の最長（この項目より前の保存データには無い） */
+  bestCombo?: number;
   /** レア度ごとの図鑑登録（1周目の道で出会える遺物。周回限定・星天の塔の報酬は含めない） */
   rarity: Record<ItemRarity, Tally>;
   /** 図鑑解読率（図鑑の画面と同じ数え方） */
@@ -168,6 +172,8 @@ export function describeCondition(c: TitleCondition): string {
       return `律動の詠唱で、きっかり25分の詠唱を${c.count === 1 ? "" : `通算${c.count}回`}完了`;
     case "pomodoroDay":
       return `1日のうちに、きっかり25分の律動の詠唱を${c.sets}回完了`;
+    case "combo":
+      return `25分以上の詠唱を、静息を挟んで途切れずに${c.count}回紡ぐ（${c.count}連の同調）`;
     case "subjectsInDay":
       return `1日のうちに${c.count}つの属性で詠唱を完了`;
     case "areaChants":
@@ -347,6 +353,7 @@ const CONCENTRATION_TITLES: Title[] = [
   concentration("pomodoro-100", "律動を極めし者", "S", { kind: "pomodoro", count: 100 }, "百度の二十五分。あなたの律動は、もう天文盤の歯車と同じ正確さで回る。"),
   concentration("pomodoro-day-4", "四つの律動", "B", { kind: "pomodoroDay", sets: 4 }, "一日のうちに、二十五分の律動を四度重ねた。"),
   concentration("pomodoro-day-8", "律動の祭典", "A", { kind: "pomodoroDay", sets: 8 }, "八つの律動が一日に連なり、ひとつの長い旋律になった。"),
+  concentration("combo-5", "星脈の調律師", "A", { kind: "combo", count: 5 }, "静息を挟んでも、五度の詠唱は途切れなかった。星脈の拍が、あなたの呼吸に合わせて打ちはじめる。"),
 
   concentration("subjects-3", "三つの属性を巡る者", "B", { kind: "subjectsInDay", count: 3 }, "一日のうちに、三つの属性の星脈へ刻を流した。"),
   concentration("subjects-5", "万象を巡る一夜", "A", { kind: "subjectsInDay", count: 5 }, "ひと晩で五つの属性を巡ると、夜空の色がそろって揺らぐ。"),
@@ -509,6 +516,8 @@ function measure(c: TitleCondition, s: ChantSummary, stats: UserStats): TitlePro
       return progress(s.pomodoro, c.count);
     case "pomodoroDay":
       return progress(s.maxPomodoroDay, c.sets);
+    case "combo":
+      return progress(stats.bestCombo ?? 0, c.count);
     case "subjectsInDay":
       return progress(s.maxSubjectsInDay, c.count);
     case "areaChants":

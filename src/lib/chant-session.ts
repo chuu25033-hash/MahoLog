@@ -7,8 +7,8 @@ import type { StudyMode } from "./types";
 // 詠唱の間を開き直せば続きから呼び戻せる。経過は開始時刻との差で測るので、閉じていた間も時は流れる
 const STORAGE_KEY = "maholog_chant_session";
 
-/** idle: 開始前 / focus: 勉強中 / breakReady: 休憩待機 / break: 休憩中 */
-export type ChantPhase = "idle" | "focus" | "breakReady" | "break";
+/** idle: 開始前 / focus: 勉強中 / break: 休憩中（詠唱を終えると自動で始まる） */
+export type ChantPhase = "idle" | "focus" | "break";
 
 export type ClockSnapshot = { accMs: number; startedAt: number | null };
 
@@ -30,7 +30,8 @@ export function loadChantSession(): ChantSession | null {
     if (!raw) return null;
     const s = JSON.parse(raw) as ChantSession;
     const valid =
-      ["focus", "breakReady", "break"].includes(s.phase) &&
+      // 静息を手で始めていた頃の「静息待機」は、詠唱の前に戻す
+      ["focus", "break"].includes(s.phase) &&
       (s.mode === "pomodoro" || s.mode === "stopwatch") &&
       typeof s.clock?.accMs === "number";
     return valid ? s : null;

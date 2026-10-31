@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { FastForward, Hourglass, MapPin, Moon, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
+import { FastForward, Hourglass, MapPin, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
 import { saveStudyLog } from "@/app/actions/study";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { BackToLibrary } from "@/components/back-to-library";
@@ -27,8 +27,9 @@ import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
 import { resolveSubSubject } from "@/lib/subjects";
 import { soundManager } from "@/lib/sound/sound-manager";
 import { setChantPresence } from "@/lib/worldline-store";
-import { calculateItemDrops } from "@/lib/drops";
+import { COMBO_GRACE_MINUTES, COMBO_MIN_MINUTES, restEndNotice } from "@/lib/combo";
 import { CATALYSTS, STARDUST_ORE, blessingMultiplier, dropMultiplier } from "@/lib/items";
+import { calculateFinalReward } from "@/lib/reward";
 import {
   FOCUS_MINUTE_OPTIONS,
   activeSkin,
@@ -45,10 +46,10 @@ import {
 import type { StudyMode, Subject, SubjectTotal } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { usePortraitPhone } from "@/lib/use-portrait-phone";
-import { PastChantDialog } from "./past-chant-dialog";
+import { ComboIndicator, MeteorSign } from "./combo-indicator";
 import { PortraitTimer } from "./portrait-timer";
 import { ResultDialog, type StudyResult } from "./result-dialog";
-import { notifyFinish, useClock } from "./use-clock";
+import { notifyFinish, requestRestNoticePermission, showRestEndNotification, useClock } from "./use-clock";
 
 const BREAK_OPTIONS = [5, 10, 20] as const;
 const IDLE_CHECK_MS = 2 * 60 * 60 * 1000; // ストップウォッチの放置確認（2時間）
@@ -132,7 +133,7 @@ export function TimerPanel({
       setFocusMin(initialFocusMin);
     }
   }
-  const { elapsedMs, running, snapshot, start: resume, pause, reset, read } = useClock(resumed?.clock);
+  const { elapsedMs, running, snapshot, start: resume, startAt, pause, reset, read } = useClock(resumed?.clock);
 
   const [totalMp, setTotalMp] = useState(initialTotalMp);
   const [weekTotals, setWeekTotals] = useState(initialWeekTotals);
@@ -148,7 +149,6 @@ export function TimerPanel({
         : null,
   );
   const [saving, startSaving] = useTransition();
-  const [pastOpen, setPastOpen] = useState(false);
 
   // ストップウォッチ放置確認
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -164,15 +164,17 @@ export function TimerPanel({
   // 設定で選択中の科目が外されたら、詠唱に使う科目の先頭に切り替える
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0];
   const subSubject = resolveSubSubject(subject, subSubjectInput);
-  const resting = phase === "break" || phase === "breakReady";
+  const resting = phase === "break";
   const color = resting ? "#cfe9ff" : (subject?.color ?? "#a882fb");
   const lineColor = resting ? "#a882fb" : skin.lineColor;
   const boost = subject ? areaMultiplier(area, subject.name) : 1;
 
+  /** 計った詠唱を刻む。minutes は詠唱の間で実際に計った時間、endedAt は詠唱が終わった時刻（裏で満了していたら満了の時刻） */
   const save = useCallback(
-    (minutes: number) => {
+    (minutes: number, endedAt = Date.now()) => {
       if (!subject) return;
       if (minutes < 1) {
+        userActions.finishCombo({ minutes, endedAt, breakMin });
         setMessage("詠唱が短く、星に刻まれませんでした（1分未満）");
         return;
       }
@@ -209,13 +211,25 @@ export function TimerPanel({
         const usedCatalyst = userActions.consumeCatalyst();
         const { cycle } = getUserData();
         const cycleMark = cycleMarkMultiplier(cycle.count);
-        const gainedMp = Math.round(res.savedMinutes * areaBoost * blessing * (usedCatalyst?.multiplier ?? 1) * cycleMark);
-        // 流れ星は詠唱時間の区切り（25分ごとに1つ・最大4つ）で降る
-        // 25分に届かなかった端数は星の余韻として次の詠唱へ持ち越す
-        const fall = calculateItemDrops(res.savedMinutes, { area, cycle: cycle.count, boost: dropMultiplier(owned), echo: getUserData().starEcho });
+        const baseMp = res.savedMinutes * areaBoost * blessing * (usedCatalyst?.multiplier ?? 1) * cycleMark;
+        // 星脈との同調: 25分以上の詠唱なら1つ高まり、届かなければほどける（同調数はこの詠唱を含める）
+        const combo = userActions.finishCombo({ minutes, endedAt, breakMin });
+        // 流れ星は詠唱時間の区切り（25分ごとに1つ・最大4つ）で降る。25分に届かなかった端数は星の余韻として次の詠唱へ持ち越す。
+        // 30分以上なら流星群が近づき、原石を添えて流れ星の1つを秘宝以上へ。同調は魔力と稀品以上の確率に乗る
+        const reward = calculateFinalReward({
+          minutes: res.savedMinutes,
+          baseMp,
+          combo: combo.count,
+          area,
+          cycle: cycle.count,
+          blessingDrop: dropMultiplier(owned),
+          echo: getUserData().starEcho,
+        });
+        const { fall } = reward;
+        const gainedMp = reward.mp;
         userActions.setStarEcho(fall.echo);
         const drops = fall.items.map((item) => ({ item, isNew: userActions.addItem(item) }));
-        if (fall.ore > 0) userActions.addItem(STARDUST_ORE, fall.ore);
+        if (reward.ore > 0) userActions.addItem(STARDUST_ORE, reward.ore);
         // 星天の塔では、詠唱した時間で階層を昇る
         const climb = area.zenith ? userActions.climbZenith(res.savedMinutes) : null;
         if (isDemo) {
@@ -254,14 +268,28 @@ export function TimerPanel({
           beforeTotals,
           afterTotals,
           drops,
-          ore: fall.ore,
+          ore: reward.ore,
           echo: fall.echo,
+          meteor: reward.meteor,
+          combo: reward.combo,
+          comboMp: reward.comboMp,
+          comboDrop: reward.comboDrop,
+          comboTitle: reward.comboTitle,
           climb,
           cycleStartMp: cycle.startMp,
         });
       });
     },
-    [area, isDemo, mode, subject, subSubject, subjects, totalMp, weekTotals],
+    [area, breakMin, isDemo, mode, subject, subSubject, subjects, totalMp, weekTotals],
+  );
+
+  /** 詠唱を終えた時刻 endedAt から静息を始める（裏で満了していたら、その時刻から静息は流れている） */
+  const beginRest = useCallback(
+    (endedAt: number) => {
+      startAt(endedAt);
+      setPhase("break");
+    },
+    [startAt],
   );
 
   // 詠唱の途中を端末に書き留め、画面を閉じても呼び戻せるようにする
@@ -286,24 +314,36 @@ export function TimerPanel({
     return () => soundManager.setDucked(false);
   }, [phase, running]);
 
-  // ポモドーロ: 勉強・休憩の終了判定
+  // ポモドーロ: 詠唱の満了判定
   useEffect(() => {
-    if (mode !== "pomodoro" || !running) return;
-    if (phase !== "focus" && phase !== "break") return;
-    const targetMs = (phase === "focus" ? focusMin : breakMin) * 60_000;
+    if (mode !== "pomodoro" || phase !== "focus" || !running) return;
+    const targetMs = focusMin * 60_000;
     const id = setTimeout(() => {
+      // 裏に回っていたり画面を閉じていたりして遅れて気づいても、満了した時刻で区切る
+      const endedAt = Date.now() - Math.max(0, read() - targetMs);
       notifyFinish(getUserData().settings.chime);
       reset();
-      if (phase === "focus") {
-        // 自動で休憩を始めず、手動スタートの「休憩待機」へ
-        setPhase("breakReady");
-        save(focusMin);
-      } else {
-        setPhase("idle");
-      }
+      // 詠唱を刻み、満了した時刻からそのまま静息に入る
+      save(focusMin, endedAt);
+      beginRest(endedAt);
     }, Math.max(0, targetMs - read()));
     return () => clearTimeout(id);
-  }, [mode, phase, running, focusMin, breakMin, read, reset, save]);
+  }, [mode, phase, running, focusMin, read, reset, save, beginRest]);
+
+  // 静息: 決めた長さで明け、同調が続いていれば猶予を報せる
+  useEffect(() => {
+    if (phase !== "break" || !running) return;
+    const id = setTimeout(() => {
+      const { chime } = getUserData().settings;
+      notifyFinish(chime);
+      reset();
+      setPhase("idle");
+      const notice = restEndNotice(getUserData().combo);
+      showRestEndNotification(notice, chime);
+      if (notice) setNotice(notice.body);
+    }, Math.max(0, breakMin * 60_000 - read()));
+    return () => clearTimeout(id);
+  }, [phase, running, breakMin, read, reset]);
 
   // ストップウォッチ: 2時間連続で放置確認
   useEffect(() => {
@@ -334,65 +374,57 @@ export function TimerPanel({
     setMessage(null);
     setNotice(null);
     setConfirmBaseMs(0);
+    // 静息の猶予を過ぎていれば、ここで同調がほどける
+    userActions.startCombo();
+    if (getUserData().settings.chime) requestRestNoticePermission();
     reset();
     resume();
     setPhase("focus");
     soundManager.playSe("chantStart");
   };
 
-  const startBreak = () => {
-    reset();
-    resume();
-    setPhase("break");
-  };
-
-  const finish = () => {
-    const minutes = Math.floor(read() / 60_000);
+  /** 詠唱を終えて刻む。25分以上なら同調が高まり、そのまま静息に入る */
+  const finishWith = (minutes: number) => {
+    const endedAt = Date.now();
     reset();
     setConfirmBaseMs(0);
-    setPhase("idle");
     soundManager.playSe("chantComplete");
-    save(minutes);
+    save(minutes, endedAt);
+    if (minutes >= COMBO_MIN_MINUTES) beginRest(endedAt);
+    else setPhase("idle");
   };
+
+  const finish = () => finishWith(Math.floor(read() / 60_000));
 
   /** デモ用: 計測を待たずに設定時間ぶん完了したことにする */
-  const skipToFinish = () => {
-    const minutes = mode === "pomodoro" ? focusMin : Math.max(25, Math.floor(read() / 60_000));
-    reset();
-    setConfirmBaseMs(0);
-    setPhase(mode === "pomodoro" ? "breakReady" : "idle");
-    soundManager.playSe("chantComplete");
-    save(minutes);
-  };
+  const skipToFinish = () => finishWith(mode === "pomodoro" ? focusMin : Math.max(25, Math.floor(read() / 60_000)));
 
   const continueFocus = () => {
     setConfirmBaseMs(read());
     setConfirmOpen(false);
   };
 
-  const targetMs =
-    mode === "pomodoro" && (phase === "focus" || phase === "break")
-      ? (phase === "focus" ? focusMin : breakMin) * 60_000
-      : 0;
+  const focusTargetMs = focusMin * 60_000;
+  // 静息はどちらの詠唱のあとも、決めた長さを数え下ろす
   const displayMs =
-    mode === "pomodoro"
-      ? phase === "idle"
-        ? focusMin * 60_000
-        : phase === "breakReady"
-          ? breakMin * 60_000
-          : targetMs - elapsedMs
-      : elapsedMs;
+    phase === "break"
+      ? breakMin * 60_000 - elapsedMs
+      : mode === "pomodoro"
+        ? phase === "idle"
+          ? focusTargetMs
+          : focusTargetMs - elapsedMs
+        : elapsedMs;
   const intensity =
     phase !== "focus"
       ? 0
       : mode === "pomodoro"
-        ? elapsedMs / targetMs
+        ? elapsedMs / focusTargetMs
         : Math.min(1, elapsedMs / (60 * 60_000));
-  const locked = phase !== "idle" && phase !== "breakReady";
+  // 静息の間は次の詠唱の属性を選び直せる（長さ・詠唱の型は静息を数え終えるまで変えない）
+  const locked = phase === "focus";
   const statusLabel = {
     idle: "詠唱準備",
     focus: running ? "魔力集束中…" : "詠唱中断",
-    breakReady: "詠唱完了 — 静息を待つ",
     break: running ? "静息中" : "静息中断",
   }[phase];
 
@@ -448,17 +480,20 @@ export function TimerPanel({
 
   const durationRows = (
     <>
-      {mode === "pomodoro" && (
-        <div className="space-y-1.5">
+      <div className="space-y-1.5">
+        {mode === "pomodoro" && (
           <OptionRow label="詠唱時間" unit="分" options={FOCUS_MINUTE_OPTIONS} value={focusMin} onChange={setFocusMin} disabled={phase !== "idle"} />
-          <OptionRow label="静息時間" unit="分" options={BREAK_OPTIONS} value={breakMin} onChange={setBreakMin} disabled={phase !== "idle"} />
-        </div>
-      )}
+        )}
+        <OptionRow label="静息時間" unit="分" options={BREAK_OPTIONS} value={breakMin} onChange={setBreakMin} disabled={phase !== "idle"} />
+      </div>
       {mode === "stopwatch" && (
         <p className="text-xs leading-relaxed text-muted-foreground">
           果てなく詠唱を続けます。2時間途切れずに続くと、星が詠唱の継続を確かめに訪れます。
         </p>
       )}
+      <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
+        {COMBO_MIN_MINUTES}分以上の詠唱を終えると静息に入る。静息が明けて{COMBO_GRACE_MINUTES}分のうちに次の詠唱を始めれば、星脈との同調が高まる
+      </p>
       {data.starEcho > 0 && (
         <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
           星の余韻 <span className="font-display text-starlight">{data.starEcho}</span>分。25分以上の次の詠唱に足され、25分ごとに流れ星がひとつ降る
@@ -592,16 +627,6 @@ export function TimerPanel({
             </Button>
           </>
         )}
-        {phase === "breakReady" && (
-          <>
-            <Button size="lg" onClick={startBreak}>
-              <Moon /> 静息に入る
-            </Button>
-            <Button size="lg" variant="secondary" onClick={() => setPhase("idle")}>
-              スキップ
-            </Button>
-          </>
-        )}
         {phase === "break" && (
           <>
             {running ? (
@@ -636,16 +661,8 @@ export function TimerPanel({
           <FastForward className="size-3" /> 開発: 計測を省略して完了
         </button>
       )}
-      {/* 計り忘れた学びを後から刻む。端末に記録を持つときだけ */}
-      {isDemo && phase === "idle" && (
-        <button
-          onClick={() => setPastOpen(true)}
-          disabled={saving}
-          className="text-[11px] tracking-wider text-muted-foreground underline-offset-4 hover:text-starlight hover:underline"
-        >
-          計り忘れた詠唱を書き留める
-        </button>
-      )}
+      {phase === "focus" && <MeteorSign elapsedMs={elapsedMs} />}
+      <ComboIndicator phase={phase} />
       {saving && <p className="text-xs tracking-wider text-aqua/70 glimmer">魔力を記録中…</p>}
       {notice && !message && <p className="text-xs tracking-wider text-aqua/80">{notice}</p>}
       {message && <p className="text-xs text-destructive">{message}</p>}
@@ -671,25 +688,6 @@ export function TimerPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {pastOpen && subject && (
-        <PastChantDialog
-          open
-          onOpenChange={setPastOpen}
-          subject={subject}
-          subSubject={subSubject}
-          onRecorded={(minutes, daysAgo) => {
-            if (minutes < 1) {
-              setMessage("その日の記録上限（12時間）に達しています");
-              return;
-            }
-            setTotalMp((v) => v + minutes);
-            if (daysAgo === 0) setTodayMp((v) => v + minutes);
-            setMessage(null);
-            setNotice(`${formatMinutes(minutes)}の詠唱を書き留めました`);
-          }}
-        />
-      )}
 
       {result && <ResultDialog key={result.id} result={result} subjects={subjects} onClose={() => setResult(null)} />}
     </>
