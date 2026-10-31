@@ -71,11 +71,16 @@ const WEEK_CENTERS = Array.from({ length: MEMORY_WEEKS }, (_, w) => {
   return { ...polar(ORBIT_MID, angle), angle };
 });
 
-/** 夜ごとに乗る軌道。隣の軌道へ一段ずつ揺らぐので、星は円弧の上をうねるように進む */
+/** 夜ごとに乗る軌道。ときおり隣の軌道へ一段揺らぐので、星は円弧に沿いながら緩やかにうねって進む */
 const WEEK_ORBITS = Array.from({ length: MEMORY_WEEKS }, (_, w) => {
   let ring = Math.floor(rand(w * 31 + 7) * ORBITS.length);
   return Array.from({ length: 7 }, (_, d) => {
-    if (d > 0) ring = Math.min(ORBITS.length - 1, Math.max(0, ring + Math.floor(rand(w * 7 + d + 11) * 3) - 1));
+    if (d > 0) {
+      // 跳ぶのは5夜に2夜ほど。跳びすぎると星が散らばって見える
+      const roll = rand(w * 7 + d + 11);
+      const step = roll < 0.2 ? -1 : roll > 0.8 ? 1 : 0;
+      ring = Math.min(ORBITS.length - 1, Math.max(0, ring + step));
+    }
     return ORBITS[ring];
   });
 });
@@ -113,11 +118,11 @@ function polygon(n: number, r: number, offset = -90) {
   }).join(" ");
 }
 
-/** 背景に散らばる淡い星 */
-const DUST = Array.from({ length: 70 }, (_, i) => {
+/** 背景に散らばる淡い星。多いと夜の星や空きの印と紛れるので、まばらに */
+const DUST = Array.from({ length: 28 }, (_, i) => {
   const angle = rand(i + 300) * Math.PI * 2;
   const r = Math.sqrt(rand(i + 400)) * 84;
-  return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, r: 0.25 + rand(i + 500) * 0.45, o: 0.15 + rand(i + 600) * 0.4 };
+  return { x: Math.cos(angle) * r, y: Math.sin(angle) * r, r: 0.2 + rand(i + 500) * 0.35, o: 0.1 + rand(i + 600) * 0.3 };
 });
 
 /** 線が星から星へ伸びる間隔（秒） */
