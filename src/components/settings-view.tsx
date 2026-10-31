@@ -556,7 +556,7 @@ function DataControls() {
           記録の保管
         </p>
         <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
-          魔力・詠唱履歴・所持品を JSON に書き出し、復元時はそのファイルで現在の記録を上書きします
+          魔力・詠唱履歴・図鑑・称号・設定など、この端末の記録をまるごと JSON に書き出し、復元時はそのファイルで現在の記録を上書きします
         </p>
         <div className="mt-2.5 grid grid-cols-2 gap-1.5">
           <Button variant="secondary" size="sm" onClick={exportBackup}>
@@ -620,7 +620,7 @@ function DataControls() {
           <DialogHeader>
             <DialogTitle className="tracking-wider">本当にすべての魔力と記憶を消去しますか？</DialogTitle>
             <DialogDescription className="[word-break:auto-phrase]">
-              累積魔力・魔導の軌跡・図鑑の記録・設定がすべて消え、新しい観測者IDで旅をやり直します。これまでの記録は、いまの観測者IDで復元しない限り戻せません。
+              累積魔力・魔導の軌跡・図鑑の記録・設定がすべて消え、新しい観測者IDで旅をやり直します。これまでの記録は、いまの観測者IDと復元キーで復元しない限り戻せません。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
