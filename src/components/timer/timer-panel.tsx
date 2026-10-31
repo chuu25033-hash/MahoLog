@@ -138,7 +138,8 @@ export function TimerPanel({
 
   const [totalMp, setTotalMp] = useState(initialTotalMp);
   const [weekTotals, setWeekTotals] = useState(initialWeekTotals);
-  const [todayMp, setTodayMp] = useState(todayMinutes);
+  // 本日の詠唱時間（分）。1日の上限（12時間）は MP ではなく詠唱した時間で測るので、時間で示す
+  const [todayChant, setTodayChant] = useState(todayMinutes);
   const [result, setResult] = useState<StudyResult | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   // 失敗ではない報せ（呼び戻した・書き留めた）
@@ -254,7 +255,7 @@ export function TimerPanel({
 
         setWeekTotals(afterTotals);
         setTotalMp(res.beforeMp + gainedMp);
-        setTodayMp((v) => v + gainedMp);
+        setTodayChant((v) => v + res.savedMinutes);
         setResult({
           id: Date.now(),
           subject,
@@ -503,7 +504,7 @@ export function TimerPanel({
         </p>
       )}
       <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
-        {COMBO_MIN_MINUTES}分以上の詠唱を終えると静息に入る。静息が明けて{COMBO_GRACE_MINUTES}分のうちに次の詠唱を始めれば、星脈との同調が高まる
+        詠唱を終えると静息に入る（無窮の詠唱は{COMBO_MIN_MINUTES}分以上のとき）。{COMBO_MIN_MINUTES}分以上の詠唱を、静息明けから{COMBO_GRACE_MINUTES}分のうちに次へつなげば、星脈との同調が高まる
       </p>
       {data.starEcho > 0 && (
         <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
@@ -561,10 +562,9 @@ export function TimerPanel({
   const mpSummary = (
     <div className="mt-auto space-y-0.5 border-t border-white/10 pt-2 text-xs tracking-wider text-muted-foreground">
       <p className="flex items-baseline justify-between gap-2">
-        本日の獲得魔力
+        本日の詠唱
         <span>
-          <span className="font-display text-sm text-foreground">{todayMp}</span>
-          <span className="font-display text-[10px]"> MP</span>
+          <span className="text-sm text-foreground">{formatMinutes(todayChant)}</span>
           <span className="ml-1 text-[10px]">／ 上限 {formatMinutes(DAILY_LIMIT_MINUTES)}</span>
         </span>
       </p>
