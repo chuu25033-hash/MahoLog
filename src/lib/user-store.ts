@@ -31,7 +31,7 @@ import {
 } from "./items";
 import { mockObservedNights } from "./star-memory";
 import { activeSubjectsOf } from "./subjects";
-import { checkUnlockedTitles, findTitle, type Tally, type Title, type UserStats, type UserTitleState } from "./titles";
+import { ACHIEVEMENT_TITLES, checkUnlockedTitles, findTitle, type Tally, type Title, type UserStats, type UserTitleState } from "./titles";
 import { TASKS, drawCatalyst, measureTask, periodKey, type TaskBoard, type TaskScope } from "./tasks";
 import { generateWorldlineCode } from "./worldlines";
 import type { Profile, StudyLog, StudyMode, Subject } from "./types";
@@ -832,12 +832,13 @@ export function hasDevBackup() {
 const UNLOCK_ALL_MP = 300 * 60;
 
 /**
- * すべてを解放したデータ: 全ステージ・最高階級、図鑑の全遺物（神話遺物を含む）、全文書の復元、
+ * すべてを解放したデータ: 全ステージ・最高階級、図鑑の全遺物（神話遺物を含む）、全文書の復元、観測者の全称号、
  * 断片と星屑の原石も試せるだけ持たせる。名前・設定・世界線と、滞在中のエリアは引き継ぐ。
  * 魔導の軌跡や魔法陣が描けるよう、詠唱履歴はサンプルを使う
  */
 function fullyUnlockedData(base: UserData): UserData {
   const sample = sampleUserData();
+  const unlockedAt = new Date().toISOString();
   const inventory: Record<string, number> = { [STARDUST_ORE.id]: 500 };
   for (const item of ALL_ITEMS) inventory[item.id] = item.kind === "catalyst" ? 5 : 1;
   for (const f of FRAGMENTS) inventory[f.id] = 2;
@@ -850,6 +851,8 @@ function fullyUnlockedData(base: UserData): UserData {
       chantHistory: sample.chantHistory,
       inventory,
       equipment: { ...base.equipment, catalystId: null },
+      // 称号は一度に告げると通知が埋まるので、告知済みとして解放する
+      titles: { unlocked: Object.fromEntries(ACHIEVEMENT_TITLES.map((t) => [t.id, unlockedAt])), unseen: [] },
     },
     UNLOCK_ALL_MP,
   );

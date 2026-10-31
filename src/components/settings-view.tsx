@@ -487,7 +487,7 @@ function DevTools() {
       <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
         {backedUp
           ? "全解放・サンプルに切り替え中です。退避しておいた元のデータにいつでも戻せます"
-          : "いまのデータをこの端末に退避してから、全解放（全ステージ・最高階級・全遺物・全文書・錬成素材）か、直近4週間の詠唱を重ねたサンプルに切り替えます"}
+          : "いまのデータをこの端末に退避してから、全解放（全ステージ・最高階級・全遺物・全文書・全称号・錬成素材）か、直近4週間の詠唱を重ねたサンプルに切り替えます"}
       </p>
       <div className="mt-2.5 grid grid-cols-2 gap-1.5">
         <Button variant="secondary" size="sm" onClick={() => apply(userActions.unlockAll)}>

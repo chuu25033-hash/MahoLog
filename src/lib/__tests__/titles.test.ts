@@ -134,6 +134,13 @@ describe("保存データとの連携", () => {
     expect(getUserData().titles.unseen).not.toContain("ach-first-chant");
   });
 
+  it("開発者ツールの全解放では、すべての称号が告知済みで解放される", () => {
+    userActions.unlockAll();
+    const { titles } = getUserData();
+    expect(Object.keys(titles.unlocked)).toHaveLength(ACHIEVEMENT_TITLES.length);
+    expect(titles.unseen).toEqual([]);
+  });
+
   it("まだ解放していない称号は掲げても表示されない", () => {
     userActions.setTitle("ach-chants-1000");
     expect(equippedTitle(getUserData())).toBeNull();
