@@ -372,12 +372,12 @@ const CONCENTRATION_TITLES: Title[] = [
 
   concentration("pomodoro-1", "律動の刻み手", "C", { kind: "pomodoro", count: 1 }, "二十五分をきっかり刻む。魔導炉の錬金術師たちが好んだ律動。"),
   concentration("pomodoro-25", "律動の詠唱者", "B", { kind: "pomodoro", count: 25 }, "同じ長さを繰り返すほど、詠唱は呼吸に近づく。"),
-  concentration("pomodoro-100", "律動を極めし者", "S", { kind: "pomodoro", count: 100 }, "百度の二十五分。あなたの律動は、もう天文盤の歯車と同じ正確さで回る。"),
+  concentration("pomodoro-100", "律動を極めし者", "S", { kind: "pomodoro", count: 100 }, "百度の二十五分。あなたの律動は、歯の欠ける前の天文盤と同じ正確さで回る。"),
   concentration("pomodoro-day-4", "四つの律動", "B", { kind: "pomodoroDay", sets: 4 }, "一日のうちに、二十五分の律動を四度重ねた。"),
   concentration("pomodoro-day-8", "律動の祭典", "A", { kind: "pomodoroDay", sets: 8 }, "八つの律動が一日に連なり、ひとつの長い旋律になった。"),
   concentration("combo-5", "星脈の調律師", "A", { kind: "combo", count: 5 }, "静息を挟んでも、五度の詠唱は途切れなかった。星脈の拍が、あなたの呼吸に合わせて打ちはじめる。"),
 
-  concentration("subjects-3", "三つの属性を巡る者", "B", { kind: "subjectsInDay", count: 3 }, "一日のうちに、三つの属性の星脈へ刻を流した。"),
+  concentration("subjects-3", "三つの属性を巡る者", "B", { kind: "subjectsInDay", count: 3 }, "一日のうちに、三つの属性の刻を星脈へ流した。"),
   concentration("subjects-5", "万象を巡る一夜", "A", { kind: "subjectsInDay", count: 5 }, "ひと晩で五つの属性を巡ると、夜空の色がそろって揺らぐ。"),
 ];
 
@@ -385,7 +385,7 @@ const CONCENTRATION_TITLES: Title[] = [
 const COLLECTION_TITLES: Title[] = [
   collection("restored-1", "失われた言葉を拾う者", "B", { kind: "restored", count: 1 }, "四葉の断片を揃えると、預けられていた言葉が一つ戻ってきた。"),
   collection("restored-3", "言葉を継ぐ者", "A", { kind: "restored", count: 3 }, "三冊の記憶を読んだ。書いた者はもういないが、言葉はここにある。"),
-  collection("restored-all", "原典を読み解く者", "S", { kind: "restored", count: "all" }, "アルマが封じた言葉のすべてに、あなたが目を通した。"),
+  collection("restored-all", "原典を読み解く者", "S", { kind: "restored", count: "all" }, "星脈に遺された記憶を、すべて読み解いた。アルマが封じた原典の頁は、まだその先で閉じている。"),
 
   collection("dissolved-10", "還元の徒弟", "C", { kind: "dissolved", count: 10 }, "余った遺物を星屑へ還すたび、先人の刻が手のひらで温かい。"),
   collection("dissolved-50", "星屑の錬金術士", "B", { kind: "dissolved", count: 50 }, "五十の遺物を星屑に還した。錬成陣の線が手に馴染んできた。"),
