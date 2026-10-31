@@ -1,6 +1,7 @@
 // アプリ全体の音を司る。音の流れ: 環境音 → [ダッキング] → BGMバス ─┐
 //                                                 効果音 → SEバス ─┴→ マスター → 出力
 // ブラウザの自動再生制限があるため、AudioContext は最初の操作（タップ・キー入力）で起こす。
+// 別のタブを見ている間も環境音は流し続け、ブラウザに止められたら起こし直す（keepAlive）。
 import { SOUND_FILES, type AmbienceKey, type SeKey } from "./sound-files";
 import { synthAmbience, synthSe, type Voice } from "./synth";
 
@@ -37,8 +38,9 @@ class SoundManager {
   private enabled = true;
   private volumes: SoundVolumes = { master: 1, bgm: 0.5, se: 0.7 };
   private ducked = false;
-  private hidden = false;
   private silenced = false;
+  /** 一度でも音を起こせたか。起こせた後は、ブラウザに止められても操作を待たずに起こし直せる */
+  private unlocked = false;
   private ambienceKey: AmbienceKey | null = null;
   private current: { key: AmbienceKey; voice: Voice } | null = null;
   private ambienceGen = 0;
@@ -143,21 +145,37 @@ class SoundManager {
       if (!target || target.matches(':disabled, [aria-disabled="true"]')) return;
       setTimeout(() => this.playSe("tap"), 0);
     };
-    // 画面が隠れている間は環境音を絞る（完了の報せは鳴らせるよう、音そのものは止めない）
-    const onVisibility = () => {
-      this.hidden = document.hidden;
-      this.applyVolumes();
-    };
+    // 別のタブへ移っても環境音は流し続ける（単語帳や資料を見ながらでも途切れない）。
+    // 隠れた・戻った・履歴から戻った・窓に戻ったときに、ブラウザが止めていれば起こし直す
+    const keepAlive = () => void this.keepAlive();
     window.addEventListener("pointerdown", unlock, true);
     window.addEventListener("keydown", unlock, true);
     document.addEventListener("click", onClick, true);
-    document.addEventListener("visibilitychange", onVisibility);
+    document.addEventListener("visibilitychange", keepAlive);
+    window.addEventListener("pageshow", keepAlive);
+    window.addEventListener("focus", keepAlive);
     return () => {
       window.removeEventListener("pointerdown", unlock, true);
       window.removeEventListener("keydown", unlock, true);
       document.removeEventListener("click", onClick, true);
-      document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("visibilitychange", keepAlive);
+      window.removeEventListener("pageshow", keepAlive);
+      window.removeEventListener("focus", keepAlive);
     };
+  }
+
+  /**
+   * 止められた AudioContext を起こし直す。
+   * suspended: 省電力などでブラウザが止めた / interrupted: iOS Safari で電話・他のアプリの音に割り込まれた。
+   * 音を起こせたことのある場合だけ試す（自動再生の制限が解けていない間は、最初の操作を待つ）
+   */
+  private async keepAlive() {
+    const bus = this.bus;
+    if (!bus || !this.unlocked || !this.enabled) return;
+    if (bus.ctx.state !== "running" && bus.ctx.state !== "closed") {
+      await bus.ctx.resume().catch(() => undefined);
+    }
+    void this.syncAmbience();
   }
 
   private ensureBus(): Bus | null {
@@ -176,6 +194,12 @@ class SoundManager {
       duck.connect(duckFilter).connect(bgm).connect(master);
       se.connect(master);
       master.connect(ctx.destination);
+      // 動き出したら起こせた印を付け、ブラウザに止められたら（割り込みが明けたときも含めて）起こし直す
+      ctx.addEventListener("statechange", () => {
+        if (ctx.state === "running") this.unlocked = true;
+        else void this.keepAlive();
+      });
+      if (ctx.state === "running") this.unlocked = true;
       this.bus = { ctx, master, bgm, se, duck, duckFilter };
       this.applyVolumes(true);
       this.preloadSe();
@@ -190,7 +214,7 @@ class SoundManager {
     if (!bus) return;
     const set = (param: AudioParam, value: number) => (immediate ? (param.value = value) : ramp(param, value, bus.ctx));
     set(bus.master.gain, this.enabled ? this.volumes.master : 0);
-    set(bus.bgm.gain, this.hidden ? 0 : this.volumes.bgm * AMBIENCE_LEVEL);
+    set(bus.bgm.gain, this.volumes.bgm * AMBIENCE_LEVEL);
     set(bus.se.gain, this.volumes.se);
   }
 

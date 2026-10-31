@@ -137,7 +137,7 @@ function pianoPiece(ctx: AudioContext, out: AudioNode, layer: Layer, piece: Piec
   const beat = piece.barSec / 4;
   let bar = 0;
   let next = ctx.currentTime + 0.3;
-  const schedule = () => {
+  const playBar = () => {
     const { bass, chord, melody } = piece.chords[bar % piece.chords.length];
     const t = next;
     piano(ctx, pianoTone, midi(bass), t, 0.11 * piece.piano);
@@ -156,9 +156,29 @@ function pianoPiece(ctx: AudioContext, out: AudioNode, layer: Layer, piece: Piec
     });
     bar += 1;
     next += piece.barSec;
-    layer.timers.push(setTimeout(schedule, Math.max(0, (next - ctx.currentTime - 0.6) * 1000)));
   };
-  schedule();
+  // 別のタブを見ている間はタイマーが1秒以上に間引かれるので、数秒先までの小節を先に刻んでおく。
+  // 端末の休止などで大きく遅れたら、遅れた小節をまとめて鳴らさず、いまから刻み直す
+  const tick = () => {
+    if (next < ctx.currentTime) next = ctx.currentTime + 0.1;
+    while (next < ctx.currentTime + LOOKAHEAD_SEC) playBar();
+    later(layer, tick, TICK_MS);
+  };
+  tick();
+}
+
+/** 環境音の小節を先に刻んでおく長さ（秒）と、見直す間隔（ms） */
+const LOOKAHEAD_SEC = 6;
+const TICK_MS = 1000;
+
+/** layer に紐づけた setTimeout。鳴り終えた分は一覧から外し、長く流しても溜まらないようにする */
+function later(layer: Layer, fn: () => void, ms: number) {
+  const id = setTimeout(() => {
+    const i = layer.timers.indexOf(id);
+    if (i >= 0) layer.timers.splice(i, 1);
+    fn();
+  }, ms);
+  layer.timers.push(id);
 }
 
 /** タイトルの曲: ゆっくり下りていく Fmaj7 → Em7 → Dm7 → Cmaj7 */
@@ -316,11 +336,13 @@ const OWL_AMBIENCES = new Set<AmbienceKey>(["title", "hearth", "forest", "stars"
 function owlNights(ctx: AudioContext, out: AudioNode, layer: Layer) {
   const reverb = forestReverb(ctx, out);
   const next = (delayMs: number) =>
-    layer.timers.push(
-      setTimeout(() => {
+    later(
+      layer,
+      () => {
         owlCall(ctx, out, reverb, ctx.currentTime + 0.1, 0.3 + Math.random() * 0.5);
         next(90_000 + Math.random() * 90_000);
-      }, delayMs),
+      },
+      delayMs,
     );
   next(20_000 + Math.random() * 20_000);
 }
