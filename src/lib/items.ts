@@ -558,7 +558,7 @@ export const CELESTIAL_RELICS: RelicItem[] = [
   { ...relic("ss-zenith-lantern", "SS", "装置", 6, "天梯の星灯", "lantern", "#cfe9ff", { mp: { rate: 0.1 }, drop: 0.1 }, "塔の二十五層の窓辺に吊るされていた灯。前に昇った観測者が置いていったもので、これから昇る者の足もとを一段先だけ照らし続ける。"), zenithFloor: 25 },
   { ...relic("ss-zenith-spire", "SS", "装置", 6, "星天の尖塔儀", "tower", "#a882fb", { mp: { rate: 0.2 } }, "星天の塔を掌に収めた縮尺の模型。層の一つひとつが星になった人々の光で組まれ、覗き込むと、まだ誰も灯していない上層が暗く口を開けている。"), zenithFloor: 50 },
   { ...relic("ss-zenith-crown", "SS", "伝承", 6, "天頂の冠星", "ring", "#fbf3d4", { mp: { rate: 0.25 }, drop: 0.2 }, "百層の天頂で、灯し直した星々が自ら輪を成して生まれた冠。戴く者の頭上ではなく、いつかこの塔を昇る次の観測者の夜空で輝く。"), zenithFloor: 100 },
-  { ...relic("ss-zenith-halo", "SS", "触媒", 6, "無窮の天環", "armillary", "#9ef0c9", { mp: { rate: 0.3 } }, "二百層を越えた先で、天球の環がほどけて一本の光になったもの。アルマが止めた調律器の、最後の環だという。終わりのない学びの形を、ただ静かに回り続ける。"), zenithFloor: 200 },
+  { ...relic("ss-zenith-halo", "SS", "触媒", 6, "無窮の天環", "armillary", "#9ef0c9", { mp: { rate: 0.3 } }, "沈黙の夜、調律器が逆に回されたとき、弾け飛んだ最後の環。アルマの地図の外、二百層の先まで飛ばされてほどけ、一本の光になった。終わりのない学びの形を、ただ静かに回り続ける。"), zenithFloor: 200 },
 ];
 
 const title = (id: string, rarity: TitleItem["rarity"], zenithFloor: number, name: string, color: string, flavorText: string): TitleItem => ({
