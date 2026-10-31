@@ -297,8 +297,11 @@ function TileContent({ icon: Icon, label, sub, note, glyph }: { icon: typeof Swo
   return (
     <>
       <CornerMarks />
-      {/* 枠の高さに合わせた正方形にして、右下の隅に少しだけかかる位置に置く（幅で測ると円の下半分が枠の外に沈む） */}
-      <BackdropGlyph glyph={glyph} className="-right-[3%] -bottom-[12%] aspect-square h-[82%] compact:-right-[2%] compact:-bottom-[10%] compact:h-[92%]" />
+      {/*
+        枠（container: tile）の高さで測った正方形にして、右下の隅に少しだけかかる位置に置く
+        （幅で測ると円の下半分が枠の外に沈む。SVG は幅を省くと枠いっぱいに広がるので、幅と高さの両方を cqh で与える）
+      */}
+      <BackdropGlyph glyph={glyph} className="-right-[4cqh] -bottom-[10cqh] size-[82cqh] compact:-right-[3cqh] compact:-bottom-[8cqh] compact:size-[92cqh]" />
       <span className="relative grid size-11 shrink-0 place-items-center rounded-full border border-starlight/30 shadow-[0_0_12px_-4px_rgba(226,201,116,0.5)] compact:size-10 tile-snug:size-8 short:size-auto short:border-0 short:shadow-none">
         <span className="absolute inset-1 rounded-full border border-dashed border-starlight/20 short:hidden" aria-hidden />
         <Icon className="size-5! text-starlight transition-transform duration-500 group-hover:-rotate-6" strokeWidth={1.25} />
