@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { CUSTOM_SUB_SUBJECT_MAX, isCustomSubject, subSubjectsOf } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,13 @@ export function SubjectPicker({
 }) {
   const subject = subjects.find((s) => s.id === subjectId);
   const subs = subSubjectsOf(subject);
+  /** 主科目ごとに最後に選んだ詳細科目。別の主科目へ移って戻ったときに選び直さずに済むようにする */
+  const lastSubs = useRef<Record<string, string | null>>({});
+
+  function selectSubject(id: string | null) {
+    if (subjectId) lastSubs.current[subjectId] = subSubject;
+    onChange(id, id ? (lastSubs.current[id] ?? null) : null);
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -34,7 +42,7 @@ export function SubjectPicker({
               key={s.id}
               disabled={disabled}
               aria-pressed={active}
-              onClick={() => (active ? allowNone && onChange(null, null) : onChange(s.id, null))}
+              onClick={() => (active ? allowNone && selectSubject(null) : selectSubject(s.id))}
               className={cn(
                 "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs tracking-wider whitespace-nowrap transition-all duration-300 disabled:cursor-not-allowed",
                 active
