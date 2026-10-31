@@ -25,6 +25,9 @@ export type TaskDef = {
   reward: TaskReward;
 };
 
+/** 回数・科目・日数を数える試練で1回と数える詠唱の長さ。短い詠唱を細切れにして数を稼げないよう、最短の詠唱時間に揃える */
+export const COUNTED_CHANT_MIN_MINUTES = 15;
+
 export const TASKS: TaskDef[] = [
   { id: "d-visit", scope: "daily", title: "毎日の訪れ", description: "星天の導きを受け取り、今宵の探求を始める", unit: "回", reward: { kind: "mp", mp: 20 } },
   { id: "d-focus", scope: "daily", title: "秘術の集束", description: "合計25分以上の詠唱を完了する", unit: "分", reward: { kind: "mp", mp: 50 } },
@@ -32,7 +35,7 @@ export const TASKS: TaskDef[] = [
     id: "d-domain",
     scope: "daily",
     title: "領域の探求",
-    description: "主軸科目で2回以上詠唱する（未設定なら詠唱に使う科目のいずれか）",
+    description: `主軸科目で${COUNTED_CHANT_MIN_MINUTES}分以上の詠唱を2回行う（未設定なら詠唱に使う科目のいずれか）`,
     unit: "回",
     reward: { kind: "catalyst", rare: false },
   },
@@ -41,11 +44,11 @@ export const TASKS: TaskDef[] = [
     id: "w-all",
     scope: "weekly",
     title: "全領域の調律",
-    description: "詠唱に使う全科目（魔法陣の全領域）で各1回以上詠唱する",
+    description: `詠唱に使う全科目（魔法陣の全領域）で、それぞれ${COUNTED_CHANT_MIN_MINUTES}分以上の詠唱を行う`,
     unit: "領域",
     reward: { kind: "catalyst", rare: true },
   },
-  { id: "w-days", scope: "weekly", title: "継続の印", description: "週のうち4日以上詠唱を行う", unit: "日", reward: { kind: "mp", mp: 150 } },
+  { id: "w-days", scope: "weekly", title: "継続の印", description: `週のうち4日以上、${COUNTED_CHANT_MIN_MINUTES}分以上の詠唱を行う`, unit: "日", reward: { kind: "mp", mp: 150 } },
 ];
 
 export type TaskContext = {
@@ -72,6 +75,7 @@ export function measureTask(def: TaskDef, { history, activeSubjectIds, mainSubje
   const since = periodStart(def.scope, now).getTime();
   const records = history.filter((r) => new Date(r.date).getTime() >= since);
   const minutes = records.reduce((acc, r) => acc + r.minutes, 0);
+  const countedChants = records.filter((r) => r.minutes >= COUNTED_CHANT_MIN_MINUTES);
   const [progress, maxProgress] = (() => {
     switch (def.id) {
       case "d-visit":
@@ -80,14 +84,14 @@ export function measureTask(def: TaskDef, { history, activeSubjectIds, mainSubje
         return [minutes, 25];
       case "d-domain": {
         const main = mainSubjectId && activeSubjectIds.includes(mainSubjectId) ? mainSubjectId : null;
-        return [records.filter((r) => (main ? r.subjectId === main : activeSubjectIds.includes(r.subjectId))).length, 2];
+        return [countedChants.filter((r) => (main ? r.subjectId === main : activeSubjectIds.includes(r.subjectId))).length, 2];
       }
       case "w-total":
         return [minutes, 120];
       case "w-all":
-        return [new Set(records.map((r) => r.subjectId).filter((id) => activeSubjectIds.includes(id))).size, activeSubjectIds.length];
+        return [new Set(countedChants.map((r) => r.subjectId).filter((id) => activeSubjectIds.includes(id))).size, activeSubjectIds.length];
       case "w-days":
-        return [new Set(records.map((r) => jstDateKey(new Date(r.date)))).size, 4];
+        return [new Set(countedChants.map((r) => jstDateKey(new Date(r.date)))).size, 4];
       default:
         return [0, 1];
     }
