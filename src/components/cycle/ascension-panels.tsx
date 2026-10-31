@@ -13,7 +13,7 @@ import { userActions, useUserData, type ZenithClimb } from "@/lib/user-store";
 
 const FINALE_LINES = [
   "星冠の祭壇に、最後の灯がともった。",
-  "三百時間の詠唱は、ひとつの円環となって静かに閉じる。",
+  "三百時間ぶんの魔力は、ひとつの円環となって静かに閉じる。",
   "――けれど円環の終わりは、次の円環の始まりでもある。",
 ];
 
@@ -127,7 +127,9 @@ export function ZenithPanel({ climb }: { climb: ZenithClimb }) {
         <span className="mp-glow font-display text-5xl text-starlight-gradient">{climb.afterFloor}</span>
         <span className="text-sm tracking-[0.3em] text-starlight/80">層</span>
       </div>
-      <DialogDescription className="tracking-[0.2em]">星天の塔を、また一層昇った</DialogDescription>
+      <DialogDescription className="tracking-[0.2em]">
+        {climb.afterFloor - climb.beforeFloor > 1 ? `星天の塔を、一度に${climb.afterFloor - climb.beforeFloor}層昇った` : "星天の塔を、また一層昇った"}
+      </DialogDescription>
       {climb.rewards.length > 0 && (
         <div className="flex w-full flex-col gap-2">
           <p className="text-[11px] tracking-[0.3em] text-starlight">節目の階層で授かったもの</p>

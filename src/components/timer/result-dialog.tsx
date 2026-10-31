@@ -482,7 +482,7 @@ function DropReveal({
             <p className="text-xs tracking-[0.3em] whitespace-nowrap text-starlight text-glow-gold">流星群の接近 ― 特別観測</p>
             <p className="font-display text-[9px] tracking-[0.3em] whitespace-nowrap text-starlight/60">METEOR SHOWER</p>
             <p className="text-[10px] leading-snug tracking-wider text-muted-foreground [word-break:auto-phrase]">
-              長き詠唱に星脈がゆらぎ、古代の記憶が地上へ手繰り寄せられた
+              長き詠唱に星脈がゆらぎ、先人の秘宝が地上へ手繰り寄せられた
             </p>
           </div>
         )}
@@ -568,9 +568,9 @@ function dropNote({ item, isNew }: StudyResult["drops"][number]) {
     case "skin":
       return isNew ? `${item.effect}（図鑑から適用できます）` : "すでに纏える意匠だ";
     case "relic":
-      return isNew ? `${item.effect}の加護を得た` : "既に所持している秘宝だ";
+      return isNew ? `${item.effect}の加護を得た` : `すでに所持している${item.rarity === "S" ? "至宝" : "秘宝"}だ`;
     case "fragment":
-      return isNew ? "古代文書の断片だ（図鑑の「星脈の記憶」へ）" : "既に持っている断片だ（錬成陣で還元できる）";
+      return isNew ? "古代文書の断片だ（図鑑の「星脈の記憶」へ）" : "すでに持っている断片だ（錬成陣で還元できる）";
     default:
       return item.effect ?? "";
   }
