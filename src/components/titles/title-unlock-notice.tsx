@@ -5,7 +5,7 @@ import { findTitle, type Title } from "@/lib/titles";
 import type { ItemRarity } from "@/lib/items";
 import { soundManager } from "@/lib/sound/sound-manager";
 import { userActions, useStoredUserData } from "@/lib/user-store";
-import { GRADE_TONE } from "./titles-dialog";
+import { GRADE_NAME_TONE, GRADE_TONE } from "./titles-dialog";
 
 /** 解放の直後（詠唱の結果ダイアログが開く間）は少し待ってから告げる */
 const DELAY_MS = 1200;
@@ -56,7 +56,7 @@ export function TitleUnlockNotice() {
           称号を解放しました
           <span className="font-display text-[8px] tracking-[0.3em] text-starlight/60">TITLE UNLOCKED</span>
         </p>
-        <p className="text-sm tracking-[0.15em] text-starlight text-glow-gold [word-break:auto-phrase]">【{title.name}】</p>
+        <p className={`text-sm tracking-[0.15em] [word-break:auto-phrase] ${GRADE_NAME_TONE[title.grade]}`}>【{title.name}】</p>
         <p className="text-[10px] tracking-wider text-muted-foreground [word-break:auto-phrase]">
           <span className={GRADE_TONE[title.grade]}>RARE {title.grade}</span>
           <span className="mx-1.5 opacity-40">·</span>

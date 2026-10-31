@@ -3,6 +3,7 @@
 // SNS に載せる「探求の記録」の画像（1200×675）: 紋章・名前・階級と、七夜の魔法陣・学んだ時間
 import { GOLD, createCanvas, drawFrame, drawNightSky, drawStar, fontFamily, spacedText, toPng } from "./canvas-card";
 import { formatMinutes } from "./game";
+import type { ItemRarity } from "./items";
 import type { SubjectTotal } from "./types";
 
 const W = 1200;
@@ -14,6 +15,8 @@ export type ShareCardInput = {
   tint: string;
   username: string;
   title: string | null;
+  /** 称号の格。名前を画面と同じレア度の色で描く */
+  titleGrade: ItemRarity | null;
   rankNumeral: string;
   rankTitle: string;
   phase: number;
@@ -22,6 +25,39 @@ export type ShareCardInput = {
   /** 七夜（今週）の科目ごとの時間 */
   radar: SubjectTotal[];
 };
+
+/**
+ * 称号の名前の色。画面の GRADE_NAME_TONE（titles-dialog.tsx）と同じ色合いを、既定の配色の値で描く。
+ * S と SS は光を帯び、SS は金の濃淡で塗る。baseline は文字のベースライン、size は文字の大きさ
+ */
+function paintTitle(ctx: CanvasRenderingContext2D, grade: ItemRarity, baseline: number, size: number) {
+  switch (grade) {
+    case "SS": {
+      const g = ctx.createLinearGradient(0, baseline - size, 0, baseline + size * 0.2);
+      g.addColorStop(0, "#fbf3d4");
+      g.addColorStop(0.55, GOLD);
+      g.addColorStop(1, "#b89645");
+      ctx.fillStyle = g;
+      ctx.shadowColor = "rgba(226, 201, 116, 0.6)";
+      ctx.shadowBlur = 12;
+      break;
+    }
+    case "S":
+      ctx.fillStyle = GOLD;
+      ctx.shadowColor = "rgba(226, 201, 116, 0.45)";
+      ctx.shadowBlur = 10;
+      break;
+    case "A":
+      ctx.fillStyle = "#a882fb";
+      break;
+    case "B":
+      ctx.fillStyle = "rgba(226, 201, 116, 0.8)";
+      break;
+    case "C":
+      ctx.fillStyle = "#71e2ef";
+      break;
+  }
+}
 
 /** 画面の SVG を、太さを画像の大きさに合わせ直して画像にする（画面では 1px 固定の線） */
 async function svgImage(svg: SVGSVGElement, strokeWidth: number) {
@@ -195,9 +231,16 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob> {
   const lx = 320;
   await drawAvatar(ctx, input, lx, 205, 82);
   ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = GOLD;
   ctx.font = `22px ${serif}`;
-  spacedText(ctx, input.title ? `【${input.title}】` : "秘術探究者", lx, 358, 4);
+  if (input.title) {
+    ctx.save();
+    paintTitle(ctx, input.titleGrade ?? "S", 358, 22);
+    spacedText(ctx, `【${input.title}】`, lx, 358, 4);
+    ctx.restore();
+  } else {
+    ctx.fillStyle = GOLD;
+    spacedText(ctx, "秘術探究者", lx, 358, 4);
+  }
   ctx.fillStyle = "#f3eedf";
   ctx.font = `600 46px ${serif}`;
   spacedText(ctx, input.username, lx, 414, 6);

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { jstDateKey } from "@/lib/date";
 import { formatMinutes } from "@/lib/game";
-import type { ItemRarity } from "@/lib/items";
+import type { ItemRarity, TitleItem } from "@/lib/items";
 import {
   ACHIEVEMENT_TITLES,
   TITLE_CATEGORIES,
@@ -27,6 +27,21 @@ export const GRADE_TONE: Record<ItemRarity, string> = {
   B: "text-starlight/80",
   C: "text-aqua",
 };
+
+/**
+ * 称号の名前そのものの色。RARE の札と同じ色合いで、S は光を帯び、SS は金の濃淡で塗る
+ * （背景で塗る文字に text-shadow は上から重なるので、SS の光は drop-shadow で添える）
+ */
+export const GRADE_NAME_TONE: Record<ItemRarity, string> = {
+  SS: "text-starlight-gradient drop-shadow-[0_0_6px_color-mix(in_srgb,var(--starlight)_55%,transparent)]",
+  S: "text-starlight text-glow-gold",
+  A: "text-amethyst",
+  B: "text-starlight/80",
+  C: "text-aqua",
+};
+
+/** 称号の格（実績の称号は grade、星天の塔の称号は遺物のレア度） */
+export const titleGrade = (title: Title | TitleItem): ItemRarity => ("grade" in title ? title.grade : title.rarity);
 
 /** 時間で測る条件は「1時間20分」のように示す */
 /** 格の低い順（常品から神話へ）。降順はこれを逆にたどる */
@@ -77,7 +92,7 @@ export function TitlesDialog({ onClose }: { onClose: () => void }) {
           <div className="min-w-0">
             <p className="text-[10px] tracking-[0.25em] whitespace-nowrap text-muted-foreground">掲げている称号</p>
             <p className="text-sm tracking-[0.15em] [word-break:auto-phrase]">
-              {equipped ? <span className="text-starlight text-glow-gold">【{equipped.name}】</span> : <span className="text-muted-foreground">まだ掲げていません</span>}
+              {equipped ? <span className={GRADE_NAME_TONE[titleGrade(equipped)]}>【{equipped.name}】</span> : <span className="text-muted-foreground">まだ掲げていません</span>}
             </p>
           </div>
           <p className="shrink-0 text-right text-[10px] tracking-[0.2em] whitespace-nowrap text-muted-foreground">
@@ -151,7 +166,7 @@ function TitleRow({ title, unlockedAt, progress, equipped }: { title: Title; unl
     >
       <div className={cn("min-w-0 flex-1", !isUnlocked && "opacity-60")}>
         <p className="flex flex-wrap items-baseline gap-x-2">
-          <span className={cn("text-sm tracking-[0.15em] [word-break:auto-phrase]", isUnlocked && "text-foreground")}>
+          <span className={cn("text-sm tracking-[0.15em] [word-break:auto-phrase]", isUnlocked && GRADE_NAME_TONE[title.grade])}>
             {veiled ? "【？？？】" : `【${title.name}】`}
           </span>
           <span className={cn("font-display text-[9px] tracking-[0.2em] whitespace-nowrap", GRADE_TONE[title.grade])}>RARE {title.grade}</span>

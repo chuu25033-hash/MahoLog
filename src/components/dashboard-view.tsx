@@ -14,7 +14,7 @@ import { WhisperText, whisperHost } from "@/components/whisper";
 import { RadarPanel } from "@/components/radar-panel";
 import { ShareRecordButton } from "@/components/share-record";
 import { StageCard } from "@/components/stage-card";
-import { TitlesDialog } from "@/components/titles/titles-dialog";
+import { GRADE_NAME_TONE, TitlesDialog, titleGrade } from "@/components/titles/titles-dialog";
 import { TrialsDialog, readyCount } from "@/components/trials-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -86,7 +86,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
             className={cn(whisperHost, "text-left text-base tracking-wider transition-colors duration-300 hover:text-starlight")}
           >
             {title ? (
-              <span className="mr-1 text-[11px] tracking-[0.15em] text-starlight text-glow-gold">【{title.name}】</span>
+              <span className={cn("mr-1 text-[11px] tracking-[0.15em]", GRADE_NAME_TONE[titleGrade(title)])}>【{title.name}】</span>
             ) : (
               <span className="text-[11px] tracking-[0.2em] text-muted-foreground">秘術探究者・</span>
             )}
@@ -157,6 +157,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
               avatar: profile.avatar_url,
               username: profile.username,
               title: title?.name ?? null,
+              titleGrade: title ? titleGrade(title) : null,
               rankNumeral: rank.numeral,
               rankTitle: rank.title,
               phase: level.level,
