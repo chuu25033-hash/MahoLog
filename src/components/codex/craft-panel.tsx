@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 export function CraftPanel({ data }: { data: UserData }) {
   const [confirm, setConfirm] = useState<RelicItem | null>(null);
   const [ritual, setRitual] = useState<RelicItem | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [dissolved, setDissolved] = useState<Dissolved | null>(null);
   const ore = oreCount(data);
   const list = dissolvables(data);
 
@@ -28,10 +28,11 @@ export function CraftPanel({ data }: { data: UserData }) {
   }
 
   function dissolve(item: Item, amount: number) {
+    const before = ore;
     const gained = userActions.dissolve(item.id, amount);
     if (gained <= 0) return;
     soundManager.playSe("dissolve");
-    setMessage(`${item.kind === "fragment" ? item.name : `『${item.name}』`}を還元し、星屑の原石を ${gained} 得た`);
+    setDissolved({ item, amount, gained, total: before + gained });
   }
 
   return (
@@ -100,9 +101,6 @@ export function CraftPanel({ data }: { data: UserData }) {
             ))}
           </ul>
         )}
-        <p role="status" className="mt-2 min-h-4 text-center text-[11px] tracking-wider text-aqua/80 [word-break:auto-phrase]">
-          {message}
-        </p>
       </section>
 
       {confirm && (
@@ -127,7 +125,65 @@ export function CraftPanel({ data }: { data: UserData }) {
         </Dialog>
       )}
       {ritual && <CraftRitual mythic={ritual} onClose={() => setRitual(null)} />}
+      {dissolved && <DissolveRitual {...dissolved} onClose={() => setDissolved(null)} />}
     </div>
+  );
+}
+
+type Dissolved = { item: Item; amount: number; gained: number; total: number };
+
+/** 還元の儀: 遺物がほどけて星屑となって沈み、原石が姿を現す。何度も行うものなので錬成より短く */
+function DissolveRitual({ item, amount, gained, total, onClose }: Dissolved & { onClose: () => void }) {
+  const label = item.kind === "fragment" ? item.name : `『${item.name}』`;
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[min(24rem,calc(100%-2rem))]! gap-3 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-6 ring-aqua/25 backdrop-blur-2xl short:p-4">
+        <p className="text-center font-display text-[10px] tracking-[0.5em] whitespace-nowrap text-aqua/70">
+          <span className="-mr-[0.5em]">DISSOLUTION</span>
+        </p>
+        <div className="relative mx-auto aspect-square w-full max-w-48 short:max-w-36">
+          {/* ほどける遺物 */}
+          <div className="dissolve-item absolute inset-[22%]">
+            <ItemArt icon={item.svgIcon} rarity={item.rarity} color={item.color} seed={item.id} className="size-full" />
+          </div>
+          {/* 星屑となって沈んでいく */}
+          <svg viewBox="-50 -50 100 100" className="absolute inset-0 size-full overflow-visible" aria-hidden>
+            {Array.from({ length: 14 }, (_, i) => {
+              const x = ((i * 37) % 60) - 30;
+              return (
+                <circle
+                  key={i}
+                  cx={x}
+                  cy={-14 + ((i * 23) % 24)}
+                  r={0.8 + (i % 3) * 0.4}
+                  className="dissolve-mote fill-aqua"
+                  style={{ "--i": i, "--dx": `${-x * 0.8}px` } as CSSProperties}
+                />
+              );
+            })}
+          </svg>
+          {/* 凝り固まった原石 */}
+          <div className="dissolve-ore absolute inset-[26%]">
+            <ItemArt icon={STARDUST_ORE.svgIcon} rarity="C" color={STARDUST_ORE.color} seed={STARDUST_ORE.id} className="size-full" />
+          </div>
+        </div>
+        <div className="dissolve-caption flex flex-col items-center gap-1 text-center">
+          <DialogTitle className="text-sm tracking-[0.2em] [word-break:auto-phrase]">
+            {label}
+            {amount > 1 && <span className="ml-1 font-display">×{amount}</span>}
+            を還元した
+          </DialogTitle>
+          <p className="font-display text-3xl text-aqua text-glow-aqua">+{gained}</p>
+          <DialogDescription className="text-xs tracking-wider">
+            {STARDUST_ORE.name}　所持 <span className="font-display text-foreground">{total}</span>
+          </DialogDescription>
+          <Button className="mt-2" onClick={onClose}>
+            閉じる
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
