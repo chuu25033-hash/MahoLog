@@ -29,13 +29,13 @@ export type TaskDef = {
 export const COUNTED_CHANT_MIN_MINUTES = 15;
 
 export const TASKS: TaskDef[] = [
-  { id: "d-visit", scope: "daily", title: "毎日の訪れ", description: "星天の導きを受け取り、今宵の探求を始める", unit: "回", reward: { kind: "mp", mp: 20 } },
+  { id: "d-visit", scope: "daily", title: "毎日の訪れ", description: "星天の導きを受け取り、今宵の探求に備える", unit: "回", reward: { kind: "mp", mp: 20 } },
   { id: "d-focus", scope: "daily", title: "秘術の集束", description: "合計25分以上の詠唱を完了する", unit: "分", reward: { kind: "mp", mp: 50 } },
   {
     id: "d-domain",
     scope: "daily",
     title: "領域の探求",
-    description: `主軸科目で${COUNTED_CHANT_MIN_MINUTES}分以上の詠唱を2回行う（未設定なら詠唱に使う科目のいずれか）`,
+    description: `主軸科目で${COUNTED_CHANT_MIN_MINUTES}分以上の詠唱を2回行う（主軸科目が未設定か、詠唱に使う科目に無いときは、そのいずれか）`,
     unit: "回",
     reward: { kind: "catalyst", rare: false },
   },

@@ -327,7 +327,7 @@ function TaskRow({
               onClick={onClaim}
               className="claim-glow flex items-center gap-1 rounded-full border border-starlight/60 bg-starlight/10 px-3 py-1 text-[11px] tracking-wider whitespace-nowrap text-starlight transition-colors hover:bg-starlight/20"
             >
-              <Sparkles className="size-3" strokeWidth={1.5} /> 魔力を回収する
+              <Sparkles className="size-3" strokeWidth={1.5} /> {def.reward.kind === "mp" ? "魔力を回収する" : "触媒を受け取る"}
             </button>
           ) : (
             <span className="text-[11px] tracking-wider text-muted-foreground/60">未達成</span>
