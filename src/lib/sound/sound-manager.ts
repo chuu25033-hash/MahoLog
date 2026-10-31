@@ -178,6 +178,7 @@ class SoundManager {
       master.connect(ctx.destination);
       this.bus = { ctx, master, bgm, se, duck, duckFilter };
       this.applyVolumes(true);
+      this.preloadSe();
       return this.bus;
     } catch {
       return null;
@@ -244,6 +245,11 @@ class SoundManager {
         output.disconnect();
       },
     };
+  }
+
+  /** 登録した効果音のファイルを先に読み込んでおき、初めて鳴らすときの遅れを無くす */
+  private preloadSe() {
+    for (const file of Object.values(SOUND_FILES.se)) if (file) void this.loadBuffer(file);
   }
 
   /** 音声ファイルを読み込む（失敗したら null。結果は覚えておく） */

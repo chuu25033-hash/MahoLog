@@ -382,17 +382,22 @@ function tone(ctx: AudioContext, out: AudioNode, o: ToneOptions) {
 
 let whiteNoise: { ctx: BaseAudioContext; buffer: AudioBuffer } | null = null;
 
-/** 帯域を滑らせるノイズ（魔力が渦を巻く気配） */
-function whoosh(ctx: AudioContext, out: AudioNode, o: { from: number; to: number; duration: number; peak: number }) {
+/** 2秒の白色ノイズ（文脈ごとに一度だけ作って使い回す） */
+function noiseBuffer(ctx: AudioContext) {
   if (whiteNoise?.ctx !== ctx) {
     const buffer = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
     whiteNoise = { ctx, buffer };
   }
+  return whiteNoise.buffer;
+}
+
+/** 帯域を滑らせるノイズ（魔力が渦を巻く気配） */
+function whoosh(ctx: AudioContext, out: AudioNode, o: { from: number; to: number; duration: number; peak: number }) {
   const t = ctx.currentTime;
   const src = ctx.createBufferSource();
-  src.buffer = whiteNoise.buffer;
+  src.buffer = noiseBuffer(ctx);
   const filter = ctx.createBiquadFilter();
   filter.type = "bandpass";
   filter.Q.value = 2;
@@ -404,6 +409,50 @@ function whoosh(ctx: AudioContext, out: AudioNode, o: { from: number; to: number
   gain.gain.exponentialRampToValueAtTime(SILENT, t + o.duration);
   src.connect(filter).connect(gain).connect(out);
   src.start(t, Math.random() * 0.5, o.duration + 0.05);
+}
+
+/**
+ * 古い羊皮紙がほどける音: ごく短いノイズの粒を、乾いた中高域で不規則に散らす。
+ * 始めほど粒が詰まり、終わりに向けてまばらになって消える
+ */
+function parchment(ctx: AudioContext, out: AudioNode, o: { at: number; duration: number; peak: number }) {
+  const buffer = noiseBuffer(ctx);
+  const grains = 18;
+  for (let i = 0; i < grains; i++) {
+    const progress = i / grains;
+    const t = ctx.currentTime + o.at + o.duration * progress ** 1.6 + Math.random() * 0.03;
+    const length = 0.025 + Math.random() * 0.06;
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    const band = ctx.createBiquadFilter();
+    band.type = "bandpass";
+    band.frequency.value = (1400 + Math.random() * 1600) * SE_PITCH;
+    band.Q.value = 0.9;
+    const gain = ctx.createGain();
+    const peak = o.peak * (1 - progress * 0.7) * (0.5 + Math.random() * 0.5);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(peak, t + 0.004);
+    gain.gain.exponentialRampToValueAtTime(SILENT, t + length);
+    src.connect(band).connect(gain).connect(out);
+    src.start(t, Math.random() * 1.5, length + 0.02);
+  }
+}
+
+/**
+ * 星屑のきらめき: 高く澄んだ粒を五音から拾って次々に鳴らす。
+ * falling なら高い音から低い音へ零れ落ち、そうでなければ低い音から舞い上がる
+ */
+function sparkle(ctx: AudioContext, out: AudioNode, o: { at: number; count: number; span: number; peak: number; falling: boolean }) {
+  const notes = [784, 880, 1046.5, 1174.7, 1318.5, 1568, 1760, 2093, 2349.3];
+  for (let i = 0; i < o.count; i++) {
+    const progress = i / Math.max(1, o.count - 1);
+    const height = o.falling ? 1 - progress : progress;
+    const index = Math.min(notes.length - 1, Math.max(0, Math.round(height * (notes.length - 1) + (Math.random() * 2 - 1) * 1.2)));
+    const at = o.at + o.span * progress + Math.random() * 0.05;
+    const peak = o.peak * (0.55 + Math.random() * 0.45) * (o.falling ? 1 - progress * 0.5 : 0.6 + progress * 0.4);
+    tone(ctx, out, { freq: notes[index], at, attack: 0.004, decay: 0.5 + Math.random() * 0.5, peak });
+    tone(ctx, out, { freq: notes[index] * 2.76, at, attack: 0.004, decay: 0.15, peak: peak * 0.12 });
+  }
 }
 
 // 効果音の周波数は SE_PITCH をかける前の値。詠唱開始音（196〜880Hz）の音域にそろえている
@@ -466,13 +515,41 @@ const SE: Record<SeKey, (ctx: AudioContext, out: AudioNode) => void> = {
     tone(ctx, out, { freq: 784, at: 1.4, attack: 0.03, decay: 3, peak: 0.03 });
     tone(ctx, out, { freq: 784 * 2.01, at: 1.4, attack: 0.03, decay: 1.4, peak: 0.004 });
   },
-  // 古代文書の復元: 古い頁がほどけるような柔らかな和音が、ゆっくり立ちのぼる
-  restore: (ctx, out) => {
-    tone(ctx, out, { freq: 174.6, attack: 0.5, decay: 3.2, peak: 0.06 });
-    [349.2, 440, 523.25, 659.25].forEach((freq, i) => {
-      tone(ctx, out, { freq, at: 0.3 + i * 0.28, attack: 0.25, decay: 2.8, peak: 0.04 });
+  // 流れ星の品（常品・稀品）: 小さな水晶がそっと触れ合ったような、澄んだ短い単音
+  dropNormal: (ctx, out) => {
+    tone(ctx, out, { freq: 1174.7, attack: 0.004, decay: 1.1, peak: 0.05 });
+    tone(ctx, out, { freq: 1174.7 * 1.004, attack: 0.004, decay: 0.9, peak: 0.02 });
+    tone(ctx, out, { freq: 1174.7 * 2.76, attack: 0.004, decay: 0.25, peak: 0.006 });
+    tone(ctx, out, { freq: 587.3, attack: 0.01, decay: 0.6, peak: 0.012 });
+  },
+  // 流れ星の品（秘宝・至宝）: 深い残響を伴う鐘がひとつ鳴り、その響きの中から和音がゆっくり広がる
+  dropRare: (ctx, out) => {
+    tone(ctx, out, { freq: 196, attack: 0.02, decay: 4.5, peak: 0.05 });
+    tone(ctx, out, { freq: 392, attack: 0.008, decay: 3.8, peak: 0.06 });
+    tone(ctx, out, { freq: 392 * 1.19, attack: 0.008, decay: 2.2, peak: 0.012 });
+    tone(ctx, out, { freq: 392 * 2.01, attack: 0.008, decay: 1.8, peak: 0.01 });
+    tone(ctx, out, { freq: 392 * 2.76, attack: 0.008, decay: 0.9, peak: 0.005 });
+    [493.9, 587.3, 784, 880].forEach((freq, i) => {
+      tone(ctx, out, { freq, at: 0.35 + i * 0.18, attack: 0.2, decay: 3, peak: 0.032 });
     });
-    tone(ctx, out, { freq: 1046.5, at: 1.5, attack: 0.1, decay: 2.4, peak: 0.015 });
+    tone(ctx, out, { freq: 1174.7, at: 1.1, attack: 0.05, decay: 2.4, peak: 0.012 });
+  },
+  // 称号の解放: 星の砂がさらさらと零れ落ちるような、細く静かなシャワー
+  titleUnlock: (ctx, out) => {
+    sparkle(ctx, out, { at: 0, count: 16, span: 1.5, peak: 0.014, falling: true });
+    whoosh(ctx, out, { from: 2400, to: 1100, duration: 1.8, peak: 0.006 });
+    tone(ctx, out, { freq: 392, at: 0.2, attack: 0.6, decay: 2.2, peak: 0.018 });
+  },
+  // 古代文書の復元: 古い羊皮紙がほどける乾いた音のあと、低く静かな魔力の共鳴がゆっくり立ちのぼる
+  restore: (ctx, out) => {
+    parchment(ctx, out, { at: 0, duration: 0.7, peak: 0.05 });
+    tone(ctx, out, { freq: 87.3, at: 0.25, attack: 0.9, decay: 3.6, peak: 0.07 });
+    // 小さなスピーカーでも共鳴が届くよう、倍音を薄く重ねる
+    tone(ctx, out, { freq: 174.6, at: 0.3, attack: 0.7, decay: 3.2, peak: 0.045, type: "triangle" });
+    [349.2, 440, 523.25, 659.25].forEach((freq, i) => {
+      tone(ctx, out, { freq, at: 0.6 + i * 0.28, attack: 0.25, decay: 2.8, peak: 0.035 });
+    });
+    tone(ctx, out, { freq: 1046.5, at: 1.8, attack: 0.1, decay: 2.4, peak: 0.013 });
   },
   // 還元: 遺物がほどけて星屑へ沈んでいく、下降する短い響き
   dissolve: (ctx, out) => {
@@ -480,9 +557,11 @@ const SE: Record<SeKey, (ctx: AudioContext, out: AudioNode) => void> = {
     tone(ctx, out, { freq: 659.25, toFreq: 329.6, at: 0.06, attack: 0.02, decay: 0.7, peak: 0.03 });
     whoosh(ctx, out, { from: 1200, to: 300, duration: 0.6, peak: 0.015 });
   },
-  // 神話遺物の錬成: 深い地鳴りのような礎、交差する光の和音、最後に重い鐘
+  // 神話遺物（SS）の錬成: 空間ごと共鳴するような深い礎、交差する光の和音、重い鐘と、舞い上がる星屑のきらめき
   craft: (ctx, out) => {
     tone(ctx, out, { freq: 98, toFreq: 196, attack: 0.8, decay: 3.6, peak: 0.1 });
+    tone(ctx, out, { freq: 65.4, at: 0.1, attack: 1.2, decay: 4.4, peak: 0.07 });
+    sparkle(ctx, out, { at: 2.3, count: 12, span: 1.3, peak: 0.016, falling: false });
     tone(ctx, out, { freq: 146.8, at: 0.2, attack: 0.8, decay: 3.4, peak: 0.05 });
     whoosh(ctx, out, { from: 150, to: 900, duration: 2.2, peak: 0.03 });
     [293.7, 370, 440, 587.3].forEach((freq, i) => {

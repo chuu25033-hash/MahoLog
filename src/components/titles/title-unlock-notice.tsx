@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { findTitle, type Title } from "@/lib/titles";
 import type { ItemRarity } from "@/lib/items";
+import { soundManager } from "@/lib/sound/sound-manager";
 import { userActions, useStoredUserData } from "@/lib/user-store";
 import { GRADE_TONE } from "./titles-dialog";
 
@@ -38,6 +39,7 @@ export function TitleUnlockNotice() {
 
   useEffect(() => {
     if (!shown) return;
+    soundManager.playSe("titleUnlock");
     const timer = window.setTimeout(() => setShown(null), NOTICE_MS);
     return () => window.clearTimeout(timer);
   }, [shown]);

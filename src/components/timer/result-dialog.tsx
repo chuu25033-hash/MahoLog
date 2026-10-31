@@ -14,7 +14,7 @@ import { AREAS, boostLabel, isAreaUnlocked, stageOfArea, type Area } from "@/lib
 import { DROP_SLOT_MINUTES } from "@/lib/drops";
 import { CLEAR_MP } from "@/lib/cycles";
 import { calcLevel, formatMinutes, levelProgress, rankOf } from "@/lib/game";
-import { STARDUST_ORE, type CatalystItem, type Item } from "@/lib/items";
+import { STARDUST_ORE, type CatalystItem, type Item, type ItemRarity } from "@/lib/items";
 import { soundManager } from "@/lib/sound/sound-manager";
 import { TASKS } from "@/lib/tasks";
 import type { Subject, SubjectTotal } from "@/lib/types";
@@ -412,6 +412,9 @@ function UnlockPanel({ areas }: { areas: Area[] }) {
   );
 }
 
+/** 鐘の音で告げる格（秘宝・至宝・神話） */
+const RARE_DROP = new Set<ItemRarity>(["A", "S", "SS"]);
+
 /** 流れ星が降りて明滅し、触れるとほどけて、降った品（1〜4つ）と星屑の原石が浮かび上がる */
 function DropReveal({
   stage,
@@ -427,6 +430,11 @@ function DropReveal({
   onOpen: () => void;
 }) {
   const opened = stage === "open";
+  // 流れ星がほどけた瞬間に、降った品のいちばん高い格で音を分ける（秘宝・至宝が混じれば鐘、常品・稀品だけなら水晶）
+  const rare = drops.some((d) => RARE_DROP.has(d.item.rarity));
+  useEffect(() => {
+    if (opened) soundManager.playSe(rare ? "dropRare" : "dropNormal");
+  }, [opened, rare]);
   return (
     <div className="flex w-full animate-in flex-col items-center gap-1 fade-in slide-in-from-bottom-2 duration-700">
       <button
