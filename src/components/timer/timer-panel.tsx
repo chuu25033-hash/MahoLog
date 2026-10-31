@@ -27,7 +27,8 @@ import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
 import { resolveSubSubject } from "@/lib/subjects";
 import { soundManager } from "@/lib/sound/sound-manager";
 import { setChantPresence } from "@/lib/worldline-store";
-import { CATALYSTS, blessingMultiplier, dropMultiplier, rollDrop } from "@/lib/items";
+import { calculateItemDrops } from "@/lib/drops";
+import { CATALYSTS, STARDUST_ORE, blessingMultiplier, dropMultiplier } from "@/lib/items";
 import {
   FOCUS_MINUTE_OPTIONS,
   activeSkin,
@@ -209,8 +210,12 @@ export function TimerPanel({
         const { cycle } = getUserData();
         const cycleMark = cycleMarkMultiplier(cycle.count);
         const gainedMp = Math.round(res.savedMinutes * areaBoost * blessing * (usedCatalyst?.multiplier ?? 1) * cycleMark);
-        const drop = rollDrop(area, Math.random, dropMultiplier(owned), cycle.count);
-        const isNew = drop ? userActions.addItem(drop) : false;
+        // 流れ星は詠唱時間の区切り（25分ごとに1つ・最大4つ）で降る
+        // 25分に届かなかった端数は星の余韻として次の詠唱へ持ち越す
+        const fall = calculateItemDrops(res.savedMinutes, { area, cycle: cycle.count, boost: dropMultiplier(owned), echo: getUserData().starEcho });
+        userActions.setStarEcho(fall.echo);
+        const drops = fall.items.map((item) => ({ item, isNew: userActions.addItem(item) }));
+        if (fall.ore > 0) userActions.addItem(STARDUST_ORE, fall.ore);
         // 星天の塔では、詠唱した時間で階層を昇る
         const climb = area.zenith ? userActions.climbZenith(res.savedMinutes) : null;
         if (isDemo) {
@@ -222,7 +227,8 @@ export function TimerPanel({
             stageId: area.id,
             mode,
             catalystId: usedCatalyst?.id ?? null,
-            dropId: drop?.id ?? null,
+            dropId: null,
+            dropIds: fall.items.map((item) => item.id),
           });
         }
         // リザルトで達成した試練をその場で受け取れるよう、この詠唱を含めて進捗を測り直す
@@ -247,7 +253,9 @@ export function TimerPanel({
           afterMp: res.beforeMp + gainedMp,
           beforeTotals,
           afterTotals,
-          drop: drop ? { item: drop, isNew } : null,
+          drops,
+          ore: fall.ore,
+          echo: fall.echo,
           climb,
           cycleStartMp: cycle.startMp,
         });
@@ -449,6 +457,11 @@ export function TimerPanel({
       {mode === "stopwatch" && (
         <p className="text-xs leading-relaxed text-muted-foreground">
           果てなく詠唱を続けます。2時間途切れずに続くと、星が詠唱の継続を確かめに訪れます。
+        </p>
+      )}
+      {data.starEcho > 0 && (
+        <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
+          星の余韻 <span className="font-display text-starlight">{data.starEcho}</span>分。25分以上の次の詠唱に足され、25分ごとに流れ星がひとつ降る
         </p>
       )}
     </>

@@ -117,7 +117,7 @@ export type MaterialItem = ItemBase & {
 export type Blessing = {
   /** 獲得MPの加算率（0.15 = +15%）。subjects 未指定なら全属性 */
   mp?: { rate: number; subjects?: string[] };
-  /** 宝箱のドロップ率の加算率（0.1 = +10%） */
+  /** 稀品以上の流れ星が降る確率の加算率（0.1 = +10%）。lib/drops.ts の boostedRates で効く */
   drop?: number;
 };
 
@@ -316,7 +316,7 @@ const relic = (
 function blessingLabel({ mp, drop }: Blessing) {
   return [
     mp && `${mp.subjects ? `${mp.subjects.join("・")}属性` : "全属性"}の獲得MP +${Math.round(mp.rate * 100)}%`,
-    drop && `流れ星の降る確率 +${Math.round(drop * 100)}%`,
+    drop && `稀品以上の流れ星が降る確率 +${Math.round(drop * 100)}%`,
   ]
     .filter(Boolean)
     .join(" / ");
@@ -637,7 +637,7 @@ export function blessingMultiplier(owned: (id: string) => boolean, subjectName: 
     .reduce((acc, r) => acc + r.blessing.mp!.rate, 1);
 }
 
-/** 所持している秘宝・神話遺物の加護による宝箱ドロップ率の倍率 */
+/** 所持している秘宝・神話遺物の加護による、稀品以上の流れ星が降る確率の倍率 */
 export function dropMultiplier(owned: (id: string) => boolean) {
   return BLESSED.filter((r) => owned(r.id)).reduce((acc, r) => acc + (r.blessing.drop ?? 0), 1);
 }
@@ -675,20 +675,7 @@ function pickWeighted<T>(list: T[], weight: (t: T) => number, random: () => numb
   return list[list.length - 1];
 }
 
-/**
- * タイマー完了時のドロップ抽選。
- * 1. エリアの確率テーブル（S → A → B → C の順に区間を割り当て）でレア度を決める。秘宝の加護で各確率が上がる
- * 2. そのレア度のプールから1つ選ぶ（dropWeight の重み付き。触媒は weight、稀品は伝承の品 4・断片 各1）
- */
-export function rollDrop(area: Area, random: () => number = Math.random, boost = 1, cycle = 1): Item | null {
-  const pool = dropPool(area, cycle);
-  const r = random() * 100;
-  let edge = 0;
-  for (const rarity of RARITIES) {
-    edge += area.drops[rarity] * boost;
-    if (r < edge && pool[rarity].length > 0) {
-      return pickWeighted<Item>(pool[rarity], dropWeight, random);
-    }
-  }
-  return null;
+/** そのレア度のプールから1つ選ぶ（dropWeight の重み付き。触媒は weight、稀品は伝承の品 4・断片 各1）。判定の枠は lib/drops.ts */
+export function pickDropItem(pool: Record<Rarity, Item[]>, rarity: Rarity, random: () => number = Math.random): Item {
+  return pickWeighted<Item>(pool[rarity], dropWeight, random);
 }

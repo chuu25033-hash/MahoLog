@@ -114,7 +114,10 @@ export function observedNightsFrom(history: ChantRecord[], now = new Date()): Ob
       minutes: records.reduce((acc, r) => acc + r.minutes, 0),
       mp: records.reduce((acc, r) => acc + r.mp, 0),
       catalyst: catalyst?.kind === "catalyst" ? catalyst : null,
-      drops: records.map((r) => findItem(r.dropId)).filter((d): d is Item => d !== undefined),
+      drops: records
+        .flatMap((r) => r.dropIds ?? (r.dropId ? [r.dropId] : []))
+        .map((id) => findItem(id))
+        .filter((d): d is Item => d !== undefined),
     };
   });
 }

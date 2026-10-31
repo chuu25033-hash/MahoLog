@@ -11,9 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { EndingPanel, ZenithPanel } from "@/components/cycle/ascension-panels";
 import { AREAS, boostLabel, isAreaUnlocked, stageOfArea, type Area } from "@/lib/areas";
+import { DROP_SLOT_MINUTES } from "@/lib/drops";
 import { CLEAR_MP } from "@/lib/cycles";
 import { calcLevel, formatMinutes, levelProgress, rankOf } from "@/lib/game";
-import { type CatalystItem, type Item } from "@/lib/items";
+import { STARDUST_ORE, type CatalystItem, type Item } from "@/lib/items";
 import { soundManager } from "@/lib/sound/sound-manager";
 import { TASKS } from "@/lib/tasks";
 import type { Subject, SubjectTotal } from "@/lib/types";
@@ -39,7 +40,12 @@ export type StudyResult = {
   afterMp: number;
   beforeTotals: SubjectTotal[];
   afterTotals: SubjectTotal[];
-  drop: { item: Item; isNew: boolean } | null;
+  /** 降った流れ星の品（25分ごとに1つ・最大4つ。25分未満は空） */
+  drops: { item: Item; isNew: boolean }[];
+  /** 流れ星に添えられた星屑の原石の数 */
+  ore: number;
+  /** 次の詠唱へ持ち越す星の余韻（分） */
+  echo: number;
   /** 星天の塔での登頂（塔で詠唱したときだけ） */
   climb: ZenithClimb | null;
   /** この周天を始めた時点の累積MP（エリアの解放はここからの MP で測る） */
@@ -91,8 +97,8 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
   ];
   const step = steps[Math.min(index, steps.length - 1)];
   const last = index >= steps.length - 1;
-  // 宝箱を開けるまでは成果の幕に留まる
-  const waitingChest = step === "result" && chest !== "open";
+  // 流れ星に触れるまでは成果の幕に留まる（降らなかった詠唱は待たない）
+  const waitingChest = step === "result" && result.drops.length > 0 && chest !== "open";
 
   /** 画面のどこをタップしても、宝箱の演出を一段進める（ボタンの操作はそれぞれに任せる） */
   function advanceChest(e: MouseEvent) {
@@ -235,8 +241,14 @@ function ResultPanel({
         </DialogDescription>
         {capped && <p className="text-xs text-destructive">一夜に刻める詠唱は12時間まで。超えた分は星に届きません</p>}
 
-        {chest !== "hidden" && (
-          <DropReveal stage={chest} drop={result.drop} area={result.area} onOpen={() => onChestChange("open")} />
+        {result.drops.length === 0 ? (
+          <p className="text-[11px] tracking-wider text-muted-foreground [word-break:auto-phrase]">
+            流れ星は、{DROP_SLOT_MINUTES}分以上続けた詠唱にだけ降る
+          </p>
+        ) : (
+          chest !== "hidden" && (
+            <DropReveal stage={chest} drops={result.drops} ore={result.ore} echo={result.echo} onOpen={() => onChestChange("open")} />
+          )
         )}
       </div>
 
@@ -400,16 +412,18 @@ function UnlockPanel({ areas }: { areas: Area[] }) {
   );
 }
 
-/** 宝箱が揺れて開き、ドロップしたアイテムが浮かび上がる */
+/** 流れ星が降りて明滅し、触れるとほどけて、降った品（1〜4つ）と星屑の原石が浮かび上がる */
 function DropReveal({
   stage,
-  drop,
-  area,
+  drops,
+  ore,
+  echo,
   onOpen,
 }: {
   stage: Exclude<ChestStage, "hidden">;
-  drop: StudyResult["drop"];
-  area: Area;
+  drops: StudyResult["drops"];
+  ore: number;
+  echo: number;
   onOpen: () => void;
 }) {
   const opened = stage === "open";
@@ -420,54 +434,71 @@ function DropReveal({
         onClick={onOpen}
         disabled={opened}
         aria-label="流れ星に触れる"
-        className={cn("relative size-20 short:size-16", !opened && "star-arrive cursor-pointer")}
+        className={cn("relative transition-all duration-700", opened ? "size-10" : "star-arrive size-20 cursor-pointer short:size-16")}
       >
-        <ShootingStar open={opened} className={cn("absolute inset-0 transition-opacity duration-500", opened && drop && "opacity-40")} />
-        {opened && drop && (
-          <ItemArt
-            icon={drop.item.svgIcon}
-            rarity={drop.item.rarity}
-            color={drop.item.color}
-            seed={drop.item.id}
-            className="absolute inset-0 animate-in zoom-in-50 fade-in slide-in-from-bottom-6 duration-1000"
-          />
-        )}
+        <ShootingStar open={opened} className={cn("absolute inset-0 transition-opacity duration-500", opened && "opacity-40")} />
       </button>
-      {!opened && <p className="text-[11px] tracking-[0.3em] text-starlight/70 glimmer">流れ星が降りた…触れて受け取る</p>}
-      {opened &&
-        (drop ? (
-          <div className="flex animate-in flex-col items-center gap-0.5 fade-in duration-1000">
-            <span className={cn("rounded-full border px-2 text-[10px] tracking-[0.2em]", RARITY_TONE[drop.item.rarity])}>
-              RARE {drop.item.rarity} · {drop.item.type}
-            </span>
-            <span className="text-sm tracking-[0.15em] text-foreground">
-              {drop.item.kind === "fragment" ? drop.item.name : `『${drop.item.name}』`}
-            </span>
-            <span className="text-[11px] text-muted-foreground">
-              {drop.item.kind === "lore"
-                ? drop.isNew
-                  ? "魔導図鑑に新たに記された"
-                  : "すでに図鑑に記された品だ"
-                : drop.item.kind === "skin"
-                  ? drop.isNew
-                    ? `${drop.item.effect}（図鑑から適用できます）`
-                    : "すでに纏える意匠だ"
-                  : drop.item.kind === "relic"
-                    ? drop.isNew
-                      ? `${drop.item.effect}の加護を得た`
-                      : "既に所持している秘宝だ"
-                    : drop.item.kind === "fragment"
-                      ? drop.isNew
-                        ? "古代文書の断片だ（図鑑の「星脈の記憶」へ）"
-                        : "既に持っている断片だ（錬成陣で還元できる）"
-                      : drop.item.effect}
-            </span>
-          </div>
-        ) : (
-          <p className="text-[11px] tracking-wider text-muted-foreground">
-            この夜の流れ星は、何も遺さず{area.name}の空に溶けた
+      {!opened ? (
+        <>
+          <p className="text-[11px] tracking-[0.3em] text-starlight/70 glimmer">
+            {drops.length > 1 ? `流れ星が${drops.length}つ降りた` : "流れ星が降りた"}…触れて受け取る
           </p>
-        ))}
+        </>
+      ) : (
+        <>
+          <ul className={cn("grid w-full gap-2", drops.length === 1 ? "grid-cols-1" : drops.length === 3 ? "grid-cols-3" : "grid-cols-2", drops.length === 4 && "sm:grid-cols-4")}>
+            {drops.map((drop, i) => (
+              <li
+                key={i}
+                className="flex animate-in flex-col items-center gap-0.5 text-center fade-in slide-in-from-bottom-4 duration-1000 [animation-fill-mode:both]"
+                style={{ animationDelay: `${i * 250}ms` }}
+              >
+                <ItemArt icon={drop.item.svgIcon} rarity={drop.item.rarity} color={drop.item.color} seed={drop.item.id} className="size-14 short:size-12" />
+                <span className={cn("rounded-full border px-2 text-[10px] tracking-[0.2em] whitespace-nowrap", RARITY_TONE[drop.item.rarity])}>
+                  RARE {drop.item.rarity}
+                  {drops.length === 1 && ` · ${drop.item.type}`}
+                </span>
+                <span className={cn("tracking-[0.1em] text-foreground [word-break:auto-phrase]", drops.length === 1 ? "text-sm" : "text-xs")}>
+                  {drop.item.kind === "fragment" ? drop.item.name : `『${drop.item.name}』`}
+                </span>
+                <span className="text-[10px] leading-snug text-muted-foreground [word-break:auto-phrase]">{dropNote(drop)}</span>
+              </li>
+            ))}
+          </ul>
+          {ore > 0 && (
+            <p
+              className="mt-1 animate-in text-[11px] tracking-wider text-aqua fade-in duration-1000 [animation-fill-mode:both]"
+              style={{ animationDelay: `${drops.length * 250}ms` }}
+            >
+              {STARDUST_ORE.name} ×{ore} も添えられていた
+            </p>
+          )}
+          {echo > 0 && (
+            <p
+              className="animate-in text-[10px] tracking-wider text-muted-foreground fade-in duration-1000 [animation-fill-mode:both]"
+              style={{ animationDelay: `${drops.length * 250 + 250}ms` }}
+            >
+              星の余韻 {echo}分は、次の詠唱へ持ち越された
+            </p>
+          )}
+        </>
+      )}
     </div>
   );
+}
+
+/** 降った品に添える一言 */
+function dropNote({ item, isNew }: StudyResult["drops"][number]) {
+  switch (item.kind) {
+    case "lore":
+      return isNew ? "魔導図鑑に新たに記された" : "すでに図鑑に記された品だ";
+    case "skin":
+      return isNew ? `${item.effect}（図鑑から適用できます）` : "すでに纏える意匠だ";
+    case "relic":
+      return isNew ? `${item.effect}の加護を得た` : "既に所持している秘宝だ";
+    case "fragment":
+      return isNew ? "古代文書の断片だ（図鑑の「星脈の記憶」へ）" : "既に持っている断片だ（錬成陣で還元できる）";
+    default:
+      return item.effect ?? "";
+  }
 }

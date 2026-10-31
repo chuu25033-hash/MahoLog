@@ -66,8 +66,10 @@ export type ChantRecord = {
   mode: StudyMode;
   /** 使った触媒 */
   catalystId: string | null;
-  /** 見つけたアイテム */
+  /** 見つけたアイテム（流れ星が1つだった頃の記録） */
   dropId: string | null;
+  /** 降った流れ星の品（この項目より前の記録は dropId だけ） */
+  dropIds?: string[];
   /** 詠唱の間で計らず、後から書き留めた記録。魔力だけを授け、試練には数えない */
   manual?: boolean;
 };
@@ -119,6 +121,8 @@ export type UserData = {
   cycle: { count: number; startMp: number };
   /** 星天の塔: 塔で詠唱した累積時間（分） */
   zenith: { minutes: number };
+  /** 星の余韻: 25分の区切りに届かなかった端数（分、0〜24）。次の詠唱に足して流れ星を数える（lib/drops.ts） */
+  starEcho: number;
 };
 
 const unlockedAt = (totalMp: number) => AREAS.filter((a) => isAreaUnlocked(a, totalMp)).map((a) => a.id);
@@ -137,6 +141,7 @@ export function initialUserData(): UserData {
     worldlines: { code: generateWorldlineCode(), bonds: [] },
     cycle: { count: 1, startMp: 0 },
     zenith: { minutes: 0 },
+    starEcho: 0,
   };
 }
 
@@ -427,11 +432,16 @@ export const userActions = {
     update((s) => ({ ...s, userProfile: { ...s.userProfile, currentStageId: stageId } }));
   },
 
-  /** ドロップ・授かり物を登録。初獲得なら true */
-  addItem(item: Item): boolean {
+  /** ドロップ・授かり物を count 個登録。初獲得なら true */
+  addItem(item: Item, count = 1): boolean {
     const isNew = !isDiscovered(load(), item.id);
-    update((s) => ({ ...s, inventory: { ...s.inventory, [item.id]: (s.inventory[item.id] ?? 0) + 1 } }));
+    update((s) => ({ ...s, inventory: { ...s.inventory, [item.id]: (s.inventory[item.id] ?? 0) + count } }));
     return isNew;
+  },
+
+  /** 星の余韻（流れ星の区切りに届かなかった端数）を書き留める */
+  setStarEcho(minutes: number) {
+    update((s) => ({ ...s, starEcho: minutes }));
   },
 
   armCatalyst(id: string | null) {

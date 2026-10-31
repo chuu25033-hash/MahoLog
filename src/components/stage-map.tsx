@@ -5,7 +5,7 @@ import { Check, Flame, Lock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AREAS, boostLabel, isAreaUnlocked, ORIGIN_AREA, type Area } from "@/lib/areas";
 import { formatMinutes, STAGES, type Stage } from "@/lib/game";
-import { RARITIES, RARITY_LABEL } from "@/lib/items";
+import { DROP_TIERS } from "@/lib/drops";
 import { userActions } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
@@ -356,7 +356,6 @@ function AreaNode({
 function AreaPanel({ area, totalMp, current }: { area: Area; totalMp: number; current: boolean }) {
   const unlocked = isAreaUnlocked(area, totalMp);
   const stage = STAGES.find((s) => s.id === area.stageId)!;
-  const none = 100 - RARITIES.reduce((acc, r) => acc + area.drops[r], 0);
   return (
     <div
       key={area.id}
@@ -380,22 +379,21 @@ function AreaPanel({ area, totalMp, current }: { area: Area; totalMp: number; cu
               </p>
             </div>
             <div className="border-t border-white/10 pt-2">
-              <p className="mb-1 text-muted-foreground">流れ星の降る確率</p>
+              <p className="mb-1 text-muted-foreground">続けた詠唱に降る流れ星</p>
               <ul className="space-y-0.5">
-                {RARITIES.map((r) => (
-                  <li key={r} className="flex justify-between">
-                    <span>
-                      <span className="font-display">RARE {r}</span>
-                      <span className="ml-1 text-[10px] text-muted-foreground">{RARITY_LABEL[r]}</span>
+                {DROP_TIERS.map((t) => (
+                  <li key={t.minMinutes} className="flex justify-between gap-2">
+                    <span className="font-display whitespace-nowrap">{t.minMinutes}分〜</span>
+                    <span className="whitespace-nowrap">
+                      <span className="font-display text-starlight">{t.slots}</span>つ
+                      {t.ore > 0 && <span className="ml-1 text-[10px] text-aqua">＋原石{t.ore}</span>}
                     </span>
-                    <span className="font-display text-starlight">{area.drops[r]}%</span>
                   </li>
                 ))}
-                <li className="flex justify-between text-muted-foreground">
-                  <span>なし</span>
-                  <span className="font-display">{none}%</span>
-                </li>
               </ul>
+              <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
+                長く続けた詠唱ほど稀な品が降りやすく、{DROP_TIERS[DROP_TIERS.length - 1].minMinutes}分を越えると稀品以上が1つ確定する。25分に届かない端数は、次の詠唱へ持ち越される
+              </p>
             </div>
           </>
         ) : (
