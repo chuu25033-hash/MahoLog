@@ -61,7 +61,7 @@ export type Stage = {
 };
 
 export const STAGES: Stage[] = [
-  { id: 1, name: "始まりの書斎", requiredHours: 0, description: "探究者が最初の灯をともした、静かな書斎", gradient: "from-amber-200/10 via-transparent to-transparent" },
+  { id: 1, name: "始まりの書斎", requiredHours: 0, description: "探究者が最初の一行を覚えた、静かな書斎", gradient: "from-amber-200/10 via-transparent to-transparent" },
   { id: 2, name: "樹海の図書室", requiredHours: 10, description: "苔むした書架が森に溶け込む秘密の図書室", gradient: "from-emerald-300/12 via-teal-400/[0.03] to-transparent" },
   { id: 3, name: "星空の観測塔", requiredHours: 30, description: "星の運行から魔力の流れを読み解く塔", gradient: "from-indigo-300/14 via-violet-400/[0.04] to-transparent" },
   { id: 4, name: "蒼氷の大回廊", requiredHours: 60, description: "凍てつく静寂が集中を研ぎ澄ます回廊", gradient: "from-sky-200/12 via-cyan-300/[0.04] to-transparent" },
