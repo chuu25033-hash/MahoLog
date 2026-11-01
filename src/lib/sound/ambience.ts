@@ -4,7 +4,7 @@
 //  - タイトル: 夜風と、遠くの虫とフクロウ
 //  - 旅立ちの前: やわらかな夜風と、まばらな虫
 //  - 小屋: 暖炉の薪がはぜる音、ときどき頁をめくる音と古い床の軋み、窓の外の風と遠いフクロウ
-//  - 樹海・図書室: 葉擦れ、虫の声、根を伝う水滴、大樹の軋み、頁をめくる音、フクロウ
+//  - 樹海・図書室: 葉に降る雨（細かな雨粒と、遠くで降り続ける雨）、葉から落ちる滴、雨の合間の虫、大樹の軋み、頁をめくる音、フクロウ
 //  - 観測塔: 吹きさらしの高い風、天文盤の歯車の音と軋み、ずっと下から届くフクロウ
 //  - 氷の回廊: 細く冷たい風、氷の割れる音（凍った湖のように高く鳴って下りる）、氷の粒が触れ合う音
 //  - 魔導炉: 炉の低いうなり、熾火のはぜる音、溶岩の泡、火竜の深い寝息
@@ -159,6 +159,63 @@ function roar(env: Env, o: { cutoff: number; level: number; flicker: number }): 
       gain.gain.setTargetAtTime(o.level * rand(1 - o.flicker, 1 + o.flicker), at, rand(0.08, 0.4));
       low.frequency.setTargetAtTime(o.cutoff * rand(0.8, 1.25), at, rand(0.1, 0.5));
     },
+  };
+}
+
+const rainBuffers = new WeakMap<BaseAudioContext, AudioBuffer>();
+
+/**
+ * 葉に降る雨: 8秒ぶんを JS で一度だけ描いて繰り返す。左右で別々に、細かな雨粒（短く減衰する高い音と、小さく弾ける音）を
+ * まばらに散らし、ごく薄いさあっという音を下に敷く。粒の高さと大きさはばらばらにして、葉や枝に当たる音の違いを出す
+ */
+function rainBuffer(ctx: BaseAudioContext) {
+  let buffer = rainBuffers.get(ctx);
+  if (buffer) return buffer;
+  const sr = ctx.sampleRate;
+  buffer = ctx.createBuffer(2, sr * 8, sr);
+  for (let c = 0; c < 2; c++) {
+    const data = buffer.getChannelData(c);
+    // 下に敷くさあっという音（高い方へ寄せたノイズ）
+    let low = 0;
+    for (let i = 0; i < data.length; i++) {
+      const white = Math.random() * 2 - 1;
+      low += 0.35 * (white - low);
+      data[i] = (white - low) * 0.05;
+    }
+    // 雨粒: 1秒に約60粒
+    const drops = Math.round(8 * 60);
+    for (let d = 0; d < drops; d++) {
+      const start = Math.floor(Math.random() * (data.length - sr * 0.03));
+      const big = Math.random() < 0.08;
+      const freq = big ? rand(900, 2200) : rand(2200, 7000);
+      const decay = (big ? rand(0.006, 0.014) : rand(0.0015, 0.005)) * sr;
+      const amp = (big ? rand(0.25, 0.5) : rand(0.04, 0.22)) * (Math.random() < 0.5 ? 1 : -1);
+      const length = Math.min(Math.floor(decay * 6), data.length - start);
+      for (let i = 0; i < length; i++) {
+        const env = Math.exp(-i / decay);
+        data[start + i] += amp * env * (0.7 * Math.sin((2 * Math.PI * freq * i) / sr) + 0.3 * (Math.random() * 2 - 1));
+      }
+    }
+  }
+  rainBuffers.set(ctx, buffer);
+  return buffer;
+}
+
+/** 雨: 描いておいた雨粒を繰り返し鳴らし、降りの強さをゆっくり揺らす。far を付けると、こもった遠い雨になる */
+function rain(env: Env, o: { level: number; far?: boolean }): Bed {
+  const { ctx } = env;
+  const src = ctx.createBufferSource();
+  src.buffer = rainBuffer(ctx);
+  src.loop = true;
+  src.playbackRate.value = o.far ? 0.8 : 1;
+  const tone = filterOf(ctx, "lowpass", o.far ? 2200 : 9000, 0.5);
+  const gain = ctx.createGain();
+  gain.gain.value = o.level;
+  src.connect(filterOf(ctx, "highpass", o.far ? 300 : 700)).connect(tone).connect(gain).connect(voice(env, { pan: 0, wet: o.far ? 0.6 : 0.3 }));
+  src.start(ctx.currentTime, rand(0, 7));
+  return {
+    sources: [src],
+    sway: (at) => gain.gain.setTargetAtTime(o.level * rand(0.75, 1.2), at, rand(2, 5)),
   };
 }
 
@@ -508,13 +565,17 @@ const SCENES: Record<AmbienceKey, Scene> = {
   forest: {
     space: 2.8,
     level: 1,
+    // 葉に降る近い雨と、樹海の奥で降り続ける遠い雨。葉擦れの風は薄く残す
     beds: [
-      (env) => wind(env, { freq: 2200, q: 0.35, level: 0.007, pan: -0.5, gust: 0.7 }),
-      (env) => wind(env, { freq: 2700, q: 0.35, level: 0.006, pan: 0.5, gust: 0.7 }),
+      (env) => rain(env, { level: 0.05 }),
+      (env) => rain(env, { level: 0.06, far: true }),
+      (env) => wind(env, { freq: 2200, q: 0.35, level: 0.004, pan: -0.5, gust: 0.7 }),
     ],
     events: [
-      { every: [3, 8], sound: cricket(0.005) },
-      { every: [7, 16], sound: drip(0.012) },
+      // 雨の中なので、虫はまばらに小さく
+      { every: [8, 18], sound: cricket(0.0035) },
+      // 葉から落ちる大きめの滴
+      { every: [1.5, 5], sound: drip(0.014) },
       { every: [30, 70], first: [10, 30], sound: creak({ low: 90, high: 150, level: 0.007, length: [0.9, 1.8] }) },
       { every: [60, 140], first: [25, 60], sound: pageTurn(0.016) },
       { every: [60, 150], first: [20, 40], sound: owl([0.3, 0.7]) },
