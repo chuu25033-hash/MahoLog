@@ -2,8 +2,9 @@
 
 import { WhisperText, whisperHost } from "@/components/whisper";
 import { useRef, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, BookOpen, Check, Compass, FlaskConical, Download, Feather, Hexagon, LogOut, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
+import { Bell, BookOpen, Check, Compass, FlaskConical, Download, Feather, Hexagon, LogOut, Music, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { ObserverIdField } from "@/components/observer/observer-id";
 import { BackToLibrary } from "@/components/back-to-library";
@@ -12,7 +13,7 @@ import { Prologue } from "@/components/prologue/prologue";
 import { SubjectPicker } from "@/components/subject-picker";
 import { SubjectRuneChip } from "@/components/subject-rune-chip";
 import { WIZARD_AVATARS, WizardAvatar } from "@/components/wizard-avatar";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useIsAdmin } from "@/lib/admin";
 import { overrideCloud, startNewObserver } from "@/lib/cloud-sync";
 import { THEME_LABEL, unlockedThemes } from "@/lib/cycles";
 import { jstDateKey } from "@/lib/date";
@@ -237,6 +239,14 @@ export function SettingsView({
                 onChange={(seVolume) => userActions.updateSettings({ seVolume })}
                 onCommit={() => soundManager.playSe("tap")}
               />
+              {/* 環境音のピアノの録音は CC-BY 3.0。作者の表示がライセンスの条件 */}
+              <p className="mt-1 text-[10px] leading-relaxed tracking-wider text-muted-foreground/60">
+                ピアノの音: Salamander Grand Piano by Alexander Holm（
+                <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                  CC BY 3.0
+                </a>
+                ）
+              </p>
             </div>
           </Field>
 
@@ -458,8 +468,11 @@ function VolumeRow({
   );
 }
 
-/** 開発者ツール: いまのデータを退避して全解放・サンプルに切り替え、いつでも元に戻せる（開発サーバーでのみ表示） */
-function DevTools() {
+/**
+ * 開発者ツール: いまのデータを退避して全解放・サンプルに切り替え、いつでも元に戻せる。
+ * 開発サーバーと、管理者の観測者IDでだけ表示する。管理者には曲の試聴・書き出しへの入口も出す
+ */
+function DevTools({ admin }: { admin: boolean }) {
   const [backedUp] = useState(hasDevBackup);
 
   // 各画面が保存データを読み直すよう、切り替えたら再読み込みする
@@ -480,8 +493,8 @@ function DevTools() {
       <p className="flex items-center gap-1.5 text-sm tracking-wider whitespace-nowrap text-amethyst">
         <Wrench className="size-4 shrink-0" strokeWidth={1.25} />
         <span className="flex flex-col leading-tight">
-          開発者ツール
-          <span className="font-display text-[9px] tracking-[0.25em] text-amethyst/70">DEV ONLY</span>
+          {admin ? "管理者ツール" : "開発者ツール"}
+          <span className="font-display text-[9px] tracking-[0.25em] text-amethyst/70">{admin ? "ADMIN ONLY" : "DEV ONLY"}</span>
         </span>
       </p>
       <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
@@ -499,6 +512,11 @@ function DevTools() {
         <Button variant="outline" size="sm" className="col-span-2" disabled={!backedUp} onClick={restore}>
           <Undo2 /> 元のデータに戻す
         </Button>
+        {admin && (
+          <Link href="/music" className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "col-span-2")}>
+            <Music /> 音楽（試聴と書き出し）
+          </Link>
+        )}
       </div>
     </div>
   );
@@ -506,6 +524,7 @@ function DevTools() {
 
 /** バックアップの書き出し・復元と、探求記録の初期化 */
 function DataControls() {
+  const admin = useIsAdmin();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = useState<{ name: string; json: string } | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
@@ -593,8 +612,8 @@ function DataControls() {
         </Button>
       </div>
 
-      {/* 開発サーバー（npm run dev）でだけ出す。本番ビルドでは条件ごと取り除かれる */}
-      {process.env.NODE_ENV === "development" && <DevTools />}
+      {/* 開発サーバー（npm run dev）と、管理者の観測者IDでだけ出す */}
+      {(process.env.NODE_ENV === "development" || admin) && <DevTools admin={admin} />}
 
       <Dialog open={pendingImport !== null} onOpenChange={(open) => !open && setPendingImport(null)}>
         <DialogContent>
