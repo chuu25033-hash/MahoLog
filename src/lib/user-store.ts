@@ -498,6 +498,11 @@ export function localStudyLogs(data: UserData): StudyLog[] {
   }));
 }
 
+/** 通算の詠唱時間（分）。書き留めた詠唱も含める */
+export function totalChantMinutes(data: UserData) {
+  return data.chantHistory.reduce((acc, r) => acc + r.minutes, 0);
+}
+
 /** 本日（JST）の詠唱時間の合計（分） */
 export function todayChantMinutes(data: UserData, now = new Date()) {
   const today = startOfJstDay(now).getTime();

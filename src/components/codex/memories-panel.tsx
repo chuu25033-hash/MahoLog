@@ -11,7 +11,7 @@ import { canRestore, fragmentsOf, isRestored, memoryOf, restoredCount } from "@/
 import { STAGES } from "@/lib/game";
 import { DOCUMENTS, ZENITH_DOCUMENT_STAGE, fillCoda, type MemoryItem } from "@/lib/items";
 import { soundManager } from "@/lib/sound/sound-manager";
-import { isDiscovered, knowsZenith, userActions, type UserData } from "@/lib/user-store";
+import { isDiscovered, knowsZenith, totalChantMinutes, userActions, type UserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 const ROMAN = ["I", "II", "III", "IV"];
@@ -24,7 +24,7 @@ export function MemoriesPanel({ data }: { data: UserData }) {
   const documents = DOCUMENTS.filter((d) => !d.zenithFloors || knowsZenith(data) || fragmentsOf(d.id).some((f) => isDiscovered(data, f.id)));
   const zenithShown = documents.some((d) => d.zenithFloors);
   const name = data.userProfile.username || "名もなき者";
-  const minutes = data.chantHistory.reduce((acc, c) => acc + c.minutes, 0);
+  const minutes = totalChantMinutes(data);
   const [bookOpen, setBookOpen] = useState(false);
   const anyFound = documents.some((d) => isRestored(data, d.id) || fragmentsOf(d.id).some((f) => isDiscovered(data, f.id)));
 

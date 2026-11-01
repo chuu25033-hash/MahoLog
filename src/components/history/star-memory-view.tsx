@@ -8,7 +8,7 @@ import { PageLoading } from "@/components/page-loading";
 import { demoSubjects } from "@/lib/demo";
 import { formatMinutes } from "@/lib/game";
 import { MEMORY_WEEKS, observedNightsFrom, type ObservedNight } from "@/lib/star-memory";
-import { useStoredUserData, type ChantRecord } from "@/lib/user-store";
+import { totalChantMinutes, useStoredUserData, type ChantRecord } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 /** 拡大縮小しても 1px を保つ光の線 */
@@ -186,10 +186,11 @@ function nightsOf(history: ChantRecord[]) {
 export function StarMemoryView() {
   const stored = useStoredUserData();
   if (!stored) return <PageLoading />;
-  return <StarMemory nights={nightsOf(stored.chantHistory)} />;
+  return <StarMemory nights={nightsOf(stored.chantHistory)} allMinutes={totalChantMinutes(stored)} />;
 }
 
-function StarMemory({ nights }: { nights: ObservedNight[] }) {
+/** allMinutes は通算の詠唱時間（星図に描く4週より前も含む） */
+function StarMemory({ nights, allMinutes }: { nights: ObservedNight[]; allMinutes: number }) {
   const observed = nights.filter((n) => n.minutes > 0);
   const [selected, setSelected] = useState<ObservedNight>(observed.at(-1) ?? nights[0]);
 
@@ -209,11 +210,13 @@ function StarMemory({ nights }: { nights: ObservedNight[] }) {
             <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">詠唱した夜は星となり、今週までの{MEMORY_WEEKS}週間の学びが夜空に自分だけの星座を描きます</p>
           </div>
         </div>
-        <dl className="flex shrink-0 gap-4 text-right portrait:justify-between text-[11px] tracking-wider whitespace-nowrap text-muted-foreground">
+        {/* 縦持ちでは4つが横に収まらないので、2つずつ2段に並べる */}
+        <dl className="flex shrink-0 gap-4 text-right portrait:grid portrait:grid-cols-2 portrait:gap-x-6 portrait:gap-y-2 portrait:text-left text-[11px] tracking-wider whitespace-nowrap text-muted-foreground">
           {[
             { label: "詠唱した夜", value: `${observed.length}` },
             { label: `${MEMORY_WEEKS}週の詠唱`, value: formatMinutes(totalMinutes) },
             { label: "完成した星座", value: `${completed.filter(Boolean).length}` },
+            { label: "通算の詠唱", value: formatMinutes(allMinutes) },
           ].map(({ label, value }) => (
             <div key={label}>
               <dt>{label}</dt>
