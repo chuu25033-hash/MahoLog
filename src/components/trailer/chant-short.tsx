@@ -4,7 +4,7 @@ import type { CSSProperties } from "react";
 import { ArcaneLogo } from "@/components/arcane-icons";
 import { ItemArt } from "@/components/item-art";
 import { RELICS } from "@/lib/items";
-import { forestReverb, owlCall, synthAmbience } from "@/lib/sound/synth";
+import { forestReverb, owlCall, synthTrailerTheme } from "@/lib/sound/synth";
 import { ChantCircle, ease, fade, rand, ShortPlayer, STARS, veil } from "./trailer";
 
 // TikTok T02「25分勉強すると、こうなる。」。25分のタイマーが早回しで減り、流れ星が降りて報酬が開くまで。
@@ -544,9 +544,9 @@ function playSoundtrack(ctx: AudioContext, destination: AudioNode) {
   // 曲は効果音より一段引いて流す
   const MUSIC_LEVEL = 0.6;
   // 曲: 最初の小節が「ボンッ」に重なるよう、0.3秒前に始める（曲は始めてから 0.3 秒後に最初の和音を鳴らす）
-  let music: ReturnType<typeof synthAmbience> | null = null;
+  let music: ReturnType<typeof synthTrailerTheme> | null = null;
   const start = setTimeout(() => {
-    music = synthAmbience(ctx, "title", master);
+    music = synthTrailerTheme(ctx, master);
     const gain = music.output.gain;
     gain.setValueAtTime(MUSIC_LEVEL, ctx.currentTime);
     gain.setValueAtTime(MUSIC_LEVEL, at(FINALE.out[0]));

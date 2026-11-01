@@ -3,7 +3,7 @@
 // 例: ambience: { hearth: "/sounds/ambience/hearth.mp3" }, se: { tap: "/sounds/se/tap.mp3" }
 
 /** 環境音（title はタイトルの曲、prelude は星天の導きなど魔術書庫に入る前の画面、ほかは滞在ステージごと） */
-export type AmbienceKey = "title" | "prelude" | "hearth" | "forest" | "stars" | "frost" | "forge" | "sanctum";
+export type AmbienceKey = "title" | "prelude" | "hearth" | "forest" | "stars" | "frost" | "forge" | "sanctum" | "zenith";
 
 /** 操作・演出の効果音 */
 export type SeKey =
@@ -63,5 +63,5 @@ export const AMBIENCE_BY_STAGE: Record<number, AmbienceKey> = {
   4: "frost",
   5: "forge",
   6: "sanctum",
-  7: "stars",
+  7: "zenith",
 };

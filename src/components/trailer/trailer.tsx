@@ -7,7 +7,7 @@ import { ItemArt } from "@/components/item-art";
 import { MagicCircle } from "@/components/magic-circle";
 import { CORE_LAYER, FAR_LAYER, LINES, MID_LAYER } from "@/components/prologue/prologue";
 import { CATALYSTS, LORES, RELICS, type Item } from "@/lib/items";
-import { forestReverb, owlCall, synthAmbience, synthSe } from "@/lib/sound/synth";
+import { forestReverb, owlCall, synthSe, synthTrailerTheme } from "@/lib/sound/synth";
 
 // SNS（縦長 9:16）に載せる予告編。アプリの魔法陣・遺物・階級の印をそのまま使って描く。
 // 時刻 t（ms）だけで画面が決まるように組み、撮影ツール（video/capture.mjs）が1コマずつ時刻を進めて撮る。
@@ -481,7 +481,7 @@ const OWL_CUES: [number, number][] = [
 function playSoundtrack(ctx: AudioContext, destination: AudioNode) {
   const master = ctx.createGain();
   master.connect(destination);
-  const music = synthAmbience(ctx, "title", master);
+  const music = synthTrailerTheme(ctx, master);
   const now = ctx.currentTime;
   const at = (ms: number) => now + ms / 1000;
   const gain = music.output.gain;
