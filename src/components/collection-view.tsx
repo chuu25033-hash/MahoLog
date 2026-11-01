@@ -249,7 +249,7 @@ function originHint(item: Item) {
     const chapter = item.variant === "shadow" ? "（2周目・影の章）" : item.variant === "azure" ? "（3周目以降・蒼炎の章）" : "";
     return `AREA ${item.areaId} ${area?.name ?? ""}に降る流れ星${chapter}`;
   }
-  if (item.kind === "title" || (item.kind === "relic" && item.zenithFloor)) return `星天の塔 ${item.zenithFloor}層への到達`;
+  if (item.kind === "title" || ((item.kind === "relic" || item.kind === "fragment") && item.zenithFloor)) return `星天の塔 ${item.zenithFloor}層への到達`;
   if (item.kind === "skin" && item.cycle) return `${chapterOf(item.cycle).name}の幕開け（${item.cycle}周目へ進む）`;
   if (item.kind === "catalyst") {
     if (GUIDANCE_CATALYSTS.includes(item)) return "星天の導き";

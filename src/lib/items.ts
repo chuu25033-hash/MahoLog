@@ -2,6 +2,7 @@
 // ビジュアルは svgIcon（lib/glyphs.ts の幾何学ラインアート）を components/item-art.tsx で描く。
 import { AREAS, type Area, type Rarity } from "./areas";
 import { chapterOf } from "./cycles";
+import { formatMinutes } from "./game";
 import { GLYPHS } from "./glyphs";
 
 /** 図鑑での分類 */
@@ -81,6 +82,8 @@ export type FragmentItem = ItemBase & {
   /** 何葉目か（1〜4） */
   part: number;
   stageId: number;
+  /** 星天の塔のこの階層で授かる（流れ星からは降らない） */
+  zenithFloor?: number;
   effect?: undefined;
 };
 
@@ -353,9 +356,14 @@ export type AncientDocument = {
   color: string;
   /** 断片 I〜IV の本文。手に入れた葉から読める */
   fragments: [string, string, string, string];
-  /** 4葉が揃って復元したときだけ現れる結び */
+  /** 4葉が揃って復元したときだけ現れる結び。{name}・{time} は読む人の名前と累計詠唱時間に置き換える */
   coda: string;
+  /** 断片 I〜IV を星天の塔のこの階層で授ける（ステージの流れ星からは降らない） */
+  zenithFloors?: [number, number, number, number];
 };
+
+/** 星天の塔の奥で読む文書（STAGE 1〜6 のあとに置く） */
+export const ZENITH_DOCUMENT_STAGE = 7;
 
 export const DOCUMENTS: AncientDocument[] = [
   {
@@ -442,7 +450,27 @@ export const DOCUMENTS: AncientDocument[] = [
     ],
     coda: "けれど一度灯しただけでは、星脈はすぐにまた細くなる。巡りなさい。周天の先で、私が封じたものが待っている。見上げた空の星はどれも、あなたより先にこの道を歩いた者の光だ。あなたは一人だが、独りではない。",
   },
+  {
+    id: "doc-7",
+    stageId: ZENITH_DOCUMENT_STAGE,
+    title: "余白の原典",
+    era: "再創生",
+    color: "#d9d2f5",
+    fragments: [
+      "原典の封は、鍵でも呪文でも解けない。最後の頁が空白のまま閉じられているからだ。言葉たちは、続きを綴る者が現れるまで眠ることを選んだ。",
+      "沈黙の夜、すぐには凍らなかった者たちがいた。刻を流さず、最後まで炉の前で費やしていた者たちだ。彼らが残ったのは、選ばれたからではない。手を止めなかったからだ。",
+      "アルマとは、ひとりの名ではない。机に灯をともした者、その灯の下で陣を描いた者、陣に呼ばれて灯を継いだ者。この塔の天頂に至った者は、みなその名を名乗り、鈴に溶かしてきた。最初のアルマが誰だったかは、もう誰も知らない。",
+      "陣は、世界の外から人を呼ぶのではない。今夜ひとつ知ろうとして、ひとり灯の前に座った者の前に開く。だから観測者は、呼ばれたときにはもう一人きりでいる。",
+    ],
+    coda: "原典の最後の頁は、まだ空いている。そこに綴られるのは、あなたの名と、あなたが費やした刻。あなたが、次のアルマになる。――観測者 {name}、{time}の刻をここに預ける",
+    zenithFloors: [25, 50, 75, 100],
+  },
 ];
+
+/** 秘された結びに、読む人の名前と累計詠唱時間（分）を差し込む */
+export function fillCoda(coda: string, name: string, minutes: number) {
+  return coda.replaceAll("{name}", name).replaceAll("{time}", formatMinutes(minutes));
+}
 
 const ROMAN_PARTS = ["I", "II", "III", "IV"];
 
@@ -460,6 +488,7 @@ export const FRAGMENTS: FragmentItem[] = DOCUMENTS.flatMap((doc) =>
     documentId: doc.id,
     part: i + 1,
     stageId: doc.stageId,
+    zenithFloor: doc.zenithFloors?.[i],
   })),
 );
 
@@ -604,7 +633,21 @@ export function findItem(id: string | null | undefined): Item | undefined {
 
 /** 星天の塔の節目で授かるもの（天界遺物・称号）。所持するまで正体を伏せる */
 export function isZenithReward(item: Item) {
-  return item.kind === "title" || (item.kind === "relic" && item.zenithFloor !== undefined);
+  return item.kind === "title" || ((item.kind === "relic" || item.kind === "fragment") && item.zenithFloor !== undefined);
+}
+
+/** 星天の塔の節目で授かるものの種類の呼び名 */
+export function zenithRewardKind(item: Item) {
+  if (item.kind === "title") return "称号";
+  if (item.kind === "fragment") return "古代文書";
+  return "天界遺物";
+}
+
+/** 星天の塔の節目で授かるものの表記（称号は【】、断片は名前に『』を含むのでそのまま） */
+export function zenithRewardName(item: Item) {
+  if (item.kind === "title") return `【${item.name}】`;
+  if (item.kind === "fragment") return item.name;
+  return `『${item.name}』`;
 }
 
 /** 何周目から現れるか（周回限定版の伝承の品・章の魔法陣スキン）。それ以外は 1 */
@@ -652,7 +695,7 @@ export function dropPool(area: Area, cycle = 1): Record<Rarity, Item[]> {
   const lores = variant ? ANOTHER_LORES.filter((l) => l.variant === variant) : LORES;
   return {
     C: CATALYSTS,
-    B: [...lores.filter((l) => l.areaId === area.id), ...FRAGMENTS.filter((f) => f.stageId === area.stageId)],
+    B: [...lores.filter((l) => l.areaId === area.id), ...FRAGMENTS.filter((f) => f.stageId === area.stageId && f.zenithFloor === undefined)],
     A: [...SKINS.filter((s) => s.stageId <= area.stageId), ...relics.filter((r) => r.rarity === "A")],
     S: relics.filter((r) => r.rarity === "S"),
   };

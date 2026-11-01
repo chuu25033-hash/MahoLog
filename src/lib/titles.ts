@@ -385,7 +385,7 @@ const CONCENTRATION_TITLES: Title[] = [
 const COLLECTION_TITLES: Title[] = [
   collection("restored-1", "失われた言葉を拾う者", "B", { kind: "restored", count: 1 }, "四葉の断片を揃えると、預けられていた言葉が一つ戻ってきた。"),
   collection("restored-3", "言葉を継ぐ者", "A", { kind: "restored", count: 3 }, "三冊の記憶を読んだ。書いた者はもういないが、言葉はここにある。"),
-  collection("restored-all", "原典を読み解く者", "S", { kind: "restored", count: "all" }, "星脈に遺された記憶を、すべて読み解いた。アルマが封じた原典の頁は、まだその先で閉じている。"),
+  collection("restored-all", "原典を読み解く者", "S", { kind: "restored", count: 6 }, "星脈に遺された記憶を、すべて読み解いた。アルマが封じた原典の頁は、まだその先で閉じている。"),
 
   collection("dissolved-10", "還元の徒弟", "C", { kind: "dissolved", count: 10 }, "余った遺物を星屑へ還すたび、先人の刻が手のひらで温かい。"),
   collection("dissolved-50", "星屑の錬金術士", "B", { kind: "dissolved", count: 50 }, "五十の遺物を星屑に還した。錬成陣の線が手に馴染んできた。"),

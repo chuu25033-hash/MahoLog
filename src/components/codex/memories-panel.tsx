@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { canRestore, fragmentsOf, isRestored, memoryOf, restoredCount } from "@/lib/crafting";
 import { STAGES } from "@/lib/game";
-import { DOCUMENTS, type MemoryItem } from "@/lib/items";
+import { DOCUMENTS, ZENITH_DOCUMENT_STAGE, fillCoda, type MemoryItem } from "@/lib/items";
 import { soundManager } from "@/lib/sound/sound-manager";
-import { isDiscovered, userActions, type UserData } from "@/lib/user-store";
+import { isDiscovered, knowsZenith, userActions, type UserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 const ROMAN = ["I", "II", "III", "IV"];
@@ -19,6 +19,11 @@ const ROMAN = ["I", "II", "III", "IV"];
 export function MemoriesPanel({ data }: { data: UserData }) {
   const [reading, setReading] = useState<MemoryItem | null>(null);
   const restored = restoredCount(data);
+  // 星天の塔の文書は、塔の存在を知るまで棚に並べない
+  const documents = DOCUMENTS.filter((d) => !d.zenithFloors || knowsZenith(data) || fragmentsOf(d.id).some((f) => isDiscovered(data, f.id)));
+  const zenithShown = documents.some((d) => d.zenithFloors);
+  const name = data.userProfile.username || "名もなき者";
+  const minutes = data.chantHistory.reduce((acc, c) => acc + c.minutes, 0);
 
   function restore(documentId: string) {
     const memory = userActions.restoreDocument(documentId);
@@ -36,21 +41,21 @@ export function MemoriesPanel({ data }: { data: UserData }) {
           <span className="font-display text-[9px] tracking-[0.3em] text-starlight/60">STELLAR MEMORIES</span>
         </span>
         <span className="ml-auto font-display text-xs text-muted-foreground">
-          {restored} / {DOCUMENTS.length}
+          {restored} / {documents.length}
           <span className="ml-2 font-serif text-[11px] tracking-wider text-aqua">全属性 MP +{restored}%</span>
         </span>
       </h2>
       <p className="mb-3 text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
-        各ステージに降る流れ星が運ぶ古代文書の断片（I〜IV）を集め、4葉が揃えば復元できます。復元した文書1冊ごとに、全属性の獲得MPが永久に +1% されます
+        各ステージに降る流れ星が運ぶ古代文書の断片（I〜IV）を集め、4葉が揃えば復元できます{zenithShown && "（『余白の原典』の断片は、星天の塔の節目の層で授かります）"}。復元した文書1冊ごとに、全属性の獲得MPが永久に +1% されます
       </p>
       <ul className="grid grid-cols-3 gap-2 portrait:grid-cols-1">
-        {DOCUMENTS.map((doc) => (
+        {documents.map((doc) => (
           <li key={doc.id}>
             <DocumentCard documentId={doc.id} data={data} onRestore={() => restore(doc.id)} onRead={() => setReading(memoryOf(doc.id))} />
           </li>
         ))}
       </ul>
-      {reading && <MemoryDialog memory={reading} onClose={() => setReading(null)} />}
+      {reading && <MemoryDialog memory={reading} coda={fillCoda(reading.coda, name, minutes)} onClose={() => setReading(null)} />}
     </section>
   );
 }
@@ -95,8 +100,10 @@ function DocumentCard({
         />
         <div className="min-w-0">
           <p className="flex flex-wrap items-baseline gap-x-1.5 font-display text-[10px] tracking-[0.25em] text-starlight/60">
-            STAGE {doc.stageId}
-            <span className="font-serif tracking-wider whitespace-nowrap text-muted-foreground">{stage?.name}</span>
+            {doc.stageId === ZENITH_DOCUMENT_STAGE ? "ZENITH" : `STAGE ${doc.stageId}`}
+            <span className="font-serif tracking-wider whitespace-nowrap text-muted-foreground">
+              {doc.stageId === ZENITH_DOCUMENT_STAGE ? "星天の塔" : stage?.name}
+            </span>
           </p>
           <p className="text-sm tracking-[0.15em]" style={restored ? { color: doc.color } : undefined}>
             {known ? `『${doc.title}』` : "未発見の古代文書"}
@@ -147,7 +154,7 @@ function DocumentCard({
 }
 
 /** 復元した古代文書の記憶。すりガラスの頁に、一節ずつ静かに浮かび上がる */
-function MemoryDialog({ memory, onClose }: { memory: MemoryItem; onClose: () => void }) {
+function MemoryDialog({ memory, coda, onClose }: { memory: MemoryItem; coda: string; onClose: () => void }) {
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[min(32rem,calc(100%-2rem))]! gap-4 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-6 ring-starlight/25 backdrop-blur-2xl short:p-4">
@@ -176,7 +183,7 @@ function MemoryDialog({ memory, onClose }: { memory: MemoryItem; onClose: () => 
             style={{ animationDelay: `${600 + memory.memory.length * 900 + 1200}ms`, color: memory.color, textShadow: `0 0 10px ${memory.color}66` }}
           >
             <span className="mb-2 block font-display text-[10px] tracking-[0.4em] opacity-70">✦</span>
-            {memory.coda}
+            {coda}
           </p>
         </DialogDescription>
         <div className="rank-line w-full [animation-delay:300ms]" />

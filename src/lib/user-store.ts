@@ -169,9 +169,11 @@ function normalize(saved: Partial<UserData>): UserData {
   const { mainSubjectId, ...settings } = (saved.settings ?? {}) as Partial<UserSettings> & { mainSubjectId?: string | null };
   const userProfile = { ...base.userProfile, ...saved.userProfile };
   userProfile.subject ??= mainSubjectId ?? null;
+  const zenith = { ...base.zenith, ...saved.zenith };
   return withUnlockedTitles({
     ...base,
     ...saved,
+    inventory: withPassedZenithFragments(saved.inventory ?? base.inventory, zenith.minutes),
     userProfile,
     dailyReward: { ...base.dailyReward, ...saved.dailyReward },
     equipment: { ...base.equipment, ...saved.equipment },
@@ -179,10 +181,19 @@ function normalize(saved: Partial<UserData>): UserData {
     tasks: { ...base.tasks, ...saved.tasks },
     worldlines: { ...base.worldlines, ...saved.worldlines },
     cycle: { ...base.cycle, ...saved.cycle },
-    zenith: { ...base.zenith, ...saved.zenith },
+    zenith,
     titles: { ...base.titles, ...saved.titles },
     combo: { ...base.combo, ...saved.combo },
   });
+}
+
+/** 『余白の原典』の断片は後から塔の節目に加えたので、すでに越えた節目の分を届ける */
+function withPassedZenithFragments(inventory: Record<string, number>, zenithMinutes: number) {
+  const missing = milestonesBetween(0, zenithFloor(zenithMinutes))
+    .flatMap((m) => m.rewards)
+    .filter((id) => findItem(id)?.kind === "fragment" && !(id in inventory));
+  if (missing.length === 0) return inventory;
+  return { ...inventory, ...Object.fromEntries(missing.map((id) => [id, 1])) };
 }
 
 /** 試練の進捗を詠唱履歴から測り直す。期間が変わっていれば受取状況も巡り直す */

@@ -73,12 +73,13 @@ export function zenithProgress(minutes: number) {
   return { floor, ratio: current / ZENITH_MINUTES_PER_FLOOR, remainingMinutes: ZENITH_MINUTES_PER_FLOOR - current };
 }
 
-/** 節目の階層で授かるもの（アイテム ID。天界遺物と称号は lib/items.ts に定義） */
+/** 節目の階層で授かるもの（アイテム ID。天界遺物・称号・『余白の原典』の断片は lib/items.ts に定義） */
 export const ZENITH_MILESTONES: { floor: number; rewards: string[] }[] = [
   { floor: 10, rewards: ["t-wayfarer"] },
-  { floor: 25, rewards: ["ss-zenith-lantern"] },
-  { floor: 50, rewards: ["ss-zenith-spire", "t-observer"] },
-  { floor: 100, rewards: ["ss-zenith-crown", "t-apex"] },
+  { floor: 25, rewards: ["ss-zenith-lantern", "frag-7-1"] },
+  { floor: 50, rewards: ["ss-zenith-spire", "t-observer", "frag-7-2"] },
+  { floor: 75, rewards: ["frag-7-3"] },
+  { floor: 100, rewards: ["ss-zenith-crown", "t-apex", "frag-7-4"] },
   { floor: 200, rewards: ["ss-zenith-halo", "t-boundless"] },
 ];
 

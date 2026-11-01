@@ -24,7 +24,7 @@ import {
   zenithProgress,
 } from "@/lib/cycles";
 import { formatMinutes } from "@/lib/game";
-import { findItem, type Item } from "@/lib/items";
+import { findItem, zenithRewardKind, zenithRewardName, type Item } from "@/lib/items";
 import { cycleMp, isCycleCleared, isDiscovered, isZenithOpen, useStoredUserData, userActions, type UserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
@@ -183,10 +183,10 @@ function MilestoneRow({ floor, reached, rewards, data }: { floor: number; reache
               )}
               <span className="min-w-0">
                 <span className="block font-display text-[9px] tracking-[0.2em] text-muted-foreground">
-                  {owned ? `${item.kind === "title" ? "称号" : "天界遺物"} · ${item.rarity}` : "UNKNOWN"}
+                  {owned ? `${zenithRewardKind(item)} · ${item.rarity}` : "UNKNOWN"}
                 </span>
                 <span className={cn("block text-xs tracking-wider", owned ? "text-foreground" : "text-muted-foreground/60")}>
-                  {owned ? (item.kind === "title" ? `【${item.name}】` : `『${item.name}』`) : "？？？"}
+                  {owned ? zenithRewardName(item) : "？？？"}
                 </span>
               </span>
             </span>

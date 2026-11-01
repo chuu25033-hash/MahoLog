@@ -7,7 +7,7 @@ import { ItemArt } from "@/components/item-art";
 import { Button } from "@/components/ui/button";
 import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { CYCLE_MARK_RATE, THEME_LABEL, chapterOf, cycleLabel, cycleMarkMultiplier, type Chapter } from "@/lib/cycles";
-import { findItem } from "@/lib/items";
+import { findItem, zenithRewardKind, zenithRewardName } from "@/lib/items";
 import { soundManager } from "@/lib/sound/sound-manager";
 import { userActions, useUserData, type ZenithClimb } from "@/lib/user-store";
 
@@ -141,11 +141,11 @@ export function ZenithPanel({ climb }: { climb: ZenithClimb }) {
               <ItemArt icon={item.svgIcon} rarity={item.rarity} color={item.color} seed={item.id} className="size-14 shrink-0" />
               <div className="min-w-0">
                 <p className="font-display text-[10px] tracking-[0.2em] text-starlight/80">
-                  RARE {item.rarity} · {item.kind === "title" ? "称号" : "天界遺物"}
+                  RARE {item.rarity} · {zenithRewardKind(item)}
                 </p>
-                <p className="text-sm tracking-[0.15em]">{item.kind === "title" ? `【${item.name}】` : `『${item.name}』`}</p>
+                <p className="text-sm tracking-[0.15em]">{zenithRewardName(item)}</p>
                 <p className="text-[11px] text-muted-foreground [word-break:auto-phrase]">
-                  {item.effect}
+                  {item.kind === "fragment" ? "4葉が揃えば、図鑑の星脈の記憶で復元できる" : item.effect}
                   {isNew && " ・図鑑に記された"}
                 </p>
               </div>
