@@ -1,15 +1,16 @@
 // エリアごとの環境音。曲の後ろで、その場所の空気をごく薄く鳴らす。
-// 音声ファイルは使わず、ノイズと発振器から組み立てる。続く音（風・炎のうなり・炉）と、ときどき鳴る音
-// （薪のはぜる音・頁をめくる音・木の軋み・虫・水滴・氷の割れる音・溶岩・火竜の寝息・鐘・天文盤・フクロウ）を重ねる。
-//  - タイトル: 夜風と、遠くの虫とフクロウ
-//  - 旅立ちの前: やわらかな夜風と、まばらな虫
-//  - 小屋: 暖炉の薪がはぜる音、ときどき頁をめくる音と古い床の軋み、窓の外の風と遠いフクロウ
-//  - 樹海・図書室: 葉に降る雨（細かな雨粒と、遠くで降り続ける雨）、葉から落ちる滴、雨の合間の虫、大樹の軋み、頁をめくる音、フクロウ
-//  - 観測塔: 吹きさらしの高い風、天文盤の歯車の音と軋み、ずっと下から届くフクロウ
-//  - 氷の回廊: 細く冷たい風、氷の割れる音（凍った湖のように高く鳴って下りる）、氷の粒が触れ合う音
-//  - 魔導炉: 炉の低いうなり、熾火のはぜる音、溶岩の泡、火竜の深い寝息
-//  - 大聖堂: 雲の上の風と、遠くで鳴る鐘
-//  - 星天の塔: 細く高い風と、遠い星の鳴る音
+// 音声ファイルは使わず、ノイズと発振器から組み立てる。続く音（炎のうなり・炉）と、ときどき鳴る音
+// （頁をめくる音・木の軋み・虫・水滴・溶岩・火竜の寝息・鐘・天文盤・氷の粒・フクロウ）を重ねる。
+// 風の音（砂嵐のような「ザー」）、薪や熾火のはぜる音（かちかち）、雨粒を散らした音（からから）は、耳について心地よくないので使わない。
+//  - タイトル: 遠くの虫とフクロウ
+//  - 旅立ちの前: まばらな虫
+//  - 小屋: 暖炉の低いうなり、ときどき頁をめくる音と古い床の軋み、遠いフクロウ
+//  - 樹海・図書室: 根を伝う水滴、虫の声、大樹の軋み、頁をめくる音、フクロウ
+//  - 観測塔: 天文盤の歯車の音と軋み、ずっと下から届くフクロウ
+//  - 氷の回廊: 氷の粒が触れ合う音
+//  - 魔導炉: 炉の低いうなり、溶岩の泡、火竜の深い寝息
+//  - 大聖堂: 遠くで鳴る鐘
+//  - 星天の塔: 遠い星の鳴る音
 import type { AmbienceKey } from "./sound-files";
 
 const SILENT = 0.0001;
@@ -117,31 +118,6 @@ function tone(env: Env, out: AudioNode, at: number, o: { from: number; to?: numb
 
 type Bed = { sources: AudioScheduledSourceNode[]; /** 揺らぎを at から先に予約する */ sway: (at: number) => void };
 
-/**
- * 風: ノイズを帯域で絞り、強さと高さをゆっくり揺らす。
- * q を高くすると、隙間を抜けるような細い風（口笛のような鳴り）になる
- */
-function wind(env: Env, o: { freq: number; q: number; level: number; pan: number; gust: number }): Bed {
-  const { ctx } = env;
-  const src = ctx.createBufferSource();
-  src.buffer = noise(ctx);
-  src.loop = true;
-  const band = filterOf(ctx, "bandpass", o.freq, o.q);
-  const soft = filterOf(ctx, "lowpass", o.freq * 2.5);
-  const gain = ctx.createGain();
-  gain.gain.value = o.level * 0.6;
-  src.connect(band).connect(soft).connect(gain).connect(voice(env, { pan: o.pan, wet: 0.25 }));
-  src.start(ctx.currentTime, rand(0, 3));
-  return {
-    sources: [src],
-    sway: (at) => {
-      // 強い風は大きく揺れる（gust）
-      gain.gain.setTargetAtTime(o.level * rand(1 - o.gust, 1 + o.gust * 0.6), at, rand(1.2, 3));
-      band.frequency.setTargetAtTime(o.freq * rand(0.75, 1.35), at, rand(1.5, 3.5));
-    },
-  };
-}
-
 /** 炎や炉のうなり: 低くこもったノイズを、ちらつくように揺らす */
 function roar(env: Env, o: { cutoff: number; level: number; flicker: number }): Bed {
   const { ctx } = env;
@@ -162,85 +138,9 @@ function roar(env: Env, o: { cutoff: number; level: number; flicker: number }): 
   };
 }
 
-const rainBuffers = new WeakMap<BaseAudioContext, AudioBuffer>();
-
-/**
- * 葉に降る雨: 8秒ぶんを JS で一度だけ描いて繰り返す。左右で別々に、細かな雨粒（短く減衰する高い音と、小さく弾ける音）を
- * まばらに散らし、ごく薄いさあっという音を下に敷く。粒の高さと大きさはばらばらにして、葉や枝に当たる音の違いを出す
- */
-function rainBuffer(ctx: BaseAudioContext) {
-  let buffer = rainBuffers.get(ctx);
-  if (buffer) return buffer;
-  const sr = ctx.sampleRate;
-  buffer = ctx.createBuffer(2, sr * 8, sr);
-  for (let c = 0; c < 2; c++) {
-    const data = buffer.getChannelData(c);
-    // 下に敷くさあっという音（高い方へ寄せたノイズ）
-    let low = 0;
-    for (let i = 0; i < data.length; i++) {
-      const white = Math.random() * 2 - 1;
-      low += 0.35 * (white - low);
-      data[i] = (white - low) * 0.05;
-    }
-    // 雨粒: 1秒に約60粒
-    const drops = Math.round(8 * 60);
-    for (let d = 0; d < drops; d++) {
-      const start = Math.floor(Math.random() * (data.length - sr * 0.03));
-      const big = Math.random() < 0.08;
-      const freq = big ? rand(900, 2200) : rand(2200, 7000);
-      const decay = (big ? rand(0.006, 0.014) : rand(0.0015, 0.005)) * sr;
-      const amp = (big ? rand(0.25, 0.5) : rand(0.04, 0.22)) * (Math.random() < 0.5 ? 1 : -1);
-      const length = Math.min(Math.floor(decay * 6), data.length - start);
-      for (let i = 0; i < length; i++) {
-        const env = Math.exp(-i / decay);
-        data[start + i] += amp * env * (0.7 * Math.sin((2 * Math.PI * freq * i) / sr) + 0.3 * (Math.random() * 2 - 1));
-      }
-    }
-  }
-  rainBuffers.set(ctx, buffer);
-  return buffer;
-}
-
-/** 雨: 描いておいた雨粒を繰り返し鳴らし、降りの強さをゆっくり揺らす。far を付けると、こもった遠い雨になる */
-function rain(env: Env, o: { level: number; far?: boolean }): Bed {
-  const { ctx } = env;
-  const src = ctx.createBufferSource();
-  src.buffer = rainBuffer(ctx);
-  src.loop = true;
-  src.playbackRate.value = o.far ? 0.8 : 1;
-  const tone = filterOf(ctx, "lowpass", o.far ? 2200 : 9000, 0.5);
-  const gain = ctx.createGain();
-  gain.gain.value = o.level;
-  src.connect(filterOf(ctx, "highpass", o.far ? 300 : 700)).connect(tone).connect(gain).connect(voice(env, { pan: 0, wet: o.far ? 0.6 : 0.3 }));
-  src.start(ctx.currentTime, rand(0, 7));
-  return {
-    sources: [src],
-    sway: (at) => gain.gain.setTargetAtTime(o.level * rand(0.75, 1.2), at, rand(2, 5)),
-  };
-}
-
 // ---------------------------------------------------------------- ときどき鳴る音
 
 type Sound = (env: Env, at: number) => void;
-
-/** 薪や熾火のはぜる音: 小さな音が数個、ばらばらにまとまって鳴る */
-const crackle =
-  (o: { level: number; low: number; high: number }): Sound =>
-  (env, at) => {
-    const out = voice(env, { pan: rand(-0.35, 0.35), wet: 0.25 });
-    const count = 1 + Math.floor(Math.random() * 4);
-    for (let i = 0; i < count; i++)
-      burst(env, out, at + rand(0, 0.14), { type: "bandpass", freq: rand(o.low, o.high), Q: 1.1, peak: o.level * rand(0.3, 1), decay: rand(0.003, 0.012) });
-  };
-
-/** 薪の大きくはぜる音: はっきりした音と、低く小さな響き */
-const pop =
-  (level: number): Sound =>
-  (env, at) => {
-    const out = voice(env, { pan: rand(-0.3, 0.3), wet: 0.35 });
-    burst(env, out, at, { type: "bandpass", freq: rand(900, 1800), Q: 0.8, peak: level, decay: 0.03 });
-    tone(env, out, at, { from: 160, to: 80, peak: level * 0.5, decay: 0.05 });
-  };
 
 /** 頁をめくる音: 紙が擦れて波打つ音のあと、そっと頁が落ちる */
 const pageTurn =
@@ -330,16 +230,6 @@ const drip =
     const f = rand(700, 1100);
     tone(env, out, at, { from: f, to: f * 2.2, sweep: 0.03, peak: level, decay: 0.12 });
     if (Math.random() < 0.4) tone(env, out, at + rand(0.2, 0.4), { from: f * 1.3, to: f * 2.6, sweep: 0.025, peak: level * 0.4, decay: 0.08 });
-  };
-
-/** 氷の割れる音: 鋭い音のあと、凍った湖のように高い音が下りながら響く */
-const iceCrack =
-  (level: number): Sound =>
-  (env, at) => {
-    const out = voice(env, { wet: 1.1, dry: 0.6 });
-    burst(env, out, at, { type: "highpass", freq: 3000, peak: level, decay: 0.004 });
-    tone(env, out, at, { from: rand(2800, 3600), to: rand(200, 320), sweep: 0.28, peak: level * 0.6, decay: 0.4 });
-    tone(env, out, at + 0.06, { from: rand(2200, 2600), to: rand(160, 240), sweep: 0.3, peak: level * 0.3, decay: 0.45 });
   };
 
 /** 氷の粒・遠い星が触れ合う音: 高い音がいくつか、ばらばらに */
@@ -529,16 +419,11 @@ type Scene = {
   events: { every: [number, number]; first?: [number, number]; sound: Sound }[];
 };
 
-const nightBreeze = (freq: number, level: number) => [
-  (env: Env) => wind(env, { freq, q: 0.7, level, pan: -0.5, gust: 0.5 }),
-  (env: Env) => wind(env, { freq: freq * 1.25, q: 0.7, level: level * 0.8, pan: 0.5, gust: 0.5 }),
-];
-
 const SCENES: Record<AmbienceKey, Scene> = {
   title: {
     space: 3.2,
     level: 1,
-    beds: nightBreeze(520, 0.02),
+    beds: [],
     events: [
       { every: [5, 12], sound: cricket(0.006) },
       { every: [70, 150], first: [20, 40], sound: owl([0.3, 0.8]) },
@@ -547,16 +432,14 @@ const SCENES: Record<AmbienceKey, Scene> = {
   prelude: {
     space: 3,
     level: 1,
-    beds: nightBreeze(760, 0.012),
+    beds: [],
     events: [{ every: [10, 22], sound: cricket(0.005) }],
   },
   hearth: {
     space: 1.1,
     level: 1,
-    beds: [(env) => roar(env, { cutoff: 380, level: 0.022, flicker: 0.4 }), (env) => wind(env, { freq: 300, q: 0.6, level: 0.013, pan: 0.6, gust: 0.6 })],
+    beds: [(env) => roar(env, { cutoff: 380, level: 0.022, flicker: 0.4 })],
     events: [
-      { every: [0.15, 0.9], sound: crackle({ level: 0.035, low: 1500, high: 6000 }) },
-      { every: [5, 14], sound: pop(0.045) },
       { every: [45, 100], first: [15, 40], sound: pageTurn(0.03) },
       { every: [35, 80], first: [20, 50], sound: creak({ low: 140, high: 220, level: 0.012, length: [0.5, 1.1] }) },
       { every: [100, 220], first: [40, 80], sound: owl([0.75, 0.95]) },
@@ -565,17 +448,10 @@ const SCENES: Record<AmbienceKey, Scene> = {
   forest: {
     space: 2.8,
     level: 1,
-    // 葉に降る近い雨と、樹海の奥で降り続ける遠い雨。葉擦れの風は薄く残す
-    beds: [
-      (env) => rain(env, { level: 0.05 }),
-      (env) => rain(env, { level: 0.06, far: true }),
-      (env) => wind(env, { freq: 2200, q: 0.35, level: 0.004, pan: -0.5, gust: 0.7 }),
-    ],
+    beds: [],
     events: [
-      // 雨の中なので、虫はまばらに小さく
-      { every: [8, 18], sound: cricket(0.0035) },
-      // 葉から落ちる大きめの滴
-      { every: [1.5, 5], sound: drip(0.014) },
+      { every: [5, 12], sound: cricket(0.005) },
+      { every: [6, 14], sound: drip(0.012) },
       { every: [30, 70], first: [10, 30], sound: creak({ low: 90, high: 150, level: 0.007, length: [0.9, 1.8] }) },
       { every: [60, 140], first: [25, 60], sound: pageTurn(0.016) },
       { every: [60, 150], first: [20, 40], sound: owl([0.3, 0.7]) },
@@ -584,10 +460,7 @@ const SCENES: Record<AmbienceKey, Scene> = {
   stars: {
     space: 4,
     level: 1,
-    beds: [
-      (env) => wind(env, { freq: 900, q: 1.8, level: 0.018, pan: -0.6, gust: 0.8 }),
-      (env) => wind(env, { freq: 1150, q: 2, level: 0.014, pan: 0.6, gust: 0.8 }),
-    ],
+    beds: [],
     events: [
       { every: [18, 40], first: [8, 20], sound: gears(0.01) },
       { every: [30, 60], first: [15, 35], sound: creak({ low: 200, high: 320, level: 0.006, length: [0.6, 1.2] }) },
@@ -597,12 +470,8 @@ const SCENES: Record<AmbienceKey, Scene> = {
   frost: {
     space: 6,
     level: 1,
-    beds: [
-      (env) => wind(env, { freq: 1500, q: 3, level: 0.014, pan: -0.6, gust: 0.7 }),
-      (env) => wind(env, { freq: 1900, q: 3.5, level: 0.011, pan: 0.6, gust: 0.7 }),
-    ],
+    beds: [],
     events: [
-      { every: [14, 35], first: [6, 15], sound: iceCrack(0.02) },
       { every: [6, 15], sound: tinkle(0.009) },
     ],
   },
@@ -611,26 +480,21 @@ const SCENES: Record<AmbienceKey, Scene> = {
     level: 1,
     beds: [(env) => roar(env, { cutoff: 220, level: 0.03, flicker: 0.25 }), (env) => roar(env, { cutoff: 700, level: 0.008, flicker: 0.5 })],
     events: [
-      { every: [0.1, 0.5], sound: crackle({ level: 0.016, low: 800, high: 3500 }) },
       { every: [2, 6], sound: lava(0.03) },
-      { every: [4, 10], sound: pop(0.025) },
       { every: [22, 45], first: [8, 18], sound: dragonBreath(0.016) },
     ],
   },
   sanctum: {
     space: 7,
     level: 1,
-    beds: nightBreeze(600, 0.012),
+    beds: [],
     // 大聖堂の鐘（曲と同じヘ長調の F）
     events: [{ every: [45, 100], first: [15, 35], sound: bell({ note: 53, level: 0.014 }) }],
   },
   zenith: {
     space: 6,
     level: 1,
-    beds: [
-      (env) => wind(env, { freq: 1700, q: 4, level: 0.014, pan: -0.6, gust: 0.6 }),
-      (env) => wind(env, { freq: 2100, q: 4, level: 0.012, pan: 0.6, gust: 0.6 }),
-    ],
+    beds: [],
     // 遠い星の鳴る音（曲と同じロ長調の B）
     events: [
       { every: [50, 110], first: [20, 40], sound: bell({ note: 83, level: 0.008 }) },
