@@ -106,7 +106,8 @@ const DRIFTERS = Array.from({ length: 14 }, (_, i) => {
 
 /** 授かる遺物 */
 const BESTOWED = RELICS.find((r) => r.id === "r-armillary")!;
-const BESTOWED_FLAVOR = ["天球の運行を寸分違わず写す真鍮の環。", "回せば星々の和音が整い、", "理の言葉が澄んで響く。"];
+/** 授かる遺物の解読文。図鑑の「天球の調律器」の書き出しだけを使う（続きはアルマが星脈を止めた真相に触れるので、予告編では出さない） */
+const BESTOWED_FLAVOR = ["天球の運行を整えてきた", "学院の至宝。"];
 
 /** 一夜ずつ灯る星（上から 15〜40% の帯に、左から右へ） */
 const NIGHT_STARS = Array.from({ length: 7 }, (_, i) => ({
