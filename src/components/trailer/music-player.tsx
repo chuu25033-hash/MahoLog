@@ -1,15 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { soundManager } from "@/lib/sound/sound-manager";
-import { startAmbience } from "@/lib/sound/ambience";
-import {
-  loadPiano,
-  SONGS,
-  startSong,
-  type SongKey,
-  type SongVoice,
-} from "@/lib/sound/music";
+import { startAmbience, type AmbienceVoice } from "@/lib/sound/ambience";
+import { loadPiano, SONGS, songLayout, startSong, type SongKey, type SongVoice } from "@/lib/sound/music";
 
 const TRACKS: { key: SongKey; name: string; en: string }[] = [
   { key: "title", name: "タイトル", en: "Title" },
@@ -27,13 +21,12 @@ const LENGTHS = [15, 30, 60, 120] as const;
 const SAMPLE_RATE = 48000;
 const FADE_SEC = 2;
 
+type From = "intro" | "chorus";
+
+const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
+
 /** 曲を OfflineAudioContext で描き出し、WAV（16bit ステレオ）にする */
-async function renderWav(
-  key: SongKey,
-  from: "intro" | "chorus",
-  seconds: number,
-  ambience: boolean,
-) {
+async function renderWav(key: SongKey, from: From, seconds: number, ambience: boolean) {
   const ctx = new OfflineAudioContext(2, SAMPLE_RATE * seconds, SAMPLE_RATE);
   const fade = ctx.createGain();
   fade.gain.setValueAtTime(1, seconds - FADE_SEC);
@@ -45,15 +38,12 @@ async function renderWav(
   const buffer = await ctx.startRendering();
   // 動画で使うので、いちばん大きいところが -1 dBFS になるよう持ち上げる
   let peak = 0;
-  for (let c = 0; c < 2; c++)
-    for (const v of buffer.getChannelData(c))
-      peak = Math.max(peak, Math.abs(v));
+  for (let c = 0; c < 2; c++) for (const v of buffer.getChannelData(c)) peak = Math.max(peak, Math.abs(v));
   const gain = peak > 0 ? 0.89 / peak : 1;
 
   const frames = buffer.length;
   const view = new DataView(new ArrayBuffer(44 + frames * 4));
-  const text = (at: number, s: string) =>
-    [...s].forEach((ch, i) => view.setUint8(at + i, ch.charCodeAt(0)));
+  const text = (at: number, s: string) => [...s].forEach((ch, i) => view.setUint8(at + i, ch.charCodeAt(0)));
   text(0, "RIFF");
   view.setUint32(4, 36 + frames * 4, true);
   text(8, "WAVE");
@@ -76,39 +66,132 @@ async function renderWav(
   return new Blob([view], { type: "audio/wav" });
 }
 
-/** 曲の試聴と、動画用の WAV 書き出し（開発サーバーでだけ開く） */
+/**
+ * 再生バー: 1巡目（前奏〜間奏）の長さに、段の区切りと名前を描く。押した（なぞった）位置の小節から鳴らし直す。
+ * 2巡目以降は、間奏の後に A メロの頭へ戻って進む
+ */
+function PlaybackBar({ songKey, position, onSeek }: { songKey: SongKey; position: number | null; onSeek: (bar: number) => void }) {
+  const layout = songLayout(songKey);
+  const [dragging, setDragging] = useState<number | null>(null);
+  const shown = dragging ?? position ?? 0;
+  const ratio = Math.min(1, shown / layout.seconds);
+
+  const barAt = (e: PointerEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    return Math.max(0, Math.min(layout.bars - 1, Math.floor(((e.clientX - rect.left) / rect.width) * layout.bars)));
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div
+        role="slider"
+        aria-label="再生位置"
+        aria-valuemin={0}
+        aria-valuemax={Math.round(layout.seconds)}
+        aria-valuenow={Math.round(shown)}
+        aria-valuetext={`${clock(shown)} / ${clock(layout.seconds)}`}
+        tabIndex={0}
+        className="relative h-9 cursor-pointer touch-none select-none"
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setDragging(barAt(e) * layout.barSec);
+        }}
+        onPointerMove={(e) => dragging !== null && setDragging(barAt(e) * layout.barSec)}
+        onPointerUp={(e) => {
+          setDragging(null);
+          onSeek(barAt(e));
+        }}
+        onKeyDown={(e) => {
+          const bar = Math.floor(shown / layout.barSec);
+          if (e.key === "ArrowRight") onSeek(Math.min(layout.bars - 1, bar + 1));
+          if (e.key === "ArrowLeft") onSeek(Math.max(0, bar - 1));
+        }}
+      >
+        {/* 段の区切りと名前 */}
+        {layout.sections.map((s) => (
+          <div
+            key={s.from}
+            className="absolute top-0 bottom-0 border-l border-white/15 first:border-l-0"
+            style={{ left: `${(s.from / layout.bars) * 100}%`, width: `${(s.bars / layout.bars) * 100}%` }}
+          >
+            <span className="absolute top-0 left-1 text-[9px] tracking-wider whitespace-nowrap text-muted-foreground">{s.label}</span>
+          </div>
+        ))}
+        <div className="absolute right-0 bottom-1.5 left-0 h-1 rounded-full bg-white/10" />
+        <div className="absolute bottom-1.5 left-0 h-1 rounded-full bg-starlight/70" style={{ width: `${ratio * 100}%` }} />
+        <div
+          className="absolute bottom-0.5 size-3 -translate-x-1/2 rounded-full bg-starlight shadow-[0_0_8px_rgba(226,201,116,0.7)]"
+          style={{ left: `${ratio * 100}%` }}
+        />
+      </div>
+      <div className="flex justify-between font-display text-[10px] tracking-wider text-muted-foreground">
+        <span>{clock(shown)}</span>
+        <span>{clock(layout.seconds)}</span>
+      </div>
+    </div>
+  );
+}
+
+/** 曲の試聴と、動画用の WAV 書き出し */
 export function MusicPlayer() {
   const [playing, setPlaying] = useState<SongKey | null>(null);
-  const [from, setFrom] = useState<"intro" | "chorus">("chorus");
+  const [position, setPosition] = useState<number | null>(null);
+  const [from, setFrom] = useState<From>("chorus");
   const [seconds, setSeconds] = useState<(typeof LENGTHS)[number]>(30);
   const [rendering, setRendering] = useState<SongKey | null>(null);
   const [ambience, setAmbience] = useState(true);
-  const audio = useRef<{ ctx: AudioContext; voices: SongVoice[] } | null>(null);
+  const audio = useRef<{ ctx: AudioContext; key: SongKey; song: SongVoice; ambience: AmbienceVoice | null } | null>(null);
+
+  const release = () => {
+    audio.current?.song.stop();
+    audio.current?.ambience?.stop();
+    void audio.current?.ctx.close();
+    audio.current = null;
+  };
 
   // アプリの環境音と重ならないようにする
   useEffect(() => {
     soundManager.setSilenced(true);
     return () => {
       soundManager.setSilenced(false);
-      audio.current?.voices.forEach((v) => v.stop());
-      void audio.current?.ctx.close();
+      release();
     };
   }, []);
 
+  // 再生中は、いまの位置をバーに映し続ける
+  useEffect(() => {
+    if (!playing) return;
+    let raf = requestAnimationFrame(function tick() {
+      setPosition(audio.current?.song.position() ?? null);
+      raf = requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [playing]);
+
   const stop = () => {
-    audio.current?.voices.forEach((v) => v.stop());
-    void audio.current?.ctx.close();
-    audio.current = null;
+    release();
     setPlaying(null);
+    setPosition(null);
   };
 
   const play = (key: SongKey) => {
-    stop();
+    release();
     const ctx = new AudioContext();
-    const voices = [startSong(ctx, ctx.destination, key, { from })];
-    if (ambience) voices.push(startAmbience(ctx, ctx.destination, key));
-    audio.current = { ctx, voices };
+    audio.current = {
+      ctx,
+      key,
+      song: startSong(ctx, ctx.destination, key, { from }),
+      ambience: ambience ? startAmbience(ctx, ctx.destination, key) : null,
+    };
     setPlaying(key);
+  };
+
+  /** 曲だけを、指定した小節から鳴らし直す（環境音は流したまま） */
+  const seek = (bar: number) => {
+    const current = audio.current;
+    if (!current) return;
+    current.song.stop();
+    current.song = startSong(current.ctx, current.ctx.destination, current.key, { from: bar });
   };
 
   const download = async (key: SongKey) => {
@@ -133,74 +216,48 @@ export function MusicPlayer() {
     // 画面全体は固定してあるので、この枠の中だけをスクロールさせる
     <div className="scroll-area scrollbar-none relative h-full">
       <div className="mx-auto flex max-w-xl flex-col gap-6 px-6 py-10 text-sm">
-        <h1 className="whitespace-nowrap text-lg tracking-[0.2em] text-starlight">
-          曲の試聴と書き出し
-        </h1>
+        <h1 className="text-lg tracking-[0.2em] whitespace-nowrap text-starlight">曲の試聴と書き出し</h1>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            className={chip(from === "intro")}
-            onClick={() => setFrom("intro")}
-          >
+          <button className={chip(from === "intro")} onClick={() => setFrom("intro")}>
             最初から
           </button>
-          <button
-            className={chip(from === "chorus")}
-            onClick={() => setFrom("chorus")}
-          >
+          <button className={chip(from === "chorus")} onClick={() => setFrom("chorus")}>
             サビの手前から
           </button>
           <span className="mx-2 h-4 w-px bg-white/15" />
           {LENGTHS.map((s) => (
-            <button
-              key={s}
-              className={chip(seconds === s)}
-              onClick={() => setSeconds(s)}
-            >
+            <button key={s} className={chip(seconds === s)} onClick={() => setSeconds(s)}>
               {s}秒
             </button>
           ))}
           <span className="mx-2 h-4 w-px bg-white/15" />
-          <button
-            className={chip(ambience)}
-            onClick={() => setAmbience(!ambience)}
-          >
+          <button className={chip(ambience)} onClick={() => setAmbience(!ambience)}>
             環境音を重ねる
           </button>
         </div>
         <ul className="flex flex-col gap-2">
           {TRACKS.map((track) => (
-            <li
-              key={track.key}
-              className="flex items-center gap-3 rounded-lg border border-white/10 px-4 py-3"
-            >
-              <div className="flex min-w-0 flex-1 flex-col">
-                <span className="whitespace-nowrap text-starlight">
-                  {track.name}
-                </span>
-                <span className="text-[10px] tracking-[0.2em] text-muted-foreground">
-                  {track.en} · {SONGS[track.key].bpm} BPM
-                </span>
+            <li key={track.key} className="flex flex-col gap-3 rounded-lg border border-white/10 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="whitespace-nowrap text-starlight">{track.name}</span>
+                  <span className="text-[10px] tracking-[0.2em] text-muted-foreground">
+                    {track.en} · {SONGS[track.key].bpm} BPM · {clock(songLayout(track.key).seconds)}
+                  </span>
+                </div>
+                <button className={chip(playing === track.key)} onClick={() => (playing === track.key ? stop() : play(track.key))}>
+                  {playing === track.key ? "止める" : "再生"}
+                </button>
+                <button className={chip(false)} disabled={rendering !== null} onClick={() => void download(track.key)}>
+                  {rendering === track.key ? "書き出し中…" : "WAV"}
+                </button>
               </div>
-              <button
-                className={chip(playing === track.key)}
-                onClick={() =>
-                  playing === track.key ? stop() : play(track.key)
-                }
-              >
-                {playing === track.key ? "止める" : "再生"}
-              </button>
-              <button
-                className={chip(false)}
-                disabled={rendering !== null}
-                onClick={() => void download(track.key)}
-              >
-                {rendering === track.key ? "書き出し中…" : "WAV"}
-              </button>
+              {playing === track.key && <PlaybackBar songKey={track.key} position={position} onSeek={seek} />}
             </li>
           ))}
         </ul>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          WAV は選んだ位置・長さで書き出し、終わりの{FADE_SEC}
+          再生中はバーを押すか、なぞった位置の小節から鳴らし直せます。WAV は選んだ位置・長さで書き出し、終わりの{FADE_SEC}
           秒でフェードアウトし、音量をそろえます。1巡目の旋律は毎回同じです。
         </p>
       </div>

@@ -763,13 +763,45 @@ const hookBars = (h: Hook): Bar[] => [h.call, h.answers[0], h.call, h.answers[1]
 // ---------------------------------------------------------------- 演奏
 
 type Options = {
-  /** どこから流すか。chorus なら B メロの終わり2小節から入り、すぐにサビを聴かせる（動画用） */
-  from?: "intro" | "chorus";
+  /**
+   * どこから流すか。chorus なら B メロの終わり2小節から入り、すぐにサビを聴かせる（動画用）。
+   * 数なら、1巡目の何小節目から（0 が前奏の頭）
+   */
+  from?: "intro" | "chorus" | number;
   /** 書き出し用: この秒数ぶんを最初にまとめて刻み、タイマーを使わない（OfflineAudioContext で描き出すため） */
   duration?: number;
 };
 
-export type SongVoice = { stop: () => void };
+export type SongVoice = {
+  stop: () => void;
+  /** いま鳴っている位置（1巡目の頭からの秒。2巡目以降は間奏の後に A メロの頭へ戻して数える）。まだ始まっていなければ null */
+  position: () => number | null;
+};
+
+/** 1巡目の小節数（前奏 + A メロ〜間奏） */
+const FIRST_PASS_BARS = INTRO_BARS + CYCLE_BARS;
+/** B メロの終わり2小節（「サビの手前から」で入る小節） */
+const CHORUS_LEAD_BAR = INTRO_BARS + SECTION_BARS + 6;
+
+const SECTION_LABEL: Record<SectionName, string> = {
+  intro: "前奏",
+  verse: "A メロ",
+  pre: "B メロ",
+  chorus: "サビ",
+  chorus2: "サビ",
+  interlude: "間奏",
+};
+
+/** 曲の並び（再生バーに段の区切りを描くため）: 1小節の秒数と、1巡目の長さ、段ごとの始まりの小節 */
+export function songLayout(key: SongKey) {
+  const barSec = 240 / SONGS[key].bpm;
+  const sections = (["intro", ...CYCLE] as SectionName[]).map((name, i) => ({
+    label: SECTION_LABEL[name],
+    from: i === 0 ? 0 : INTRO_BARS + (i - 1) * SECTION_BARS,
+    bars: i === 0 ? INTRO_BARS : SECTION_BARS,
+  }));
+  return { barSec, bars: FIRST_PASS_BARS, seconds: barSec * FIRST_PASS_BARS, sections, chorusLeadBar: CHORUS_LEAD_BAR };
+}
 
 /** 先に刻んでおく長さ（秒）と見直す間隔（ms）。別のタブで間引かれても途切れないように */
 const LOOKAHEAD_SEC = 6;
@@ -823,7 +855,15 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
     return loop[inSection % 4];
   };
 
-  let bar = options.from === "chorus" ? INTRO_BARS + SECTION_BARS + 6 : 0;
+  let bar = typeof options.from === "number" ? Math.max(0, Math.min(FIRST_PASS_BARS - 1, Math.floor(options.from))) : options.from === "chorus" ? CHORUS_LEAD_BAR : 0;
+  // 再生位置を測る目印: ある小節を鳴らし始めた時刻（遅れて刻み直したら付け替える）
+  let anchor: { time: number; bar: number } | null = null;
+  const position = () => {
+    if (!anchor) return null;
+    let b = anchor.bar + Math.max(0, ctx.currentTime - anchor.time) / barSec;
+    if (b >= FIRST_PASS_BARS) b = INTRO_BARS + ((b - INTRO_BARS) % CYCLE_BARS);
+    return b * barSec;
+  };
   let next = ctx.currentTime + 0.15;
   let rightHand: number[] = [];
   let prevNote = song.center;
@@ -831,6 +871,7 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
 
   const playBar = () => {
     const t = next;
+    if (!anchor) anchor = { time: t, bar };
     const { section, inSection, cycle } = place(bar);
     const chorusLike = section === "chorus" || section === "chorus2";
     const chords = chordsAt(bar);
@@ -993,7 +1034,7 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
       bar += 1;
       next += barSec;
     }
-    return { stop: stopAll };
+    return { stop: stopAll, position };
   }
 
   let timer: ReturnType<typeof setTimeout> | null = null;
@@ -1008,7 +1049,10 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
       timer = setTimeout(tick, 200);
       return;
     }
-    if (next < ctx.currentTime) next = ctx.currentTime + 0.1;
+    if (next < ctx.currentTime) {
+      next = ctx.currentTime + 0.1;
+      if (anchor) anchor = { time: next, bar };
+    }
     while (next < ctx.currentTime + LOOKAHEAD_SEC) {
       playBar();
       bar += 1;
@@ -1025,5 +1069,6 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
       clearTimeout(giveUp);
       stopAll();
     },
+    position,
   };
 }
