@@ -31,7 +31,7 @@ export type StudyResult = {
   /** ブースト込みの獲得MP */
   gainedMp: number;
   areaBoost: number;
-  /** 所持している秘宝の加護 */
+  /** 所持している遺物（秘宝・至宝・神話・天界遺物・復元した古代文書）の加護 */
   blessing: number;
   /** 周天の刻印 */
   cycleMark: number;
@@ -325,7 +325,7 @@ function ResultPanel({
           <p className="animate-in text-[11px] tracking-wider text-muted-foreground fade-in duration-700">
             基礎 {result.savedMinutes}
             {result.areaBoost > 1 && <span className="text-aqua"> × エリア {result.areaBoost}</span>}
-            {result.blessing > 1 && <span className="text-amethyst"> × 秘宝の加護 {Number(result.blessing.toFixed(2))}</span>}
+            {result.blessing > 1 && <span className="text-amethyst"> × 遺物の加護 {Number(result.blessing.toFixed(2))}</span>}
             {result.catalyst && <span className="text-starlight"> × {result.catalyst.name} {result.catalyst.multiplier}</span>}
             {result.cycleMark > 1 && <span className="text-amethyst"> × 周天の刻印 {Number(result.cycleMark.toFixed(2))}</span>}
             {result.comboMp > 1 && <span className="text-starlight"> × 同調 {result.combo}連 {Number(result.comboMp.toFixed(2))}</span>}
