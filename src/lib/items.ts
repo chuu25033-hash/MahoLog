@@ -353,6 +353,10 @@ export type AncientDocument = {
   title: string;
   /** 文書が書かれた時代 */
   era: string;
+  /** 時代の英語名（通して読む頁で、時代の下に小さく添える） */
+  eraEn: string;
+  /** 記した者 */
+  author: string;
   color: string;
   /** 断片 I〜IV の本文。手に入れた葉から読める */
   fragments: [string, string, string, string];
@@ -371,6 +375,8 @@ export const DOCUMENTS: AncientDocument[] = [
     stageId: 1,
     title: "灯火の誓約",
     era: "黄金期",
+    eraEn: "GOLDEN AGE",
+    author: "学院の祖アルマ",
     color: "#e2c974",
     fragments: [
       "はじめに、世界には灯がひとつしか残っていなかった。誰がともしたとも知れない小屋の机の上、問いを抱いた者の前にだけともる、小さな光だった。",
@@ -385,6 +391,8 @@ export const DOCUMENTS: AncientDocument[] = [
     stageId: 2,
     title: "樹海の言の葉",
     era: "言葉の溶解",
+    eraEn: "DISSOLUTION",
+    author: "樹海の司書",
     color: "#8fdcc4",
     fragments: [
       "樹海の木々は、読まれた言葉を養分にして育つ。声に出して読まれた一文は根となり、考え抜かれた一文は幹となる。",
@@ -399,6 +407,8 @@ export const DOCUMENTS: AncientDocument[] = [
     stageId: 3,
     title: "星読みの手稿",
     era: "刻の崩壊",
+    eraEn: "COLLAPSE",
+    author: "観測塔の星読み",
     color: "#a882fb",
     fragments: [
       "空の星は、かつてこの地で学んだ者たちの灯である。ひとりが一夜を費やして理を解くたび、夜空にはひとつ星が増える。",
@@ -413,6 +423,8 @@ export const DOCUMENTS: AncientDocument[] = [
     stageId: 4,
     title: "凍れる時の碑文",
     era: "大沈黙",
+    eraEn: "GREAT SILENCE",
+    author: "名を削られた者",
     color: "#cfe9ff",
     fragments: [
       "その夜、星脈は沈黙した。空の星はすべて瞬きをやめ、時計塔の針は一斉に止まった。",
@@ -427,6 +439,8 @@ export const DOCUMENTS: AncientDocument[] = [
     stageId: 5,
     title: "熾火の錬成録",
     era: "詠唱の儀式",
+    eraEn: "THE RITE",
+    author: "魔導炉の錬金術師たち",
     color: "#f2a38d",
     fragments: [
       "沈黙の後、我々は凍えて空から落ちた星を拾い集め、炉に焼べた。凍った世界で、刻を生み直す熱が要った。",
@@ -441,6 +455,8 @@ export const DOCUMENTS: AncientDocument[] = [
     stageId: 6,
     title: "星冠の聖典",
     era: "継承",
+    eraEn: "SUCCESSION",
+    author: "アルマ",
     color: "#fbf3d4",
     fragments: [
       "この聖典を読む者よ。あなたが辿ってきた道は、世界が失ったものを、失った順にもう一度拾い直す道だった。",
@@ -455,6 +471,8 @@ export const DOCUMENTS: AncientDocument[] = [
     stageId: ZENITH_DOCUMENT_STAGE,
     title: "余白の原典",
     era: "再創生",
+    eraEn: "REGENESIS",
+    author: "名を持たない者たち",
     color: "#d9d2f5",
     fragments: [
       "原典の封は、鍵でも呪文でも解けない。最後の頁が空白のまま閉じられているからだ。言葉たちは、続きを綴る者が現れるまで眠ることを選んだ。",

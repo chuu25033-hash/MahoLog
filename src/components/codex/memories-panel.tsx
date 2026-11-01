@@ -3,6 +3,7 @@
 import { WhisperText, whisperHost } from "@/components/whisper";
 import { useState } from "react";
 import { BookOpenText, Check, ScrollText } from "lucide-react";
+import { MemoriesBook } from "@/components/codex/memories-book";
 import { ItemArt } from "@/components/item-art";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -24,6 +25,8 @@ export function MemoriesPanel({ data }: { data: UserData }) {
   const zenithShown = documents.some((d) => d.zenithFloors);
   const name = data.userProfile.username || "名もなき者";
   const minutes = data.chantHistory.reduce((acc, c) => acc + c.minutes, 0);
+  const [bookOpen, setBookOpen] = useState(false);
+  const anyFound = documents.some((d) => isRestored(data, d.id) || fragmentsOf(d.id).some((f) => isDiscovered(data, f.id)));
 
   function restore(documentId: string) {
     const memory = userActions.restoreDocument(documentId);
@@ -48,6 +51,12 @@ export function MemoriesPanel({ data }: { data: UserData }) {
       <p className="mb-3 text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
         各ステージに降る流れ星が運ぶ古代文書の断片（I〜IV）を集め、4葉が揃えば復元できます{zenithShown && "（『余白の原典』の断片は、星天の塔の節目の層で授かります）"}。復元した文書1冊ごとに、全属性の獲得MPが永久に +1% されます
       </p>
+      {/* 一葉でも見つけたら、すべての文書を時系列の一冊として通して読める */}
+      {anyFound && (
+        <Button size="sm" variant="outline" className="mb-3 w-full" onClick={() => setBookOpen(true)}>
+          <BookOpenText /> 通して読む
+        </Button>
+      )}
       <ul className="grid grid-cols-3 gap-2 portrait:grid-cols-1">
         {documents.map((doc) => (
           <li key={doc.id}>
@@ -56,6 +65,7 @@ export function MemoriesPanel({ data }: { data: UserData }) {
         ))}
       </ul>
       {reading && <MemoryDialog memory={reading} coda={fillCoda(reading.coda, name, minutes)} onClose={() => setReading(null)} />}
+      {bookOpen && <MemoriesBook data={data} documents={documents} name={name} minutes={minutes} onClose={() => setBookOpen(false)} />}
     </section>
   );
 }
