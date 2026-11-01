@@ -1,7 +1,7 @@
 // 音声ファイルが無いときに Web Audio API で組み立てる環境音・効果音。
 // 音の軸は詠唱開始音（低くから昇る光と、ゆっくり開く和音）。すべて低音〜中音域に寄せ、柔らかい残響で包む。
-// 環境音（BGM）はノイズを使わず、柔らかいピアノとオルゴールの静かなコード進行で作る。
-// タイトルとステージごとに調と進行を変える。
+// 環境音（BGM）はノイズを使わず、柔らかいピアノとオルゴールで作る。
+// タイトルはゆったりした和音の曲、各地は勉強中に眠くならないよう脈と旋律のある曲（stageSong）にし、地ごとに調と進行を変える。
 import type { AmbienceKey, SeKey } from "./sound-files";
 
 export type Voice = {
@@ -49,13 +49,13 @@ function reverbSend(ctx: AudioContext, out: AudioNode, o: { seconds: number; wet
   return input;
 }
 
-/** 柔らかいピアノ: 弱めの打鍵でふくらみ、高い倍音から先に消えていく */
-function piano(ctx: AudioContext, out: AudioNode, freq: number, at: number, level: number) {
+/** 柔らかいピアノ: 弱めの打鍵でふくらみ、高い倍音から先に消えていく。sustain で余韻の長さを縮める（分散和音を濁らせない） */
+function piano(ctx: AudioContext, out: AudioNode, freq: number, at: number, level: number, sustain = 1) {
   const partials: [ratio: number, amp: number, decay: number][] = [
-    [1, 1, 4.5],
-    [2.003, 0.35, 2.4],
-    [3.008, 0.12, 1.4],
-    [4.015, 0.05, 0.9],
+    [1, 1, 4.5 * sustain],
+    [2.003, 0.35, 2.4 * sustain],
+    [3.008, 0.12, 1.4 * sustain],
+    [4.015, 0.05, 0.9 * sustain],
   ];
   for (const [ratio, amp, decay] of partials) {
     const osc = ctx.createOscillator();
@@ -90,14 +90,8 @@ function musicBox(ctx: AudioContext, out: AudioNode, freq: number, at: number, l
   }
 }
 
+/** タイトルの曲の和音（MIDI 番号）と、オルゴールが拾う旋律の候補 */
 type Chord = { bass: number; chord: number[]; melody: number[] };
-
-/** 和音（MIDI 番号）。旋律の候補は和音の音を1オクターブ上げたものに、添えたい音を足す */
-const ch = (bass: number, chord: number[], extra: number[] = []): Chord => ({
-  bass,
-  chord,
-  melody: [...chord.map((n) => n + 12), ...extra],
-});
 
 type Piece = {
   /** 繰り返す和音進行 */
@@ -198,40 +192,341 @@ const TITLE_PIECE: Piece = {
   boxCutoff: 3200,
 };
 
-/**
- * 滞在する地ごとの曲。タイトルと同じピアノとオルゴールで、調と和音進行を変え、
- * 少しゆっくり・控えめに奏でる。オルゴールはタイトルより1オクターブ低く、高域も丸めて落ち着かせる
- */
-const STAGE_PIECE = {
-  barSec: 5.6,
-  piano: 0.85,
-  box: 0.026,
-  boxNotes: [1, 2],
-  afterBeat: false,
-  boxOctave: 0,
-  boxCutoff: 1800,
-} satisfies Omit<Piece, "chords">;
+// ---- 各地の曲: 勉強のあいだ聴き続けても眠くならないように作る ----
+// 前の作りは1拍1.4秒（約43 BPM）で、小節の頭に和音を一度鳴らすと、あとはオルゴールが乱数で1〜2音鳴るだけだった。
+// 安静時の心拍より遅く、拍が感じられず、旋律に形が無いので耳が追うものを失い、子守歌と同じ効き方をしていた。
+// そこで:
+//  - 速さを 74〜88 BPM にし、ピアノの8分の分散和音で途切れない脈を通す（拍の頭を強く、裏を弱く）
+//  - 低音は1・3拍目に置き、ときどき次の和音へ経過音で歩み寄って、前へ進む感じを出す
+//  - 旋律は2小節の動機を作り、和音に合わせて繰り返し・変奏する（耳が追え、先を予想でき、少しだけ裏切られる）
+//  - 8小節の段 A → A′ → B → A′ → 間奏 を巡り、一巡ごとに動機を作り直す（25分聴いても同じ繰り返しにならない）
+//  - 段の頭に高い鐘を一つ置き、区切りで意識を軽く引き戻す
+//  - 下りきって落ち着く進行をやめ、IV → V → iii → vi のように先へ進む進行にする
+//  - 高域を丸めすぎず、残響を浅くして輪郭を出す
 
-const SOUNDSCAPES: Record<Exclude<AmbienceKey, "title">, { chords: Chord[] }> = {
-  // 旅立ちの前（星天の導き）: C の明るい進行 Cmaj7 → Am7 → Fmaj7 → G6
-  prelude: { chords: [ch(36, [55, 59, 64]), ch(33, [55, 60, 64]), ch(41, [57, 60, 64]), ch(43, [59, 62, 64])] },
-  // 小屋: G の温かな下行 Cmaj7 → Bm7 → Am7 → Gmaj7
-  hearth: { chords: [ch(36, [55, 59, 64]), ch(35, [54, 57, 62]), ch(33, [55, 60, 64]), ch(31, [54, 59, 62])] },
-  // 樹海・図書室: D の深い響き Dm9 → B♭maj7 → Fmaj7 → C(add9)
-  forest: { chords: [ch(38, [57, 60, 64]), ch(34, [57, 62, 65]), ch(41, [57, 60, 64]), ch(36, [55, 62, 64])] },
-  // 観測塔・星空: E の澄んだ下行 Amaj7 → G♯m7 → F♯m7 → Emaj7
-  stars: { chords: [ch(45, [61, 64, 68]), ch(44, [59, 63, 66]), ch(42, [57, 61, 64]), ch(40, [59, 63, 68])] },
-  // 氷の回廊: B マイナーの静けさ Gmaj7 → F♯m7 → Em7 → Bm(add9)
-  frost: { chords: [ch(43, [59, 62, 66]), ch(42, [57, 61, 64]), ch(40, [59, 62, 67]), ch(35, [59, 61, 62])] },
-  // 魔導炉: E マイナーの重み Cmaj7 → Am7 → Bm7 → Em7
-  forge: { chords: [ch(36, [55, 59, 64]), ch(33, [55, 60, 64]), ch(35, [54, 57, 62]), ch(40, [55, 59, 62])] },
-  // 大聖堂: F の荘厳な進行 B♭maj7 → C6 → Am7 → Dm7
-  sanctum: { chords: [ch(34, [57, 62, 65]), ch(36, [57, 60, 64]), ch(33, [55, 60, 64]), ch(38, [57, 60, 65])] },
+/** 和音: root は根音のピッチクラス（0 = C）、tones は根音からの半音数 */
+type StageChord = { root: number; tones: number[] };
+const C = (root: number, tones: number[]): StageChord => ({ root, tones });
+const MAJ7 = [0, 4, 7, 11];
+const MIN7 = [0, 3, 7, 10];
+const ADD9 = [0, 2, 4, 7];
+const MADD9 = [0, 2, 3, 7];
+const TRIAD = [0, 4, 7];
+const SUS4 = [0, 5, 7];
+const SUS7 = [0, 5, 7, 10];
+
+const MAJOR = [0, 2, 4, 5, 7, 9, 11];
+const MINOR = [0, 2, 3, 5, 7, 8, 10];
+const DORIAN = [0, 2, 3, 5, 7, 9, 10];
+const scaleOf = (tonic: number, mode: number[]) => mode.map((n) => (n + tonic) % 12);
+
+type Song = {
+  bpm: number;
+  /** 調の音階（ピッチクラス） */
+  scale: number[];
+  /** 段 A・A′・間奏の進行と、段 B の進行（1小節に1和音） */
+  a: StageChord[];
+  b: StageChord[];
+  /** 8分の分散和音の並び（和音の構成音を低い方から数えた番号） */
+  pattern: number[];
+  /** 旋律の中心の高さ（MIDI） */
+  center: number;
 };
 
+const SONGS: Record<Exclude<AmbienceKey, "title">, Song> = {
+  // 旅立ちの前（星天の導き）: C の明るい進行。C(add9) → G → Am7 → Fmaj7 / Fmaj7 → G → Em7 → Am7
+  prelude: {
+    bpm: 84,
+    scale: scaleOf(0, MAJOR),
+    a: [C(0, ADD9), C(7, TRIAD), C(9, MIN7), C(5, MAJ7)],
+    b: [C(5, MAJ7), C(7, TRIAD), C(4, MIN7), C(9, MIN7)],
+    pattern: [0, 1, 2, 3, 1, 2, 3, 2],
+    center: 76,
+  },
+  // 小屋: G の温かな進行。Gmaj7 → Em7 → Cmaj7 → D / Cmaj7 → D → Bm7 → Em7
+  hearth: {
+    bpm: 78,
+    scale: scaleOf(7, MAJOR),
+    a: [C(7, MAJ7), C(4, MIN7), C(0, MAJ7), C(2, TRIAD)],
+    b: [C(0, MAJ7), C(2, TRIAD), C(11, MIN7), C(4, MIN7)],
+    pattern: [0, 2, 1, 2, 3, 2, 1, 2],
+    center: 74,
+  },
+  // 樹海・図書室: D ドリアの深い響き。Dm(add9) → Fmaj7 → C(add9) → G / B♭maj7 → C → Dm7 → Am7
+  forest: {
+    bpm: 76,
+    scale: scaleOf(2, DORIAN),
+    a: [C(2, MADD9), C(5, MAJ7), C(0, ADD9), C(7, TRIAD)],
+    b: [C(10, MAJ7), C(0, TRIAD), C(2, MIN7), C(9, MIN7)],
+    pattern: [0, 2, 1, 3, 0, 2, 1, 3],
+    center: 74,
+  },
+  // 観測塔・星空: E の澄んだ王道進行。Amaj7 → B → G♯m7 → C♯m7 / F♯m7 → B7sus4 → Emaj7 → C♯m7
+  stars: {
+    bpm: 82,
+    scale: scaleOf(4, MAJOR),
+    a: [C(9, MAJ7), C(11, TRIAD), C(8, MIN7), C(1, MIN7)],
+    b: [C(6, MIN7), C(11, SUS7), C(4, MAJ7), C(1, MIN7)],
+    pattern: [0, 1, 3, 2, 1, 3, 2, 3],
+    center: 78,
+  },
+  // 氷の回廊: B マイナーの張りつめた静けさ。Bm(add9) → Gmaj7 → D(add9) → A / Em7 → F♯m7 → Gmaj7 → Asus4
+  frost: {
+    bpm: 80,
+    scale: scaleOf(11, MINOR),
+    a: [C(11, MADD9), C(7, MAJ7), C(2, ADD9), C(9, TRIAD)],
+    b: [C(4, MIN7), C(6, MIN7), C(7, MAJ7), C(9, SUS4)],
+    pattern: [0, 2, 1, 2, 0, 2, 1, 2],
+    center: 76,
+  },
+  // 魔導炉: E マイナーの推進力。Em7 → Cmaj7 → D → Bm7 / Am7 → Bm7 → Cmaj7 → D(add9)
+  forge: {
+    bpm: 88,
+    scale: scaleOf(4, MINOR),
+    a: [C(4, MIN7), C(0, MAJ7), C(2, TRIAD), C(11, MIN7)],
+    b: [C(9, MIN7), C(11, MIN7), C(0, MAJ7), C(2, ADD9)],
+    pattern: [0, 1, 2, 1, 3, 1, 2, 1],
+    center: 72,
+  },
+  // 大聖堂: F の荘厳な王道進行。B♭maj7 → C → Am7 → Dm7 / Gm7 → Csus4 → Fmaj7 → Dm7
+  sanctum: {
+    bpm: 74,
+    scale: scaleOf(5, MAJOR),
+    a: [C(10, MAJ7), C(0, TRIAD), C(9, MIN7), C(2, MIN7)],
+    b: [C(7, MIN7), C(0, SUS4), C(5, MAJ7), C(2, MIN7)],
+    pattern: [0, 2, 3, 2, 1, 2, 3, 2],
+    center: 74,
+  },
+};
+
+const pcsOf = (c: StageChord) => c.tones.map((t) => (c.root + t) % 12);
+const pick = <T,>(list: readonly T[]) => list[Math.floor(Math.random() * list.length)];
+
+/** 和音の上で旋律に使う音（MIDI 昇順）: 和音の音の半音上にぶつかる音を外し、和音の音を足す */
+function melodyNotes(scale: number[], chord: number[], lo: number, hi: number) {
+  const pcs = new Set(chord);
+  for (const pc of scale) if (!chord.some((c) => (pc - c + 12) % 12 === 1)) pcs.add(pc);
+  const notes: number[] = [];
+  for (let n = lo; n <= hi; n++) if (pcs.has(n % 12)) notes.push(n);
+  return notes;
+}
+
+/** note にいちばん近い、pcs のどれかの音 */
+function nearestOf(note: number, pcs: number[]) {
+  for (let d = 0; d < 12; d++) {
+    if (pcs.includes((note + d) % 12)) return note + d;
+    if (pcs.includes((note - d + 12) % 12)) return note - d;
+  }
+  return note;
+}
+
+const nearestIndex = (notes: number[], note: number) =>
+  notes.reduce((best, n, i) => (Math.abs(n - note) < Math.abs(notes[best] - note) ? i : best), 0);
+
+/** 分散和音の並び: 前の和音から指の動きが少なく、中音域に収まる転回形を選ぶ */
+function voiceChord(pcs: number[], prev: number[]) {
+  const mean = (v: number[]) => v.reduce((s, n) => s + n, 0) / v.length;
+  const prevMean = prev.length ? mean(prev) : 62;
+  let best: number[] = [];
+  let bestScore = Infinity;
+  for (const lowPc of pcs) {
+    const low = 55 + ((lowPc - 55 + 120) % 12);
+    const voicing = pcs.map((pc) => low + ((pc - lowPc + 12) % 12)).sort((x, y) => x - y);
+    const score = Math.abs(mean(voicing) - prevMean) + 0.25 * Math.abs(mean(voicing) - 62);
+    if (score < bestScore) [best, bestScore] = [voicing, score];
+  }
+  return best;
+}
+
+/** 旋律の1音: at・len は8分音符で数えた位置と長さ、step は前の音から音階でいくつ動くか */
+type MelodyNote = { at: number; len: number; step: number };
+/** 4小節の楽句の形: 提示 → 応答 → 提示の変奏 → 結び */
+type Motif = { dir: 1 | -1; open: MelodyNote[]; answer: MelodyNote[]; again: MelodyNote[]; close: MelodyNote[] };
+
+const OPEN_RHYTHMS: [number, number][][] = [
+  [[0, 2], [2, 1], [3, 1], [4, 4]],
+  [[0, 3], [3, 1], [4, 2], [6, 2]],
+  [[0, 2], [2, 2], [4, 2], [6, 1], [7, 1]],
+  [[1, 1], [2, 2], [4, 3], [7, 1]],
+  [[0, 1], [1, 1], [2, 2], [4, 4]],
+  [[0, 4], [4, 1], [5, 1], [6, 2]],
+];
+const ANSWER_RHYTHMS: [number, number][][] = [
+  [[0, 2], [2, 2], [4, 4]],
+  [[0, 3], [3, 1], [4, 4]],
+  [[0, 2], [2, 1], [3, 1], [4, 2], [6, 2]],
+  [[0, 6], [6, 1], [7, 1]],
+];
+const CLOSE_RHYTHMS: [number, number][][] = [[[0, 8]], [[0, 2], [2, 6]], [[0, 3], [3, 5]], [[0, 1], [1, 1], [2, 6]]];
+
+/** 次の音への動き: 多くは順次進行で、ときどき跳ぶ。dir の向きへ寄せて、旋律に山を作る */
+function stepToward(dir: 1 | -1) {
+  if (Math.random() < 0.15) return 0;
+  const r = Math.random();
+  const size = r < 0.65 ? 1 : r < 0.9 ? 2 : 3;
+  return size * (Math.random() < 0.7 ? dir : -dir);
+}
+
+const notesOf = (rhythm: [number, number][], dir: 1 | -1): MelodyNote[] =>
+  rhythm.map(([at, len]) => ({ at, len, step: stepToward(dir) }));
+
+const mutate = (notes: MelodyNote[], rate: number, dir: 1 | -1) =>
+  notes.map((n) => (Math.random() < rate ? { ...n, step: stepToward(dir) } : n));
+
+function makeMotif(): Motif {
+  const dir = Math.random() < 0.5 ? 1 : -1;
+  const back = dir === 1 ? -1 : 1;
+  const open = notesOf(pick(OPEN_RHYTHMS), dir);
+  return {
+    dir,
+    open,
+    answer: notesOf(pick(ANSWER_RHYTHMS), back),
+    again: mutate(open, 0.4, dir),
+    close: notesOf(pick(CLOSE_RHYTHMS), back),
+  };
+}
+
+/** 動機の変奏: 音の動きを rate の割合で選び直す。リズムは保つので、同じ動機だと聴き取れる */
+const varyMotif = (m: Motif, rate: number): Motif => ({
+  ...m,
+  open: mutate(m.open, rate, m.dir),
+  answer: mutate(m.answer, rate, m.dir === 1 ? -1 : 1),
+  again: mutate(m.again, rate, m.dir),
+});
+
+/** 段の2つの楽句: 2つ目は少しだけ変え、結びのリズムも替える */
+const phrasePair = (m: Motif): [Motif, Motif] => [
+  m,
+  { ...varyMotif(m, 0.2), close: notesOf(pick(CLOSE_RHYTHMS), m.dir === 1 ? -1 : 1) },
+];
+
+/** 曲の入りの、旋律を乗せない小節数 */
+const INTRO_BARS = 4;
+/** 段の長さ（小節）と、一巡する段の並び */
+const SECTION_BARS = 8;
+const SECTIONS = ["a", "a2", "b", "a2", "interlude"] as const;
+const CYCLE_BARS = SECTION_BARS * SECTIONS.length;
+type Section = (typeof SECTIONS)[number] | "intro";
+/** 段ごとの強さ */
+const SECTION_LEVEL: Record<Section, number> = { intro: 0.85, a: 1, a2: 1, b: 1.08, interlude: 0.92 };
+/** 楽句の中の強弱: 3小節目へ向かってふくらみ、結びで少し引く */
+const PHRASE_SWELL = [0.92, 1, 1.06, 0.96];
+
+/** わずかな揺らぎ: 機械的に揃いすぎた音は聴き流され、眠気を誘う */
+const humanize = () => (Math.random() - 0.5) * 0.014;
+const velocity = () => 0.88 + Math.random() * 0.24;
+
+function stageSong(ctx: AudioContext, out: AudioNode, layer: Layer, song: Song) {
+  const send = reverbSend(ctx, out, { seconds: 2.8, wet: 0.38, cutoff: 2800 });
+  const pianoTone = ctx.createBiquadFilter();
+  pianoTone.type = "lowpass";
+  pianoTone.frequency.value = 2600;
+  pianoTone.connect(send);
+  const boxTone = ctx.createBiquadFilter();
+  boxTone.type = "lowpass";
+  boxTone.frequency.value = 4200;
+  boxTone.connect(send);
+
+  const eighth = 30 / song.bpm;
+  const barSec = eighth * 8;
+  const sectionAt = (b: number): Section => (b < 0 ? "intro" : SECTIONS[Math.floor((b % CYCLE_BARS) / SECTION_BARS)]);
+  const chordAt = (b: number) => (sectionAt(b) === "b" ? song.b : song.a)[((b % 4) + 4) % 4];
+  const bassOf = (c: StageChord) => 40 + ((c.root - 4 + 12) % 12);
+  const newMotifs = () => {
+    const a = makeMotif();
+    return { a: phrasePair(a), a2: phrasePair(varyMotif(a, 0.3)), b: phrasePair(makeMotif()) };
+  };
+
+  let bar = -INTRO_BARS;
+  let next = ctx.currentTime + 0.3;
+  let voicing: number[] = [];
+  let prevNote = song.center;
+  let motifs = newMotifs();
+
+  const playBar = () => {
+    const t = next;
+    const section = sectionAt(bar);
+    const inSection = bar < 0 ? bar + INTRO_BARS : bar % SECTION_BARS;
+    const inPhrase = inSection % 4;
+    const level = SECTION_LEVEL[section] * PHRASE_SWELL[inPhrase];
+    const chord = chordAt(bar);
+    const pcs = pcsOf(chord);
+    voicing = voiceChord(pcs, voicing);
+    // 一巡したら動機を作り直す
+    if (bar > 0 && bar % CYCLE_BARS === 0) motifs = newMotifs();
+
+    // 低音: 1拍目に根音、3拍目に五度。ときどき4拍目の裏で次の根音へ歩み寄る
+    const bass = bassOf(chord);
+    piano(ctx, pianoTone, midi(bass), t + humanize(), 0.08 * level * velocity());
+    piano(ctx, pianoTone, midi(bass + 7), t + eighth * 4 + humanize(), 0.04 * level * velocity(), 0.6);
+    if (section !== "intro" && Math.random() < 0.35) {
+      const target = bassOf(chordAt(bar + 1));
+      const approach = target + (target > bass ? -2 : 2);
+      piano(ctx, pianoTone, midi(approach), t + eighth * 7 + humanize(), 0.03 * level * velocity(), 0.4);
+    }
+
+    // 8分の分散和音（曲の入りは4分だけにして、少しずつ動き出す）
+    song.pattern.forEach((index, i) => {
+      if (section === "intro" && i % 2 === 1) return;
+      const accent = i % 4 === 0 ? 1 : i % 2 === 0 ? 0.75 : 0.55;
+      const note = voicing[index % voicing.length];
+      piano(ctx, pianoTone, midi(note), t + eighth * i + humanize(), 0.03 * accent * level * velocity(), 0.5);
+    });
+
+    // 段の頭の鐘。間奏では旋律の代わりに、高い鐘をまばらに置く
+    const bell = (at: number, height: number) =>
+      musicBox(ctx, boxTone, midi(nearestOf(song.center + height, pcs)), t + at + humanize(), 0.022 * level);
+    if (inSection === 0 && section !== "intro") bell(0, 12);
+    if (section === "interlude" && inSection % 2 === 0) bell(eighth * 3, 7 + Math.floor(Math.random() * 6));
+
+    // 旋律（オルゴール）
+    if (section === "intro" || section === "interlude") return;
+    const motif = motifs[section][inSection < 4 ? 0 : 1];
+    const cell = [motif.open, motif.answer, motif.again, motif.close][inPhrase];
+    const center = song.center + (section === "b" ? 5 : 0);
+    const notes = melodyNotes(song.scale, pcs, center - 7, center + 10);
+    // 2つ目の楽句の結びは根音で閉じ、1つ目は和音の別の音で開いたまま次へ渡す
+    const resolveTo = inSection >= 4 ? [chord.root] : pcs;
+    cell.forEach((n, i) => {
+      let note: number;
+      if (inPhrase === 0 && i === 0) note = nearestOf(center, pcs);
+      else {
+        const from = nearestIndex(notes, prevNote);
+        let idx = from + n.step;
+        if (idx < 0 || idx >= notes.length) idx = from - n.step;
+        note = notes[Math.min(notes.length - 1, Math.max(0, idx))];
+        // 結びの音は resolveTo へ、強拍や長い音は和音の音へ寄せる
+        if (inPhrase === 3 && i === cell.length - 1) note = nearestOf(note, resolveTo);
+        else if (n.at % 4 === 0 || n.len >= 3) note = nearestOf(note, pcs);
+        // 動くはずの音が寄せた結果で前の音に戻ったら、動く向きにある次の和音の音へ進める
+        if (n.step !== 0 && note === prevNote) {
+          const dir = Math.sign(n.step);
+          for (let d = 1; d <= 5; d++) if (pcs.includes((note + dir * d + 12) % 12)) {
+            note += dir * d;
+            break;
+          }
+        }
+      }
+      prevNote = note;
+      musicBox(ctx, boxTone, midi(note), t + eighth * n.at + humanize(), 0.034 * level * velocity());
+    });
+  };
+
+  // 別のタブを見ている間はタイマーが間引かれるので、数秒先までの小節を先に刻んでおく（pianoPiece と同じ）
+  const tick = () => {
+    if (next < ctx.currentTime) next = ctx.currentTime + 0.1;
+    while (next < ctx.currentTime + LOOKAHEAD_SEC) {
+      playBar();
+      bar += 1;
+      next += barSec;
+    }
+    later(layer, tick, TICK_MS);
+  };
+  tick();
+}
+
 function soundscape(ctx: AudioContext, out: AudioNode, layer: Layer, key: Exclude<AmbienceKey, "title">) {
-  const s = SOUNDSCAPES[key];
-  pianoPiece(ctx, out, layer, { ...STAGE_PIECE, chords: s.chords });
+  stageSong(ctx, out, layer, SONGS[key]);
 }
 
 // ---- 遠くの森から届くフクロウの声（モリフクロウ風） ----
