@@ -42,23 +42,23 @@ export const TRAILER_MS = 67_000;
 // ---- 時刻の補助 ----
 
 /** 区間 [a, b] での 0→1 の進み（なめらかに） */
-function ease(t: number, a: number, b: number) {
+export function ease(t: number, a: number, b: number) {
   const x = Math.min(1, Math.max(0, (t - a) / (b - a)));
   return x * x * (3 - 2 * x);
 }
 
 /** a〜b で浮かび、c〜d で消える */
-function fade(t: number, [a, b, c, d]: readonly number[]) {
+export function fade(t: number, [a, b, c, d]: readonly number[]) {
   return ease(t, a, b) * (1 - ease(t, c, d));
 }
 
 /** 浮かぶ・消えるときに、霞から結ぶように少しぼかす */
-function veil(opacity: number): CSSProperties {
+export function veil(opacity: number): CSSProperties {
   return { opacity, filter: `blur(${(1 - opacity) * 4}px)` };
 }
 
 // 決定的な疑似乱数
-function rand(seed: number) {
+export function rand(seed: number) {
   const x = Math.sin(seed * 9301 + 49297) * 233280;
   return x - Math.floor(x);
 }
@@ -66,7 +66,7 @@ function rand(seed: number) {
 /** サーバーとブラウザで小数の桁がずれないよう丸めた百分率 */
 const percent = (seed: number) => Math.round(rand(seed) * 10000) / 100;
 
-const STARS = Array.from({ length: 90 }, (_, i) => {
+export const STARS = Array.from({ length: 90 }, (_, i) => {
   const big = rand(i + 500) > 0.9;
   return {
     left: percent(i),
@@ -79,7 +79,7 @@ const STARS = Array.from({ length: 90 }, (_, i) => {
 });
 
 /** 詠唱の魔法陣の頂点に灯す科目の色（デモの科目と同じ） */
-const NODES = ["#e7a9c6", "#8db7f2", "#8fdcc4", "#e2c974", "#b9a2f7"].map((color, i) => ({ color, active: i === 1 }));
+export const NODES = ["#e7a9c6", "#8db7f2", "#8fdcc4", "#e2c974", "#b9a2f7"].map((color, i) => ({ color, active: i === 1 }));
 
 /** 下から上へ流す遺物（絵柄の重ならないものを選ぶ） */
 const DRIFT_ITEMS: Item[] = (() => {
@@ -160,7 +160,7 @@ function Sky({ t }: { t: number }) {
 }
 
 /** 詠唱中の魔法陣を、画面いっぱいに寄せる */
-function ChantCircle({ intensity, scale, opacity, t0 }: { intensity: number; scale: number; opacity: number; t0: number }) {
+export function ChantCircle({ intensity, scale, opacity, t0 }: { intensity: number; scale: number; opacity: number; t0: number }) {
   return (
     <div className="absolute inset-0 flex items-center justify-center" data-t0={t0} style={{ opacity }}>
       <div className="relative w-[118%] shrink-0" style={{ transform: `scale(${scale})` }}>
@@ -508,7 +508,7 @@ function playSoundtrack(ctx: AudioContext, destination: AudioNode) {
 }
 
 /** ページ上の CSS アニメーションを時刻 t に合わせる（data-t0 を持つ場面の中は、その時刻からの経過で） */
-function syncAnimations(t: number) {
+export function syncAnimations(t: number) {
   document.getAnimations().forEach((a) => {
     const target = (a.effect as KeyframeEffect | null)?.target;
     const el = target instanceof Element ? target : (target as { element?: Element } | null)?.element;
@@ -524,17 +524,32 @@ declare global {
       duration: number;
       /** 時刻 t（ms）の画面にし、ページ上の CSS アニメーションも同じ時刻へ合わせる */
       seek: (t: number) => Promise<void>;
-      /** 予告編の音を実時間で録音し、webm（opus）を base64 で返す */
+      /** 動画の音を実時間で録音し、webm（opus）を base64 で返す */
       recordAudio: () => Promise<string>;
     };
   }
 }
 
-/**
- * 予告編。?capture があれば撮影用に時刻を外から進め、無ければ「再生」で音と共に実時間で流す（確認用）。
- * 画面は 9:16 の枠に収め、PC で開いても縦長で見られるようにする
- */
+/** 予告編 */
 export function Trailer() {
+  return <ShortPlayer duration={TRAILER_MS} frame={(t) => <Frame t={t} />} play={playSoundtrack} />;
+}
+
+/**
+ * SNS 用の動画の再生枠。?capture があれば撮影用に時刻を外から進め（video/capture.mjs が window.__trailer を使う）、
+ * 無ければ「再生」で音と共に実時間で流す（確認用）。画面は 9:16 の枠に収め、PC で開いても縦長で見られるようにする
+ */
+export function ShortPlayer({
+  duration,
+  frame,
+  play,
+}: {
+  duration: number;
+  /** 時刻 t（ms）の画面 */
+  frame: (t: number) => ReactNode;
+  /** 音を鳴らし始め、止める関数を返す（モジュールの外で定義した関数を渡す） */
+  play: (ctx: AudioContext, destination: AudioNode) => () => void;
+}) {
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(false);
   const stopRef = useRef<(() => void) | null>(null);
@@ -547,7 +562,7 @@ export function Trailer() {
 
   useEffect(() => {
     window.__trailer = {
-      duration: TRAILER_MS,
+      duration,
       async seek(ms) {
         flushSync(() => setT(ms));
         syncAnimations(ms);
@@ -562,8 +577,8 @@ export function Trailer() {
         recorder.ondataavailable = (e) => chunks.push(e.data);
         const done = new Promise<void>((r) => (recorder.onstop = () => r()));
         recorder.start();
-        const stop = playSoundtrack(ctx, tap);
-        await new Promise((r) => setTimeout(r, TRAILER_MS + 800));
+        const stop = play(ctx, tap);
+        await new Promise((r) => setTimeout(r, duration + 800));
         recorder.stop();
         await done;
         stop();
@@ -578,34 +593,32 @@ export function Trailer() {
       delete window.__trailer;
       stopRef.current?.();
     };
-  }, []);
+  }, [duration, play]);
 
   // 確認用の再生: 実時間で時刻を進め、CSS アニメーションも同じ時刻に合わせ続ける
   useEffect(() => {
     if (!playing) return;
     const ctx = new AudioContext();
-    stopRef.current = playSoundtrack(ctx, ctx.destination);
+    stopRef.current = play(ctx, ctx.destination);
     const begin = performance.now();
-    let frame = requestAnimationFrame(function tick() {
-      const now = Math.min(performance.now() - begin, TRAILER_MS);
+    let raf = requestAnimationFrame(function tick() {
+      const now = Math.min(performance.now() - begin, duration);
       flushSync(() => setT(now));
       syncAnimations(now);
-      if (now < TRAILER_MS) frame = requestAnimationFrame(tick);
+      if (now < duration) raf = requestAnimationFrame(tick);
       else setPlaying(false);
     });
     return () => {
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(raf);
       stopRef.current?.();
       stopRef.current = null;
       void ctx.close();
     };
-  }, [playing]);
+  }, [playing, duration, play]);
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black">
-      <div className="relative aspect-[9/16] h-full max-h-dvh max-w-full overflow-hidden">
-        <Frame t={t} />
-      </div>
+      <div className="relative aspect-[9/16] h-full max-h-dvh max-w-full overflow-hidden">{frame(t)}</div>
       {!playing && !capture && (
         <button
           onClick={() => setPlaying(true)}
