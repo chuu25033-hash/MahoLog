@@ -39,10 +39,10 @@ export const RANKS: Rank[] = [
   { numeral: "III", title: "秘文字の紡ぎ手", minPhase: 10 },
   { numeral: "IV", title: "幽遠の観測士", minPhase: 15 },
   { numeral: "V", title: "深淵の探究者", minPhase: 20 },
-  { numeral: "VI", title: "星環の調律師", minPhase: 30 },
+  { numeral: "VI", title: "星環を巡らす者", minPhase: 30 },
   { numeral: "VII", title: "秘術の執書師", minPhase: 40 },
   { numeral: "VIII", title: "真理の解明者", minPhase: 50 },
-  { numeral: "IX", title: "残光の導く者", minPhase: 65 },
+  { numeral: "IX", title: "残光の導き手", minPhase: 65 },
   { numeral: "X", title: "至高の綴り手", minPhase: 80 },
 ];
 
