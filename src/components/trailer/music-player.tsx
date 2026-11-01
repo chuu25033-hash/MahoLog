@@ -22,6 +22,8 @@ const SAMPLE_RATE = 48000;
 const FADE_SEC = 2;
 
 type From = "intro" | "chorus";
+/** 曲を流すか（環境音を重ねるかは別に選ぶ）、環境音だけを流すか */
+type Mode = "song" | "ambience";
 
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 
@@ -134,16 +136,16 @@ function PlaybackBar({ songKey, position, onSeek }: { songKey: SongKey; position
 
 /** 曲の試聴と、動画用の WAV 書き出し */
 export function MusicPlayer() {
-  const [playing, setPlaying] = useState<SongKey | null>(null);
+  const [playing, setPlaying] = useState<{ key: SongKey; mode: Mode } | null>(null);
   const [position, setPosition] = useState<number | null>(null);
   const [from, setFrom] = useState<From>("chorus");
   const [seconds, setSeconds] = useState<(typeof LENGTHS)[number]>(30);
   const [rendering, setRendering] = useState<SongKey | null>(null);
   const [ambience, setAmbience] = useState(true);
-  const audio = useRef<{ ctx: AudioContext; key: SongKey; song: SongVoice; ambience: AmbienceVoice | null } | null>(null);
+  const audio = useRef<{ ctx: AudioContext; key: SongKey; song: SongVoice | null; ambience: AmbienceVoice | null } | null>(null);
 
   const release = () => {
-    audio.current?.song.stop();
+    audio.current?.song?.stop();
     audio.current?.ambience?.stop();
     void audio.current?.ctx.close();
     audio.current = null;
@@ -162,7 +164,7 @@ export function MusicPlayer() {
   useEffect(() => {
     if (!playing) return;
     let raf = requestAnimationFrame(function tick() {
-      setPosition(audio.current?.song.position() ?? null);
+      setPosition(audio.current?.song?.position() ?? null);
       raf = requestAnimationFrame(tick);
     });
     return () => cancelAnimationFrame(raf);
@@ -174,22 +176,24 @@ export function MusicPlayer() {
     setPosition(null);
   };
 
-  const play = (key: SongKey) => {
+  const play = (key: SongKey, mode: Mode) => {
     release();
     const ctx = new AudioContext();
     audio.current = {
       ctx,
       key,
-      song: startSong(ctx, ctx.destination, key, { from }),
-      ambience: ambience ? startAmbience(ctx, ctx.destination, key) : null,
+      song: mode === "song" ? startSong(ctx, ctx.destination, key, { from }) : null,
+      ambience: mode === "ambience" || ambience ? startAmbience(ctx, ctx.destination, key) : null,
     };
-    setPlaying(key);
+    setPlaying({ key, mode });
   };
+
+  const toggle = (key: SongKey, mode: Mode) => (playing?.key === key && playing.mode === mode ? stop() : play(key, mode));
 
   /** 曲だけを、指定した小節から鳴らし直す（環境音は流したまま） */
   const seek = (bar: number) => {
     const current = audio.current;
-    if (!current) return;
+    if (!current?.song) return;
     current.song.stop();
     current.song = startSong(current.ctx, current.ctx.destination, current.key, { from: bar });
   };
@@ -208,6 +212,8 @@ export function MusicPlayer() {
       setRendering(null);
     }
   };
+
+  const isPlaying = (key: SongKey, mode: Mode) => playing?.key === key && playing.mode === mode;
 
   const chip = (active: boolean) =>
     `rounded-full border px-3 py-1 text-xs ${active ? "border-starlight/60 text-starlight" : "border-white/15 text-muted-foreground hover:text-starlight"}`;
@@ -245,19 +251,22 @@ export function MusicPlayer() {
                     {track.en} · {SONGS[track.key].bpm} BPM · {clock(songLayout(track.key).seconds)}
                   </span>
                 </div>
-                <button className={chip(playing === track.key)} onClick={() => (playing === track.key ? stop() : play(track.key))}>
-                  {playing === track.key ? "止める" : "再生"}
+                <button className={chip(isPlaying(track.key, "song"))} onClick={() => toggle(track.key, "song")}>
+                  {isPlaying(track.key, "song") ? "止める" : "再生"}
+                </button>
+                <button className={chip(isPlaying(track.key, "ambience"))} onClick={() => toggle(track.key, "ambience")}>
+                  {isPlaying(track.key, "ambience") ? "止める" : "環境音だけ"}
                 </button>
                 <button className={chip(false)} disabled={rendering !== null} onClick={() => void download(track.key)}>
                   {rendering === track.key ? "書き出し中…" : "WAV"}
                 </button>
               </div>
-              {playing === track.key && <PlaybackBar songKey={track.key} position={position} onSeek={seek} />}
+              {isPlaying(track.key, "song") && <PlaybackBar songKey={track.key} position={position} onSeek={seek} />}
             </li>
           ))}
         </ul>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          再生中はバーを押すか、なぞった位置の小節から鳴らし直せます。WAV は選んだ位置・長さで書き出し、終わりの{FADE_SEC}
+          「環境音だけ」はその場所の環境音を単体で流します。再生中はバーを押すか、なぞった位置の小節から鳴らし直せます。WAV は選んだ位置・長さで書き出し、終わりの{FADE_SEC}
           秒でフェードアウトし、音量をそろえます。1巡目の旋律は毎回同じです。
         </p>
       </div>
