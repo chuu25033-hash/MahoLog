@@ -1,12 +1,12 @@
 // エリアごとの環境音。曲の後ろで、その場所の空気をごく薄く鳴らす。
 // 音声ファイルは使わず、ノイズと発振器から組み立てる。続く音（炎のうなり・炉）と、ときどき鳴る音
-// （頁をめくる音・木の軋み・虫・水滴・溶岩・火竜の寝息・鐘・天文盤・氷の粒・フクロウ）を重ねる。
-// 風の音（砂嵐のような「ザー」）、薪や熾火のはぜる音（かちかち）、雨粒を散らした音（からから）は、耳について心地よくないので使わない。
+// （虫・水滴・溶岩・火竜の寝息・鐘・天文盤の歯車・氷の粒・フクロウ）を重ねる。
+// 風の音（砂嵐のような「ザー」）、薪や熾火のはぜる音（かちかち）、雨粒を散らした音（からから）、頁をめくる音、木や金具の軋みは、耳について心地よくないので使わない。
 //  - タイトル: 遠くの虫とフクロウ
 //  - 旅立ちの前: まばらな虫
-//  - 小屋: 暖炉の低いうなり、ときどき頁をめくる音と古い床の軋み、遠いフクロウ
-//  - 樹海・図書室: 根を伝う水滴、虫の声、大樹の軋み、頁をめくる音、フクロウ
-//  - 観測塔: 天文盤の歯車の音と軋み、ずっと下から届くフクロウ
+//  - 小屋: 暖炉の低いうなり、遠いフクロウ
+//  - 樹海・図書室: 根を伝う水滴、虫の声、フクロウ
+//  - 観測塔: 天文盤の歯車の音、ずっと下から届くフクロウ
 //  - 氷の回廊: 氷の粒が触れ合う音
 //  - 魔導炉: 炉の低いうなり、溶岩の泡、火竜の深い寝息
 //  - 大聖堂: 遠くで鳴る鐘
@@ -219,7 +219,7 @@ const bell =
   };
 
 // ---------------------------------------------------------------- 描いて鳴らす音
-// 頁・軋み・歯車・火竜の寝息は、発振器を揺らすだけでは作り物に聞こえるので、音が生まれる仕組みに沿って
+// 歯車・火竜の寝息は、発振器を揺らすだけでは作り物に聞こえるので、音が生まれる仕組みに沿って
 // 波形を JS で一度だけ描く（場所ごとに数通り描いておき、鳴るたびに選ぶ）
 
 /** 2次の IIR フィルター（RBJ の式）。set で途中から高さを変えられる */
@@ -292,92 +292,6 @@ function playDrawn(env: Env, buffer: AudioBuffer, at: number, o: { level: number
   gain.gain.value = o.level;
   src.connect(gain).connect(voice(env, { wet: o.wet, dry: o.dry, pan: o.pan ?? rand(-0.4, 0.4) }));
   src.start(at);
-}
-
-/**
- * 頁をめくる: 紙がしなって動く空気の音（帯域が持ち上がってから下りる）に、紙の繊維が擦れる細かな音を重ね、
- * 最後に頁がそっと落ちる。めくる手の動きに合わせて、左から右へ流れる
- */
-function drawPage(sr: number) {
-  const length = rand(0.55, 0.85);
-  const n = Math.floor(sr * (length + 0.12));
-  const mono = new Float32Array(n);
-  const air = biquad("bandpass", 1400, 0.9, sr);
-  const fiber = biquad("highpass", 2500, 0.7, sr);
-  const flapTone = biquad("lowpass", 900, 0.7, sr);
-  let click = 0;
-  const flapAt = length - 0.03;
-  for (let i = 0; i < n; i++) {
-    const t = i / sr;
-    const p = Math.min(1, t / length);
-    if (i % 32 === 0) air.set(p < 0.4 ? 1400 + 2400 * (p / 0.4) : 3800 - 1600 * ((p - 0.4) / 0.6));
-    // めくり始めはゆっくりふくらみ、終わりで消える
-    const env = t > length ? 0 : p < 0.15 ? (p / 0.15) ** 0.7 : p > 0.75 ? (1 - p) / 0.25 : 1;
-    // 紙の繊維の擦れ: 1秒に数百回の小さな音が、動きの強いところほど多く鳴る
-    if (Math.random() < (700 * env) / sr) click = rand(0.3, 1);
-    click *= Math.exp(-1 / (0.0004 * sr));
-    let s = air.run(white()) * env * 0.6 + fiber.run(click * white()) * 0.9;
-    if (t >= flapAt) {
-      const u = t - flapAt;
-      s += Math.sin(2 * Math.PI * 120 * u) * Math.exp(-u / 0.025) * 0.35 + flapTone.run(white()) * Math.exp(-u / 0.012) * 0.4;
-    }
-    mono[i] = s;
-  }
-  const from = rand(-0.5, -0.1);
-  return spread(mono, from, from + rand(0.4, 0.7));
-}
-
-type CreakKind = "floor" | "tree" | "metal";
-
-/** 軋みの素材: 引っかかって滑る回数（1秒あたり）、長さ、鳴る板や幹の響き（高さと鋭さ） */
-const CREAK: Record<CreakKind, { rate: [number, number]; length: [number, number]; bodies: () => [number, number, number][] }> = {
-  // 古い床板: 乾いた中音
-  floor: { rate: [55, 110], length: [0.7, 1.3], bodies: () => [[rand(380, 520), 9, 1], [rand(900, 1200), 12, 0.6], [rand(2000, 2600), 10, 0.3]] },
-  // 大樹: 低く長いうめき
-  tree: { rate: [22, 48], length: [1.6, 2.6], bodies: () => [[rand(170, 240), 7, 1], [rand(420, 560), 9, 0.7], [rand(1000, 1300), 8, 0.35]] },
-  // 天文盤の軸: 金属の硬く高い鳴り
-  metal: { rate: [130, 240], length: [0.6, 1.1], bodies: () => [[rand(1100, 1400), 25, 1], [rand(2600, 3100), 30, 0.6], [rand(5200, 6000), 30, 0.3]] },
-};
-
-/**
- * 軋み: 引っかかっては滑る小さな衝撃が、板や幹（あるいは金具）を鳴らす。滑る速さが揺れて音の高さがうねり、
- * 力のかかり方で強弱がつく
- */
-function drawCreak(kind: CreakKind) {
-  return (sr: number) => {
-    const c = CREAK[kind];
-    const length = rand(...c.length);
-    const n = Math.floor(sr * (length + 0.25));
-    const mono = new Float32Array(n);
-    const specs = c.bodies();
-    const bodies = specs.map(([f, q, mix]) => ({ filter: biquad("bandpass", f, q, sr), mix }));
-    // 擦れる面のかすかなざらつき
-    const friction = biquad("bandpass", specs[0][0], 2, sr);
-    const tone = biquad("lowpass", kind === "metal" ? 8000 : 4500, 0.7, sr);
-    const base = rand(...c.rate);
-    const bend = rand(0.6, 1.4);
-    const phase0 = rand(0, Math.PI * 2);
-    let wander = 1;
-    let phase = 0;
-    for (let i = 0; i < n; i++) {
-      const t = i / sr;
-      const p = t / length;
-      const env = p >= 1 ? 0 : Math.sin(Math.PI * p) ** 0.6 * (0.75 + 0.25 * Math.sin(2 * Math.PI * 3 * t));
-      wander += (rand(-1, 1) * 0.002 - (wander - 1) * 0.0005);
-      const rate = base * wander * (1 + 0.35 * Math.sin(2 * Math.PI * bend * p + phase0));
-      phase += rate / sr;
-      let excite = 0;
-      if (phase >= 1) {
-        phase -= 1;
-        excite = env * rand(0.6, 1);
-      }
-      let s = 0;
-      for (const b of bodies) s += b.filter.run(excite) * b.mix;
-      mono[i] = tone.run(s + friction.run(white()) * env * 0.015);
-    }
-    const pan = rand(-0.5, 0.5);
-    return spread(mono, pan, pan);
-  };
 }
 
 /**
@@ -469,18 +383,6 @@ function drawDragon(sr: number) {
   for (let i = lag; i < n; i++) right[i] = mono[i - lag];
   return [left, right];
 }
-
-/** 頁をめくる音 */
-const pageTurn =
-  (level: number): Sound =>
-  (env, at) =>
-    playDrawn(env, drawn(env.ctx, "page", drawPage), at, { level, wet: 0.3 });
-
-/** 軋み（古い床板・大樹・天文盤の軸） */
-const creak =
-  (kind: CreakKind, level: number): Sound =>
-  (env, at) =>
-    playDrawn(env, drawn(env.ctx, `creak-${kind}`, drawCreak(kind)), at, { level, wet: kind === "tree" ? 0.6 : 0.45 });
 
 /** 天文盤の歯車 */
 const gears =
@@ -623,8 +525,6 @@ const SCENES: Record<AmbienceKey, Scene> = {
     level: 1,
     beds: [{ label: "暖炉のうなり", make: (env) => roar(env, { cutoff: 380, level: 0.022, flicker: 0.4 }) }],
     events: [
-      { label: "頁をめくる音", every: [45, 100], first: [15, 40], sound: pageTurn(0.03) },
-      { label: "古い床の軋み", every: [35, 80], first: [20, 50], sound: creak("floor", 0.03) },
       { label: "遠いフクロウ", every: [100, 220], first: [40, 80], sound: owl([0.75, 0.95]) },
     ],
   },
@@ -635,8 +535,6 @@ const SCENES: Record<AmbienceKey, Scene> = {
     events: [
       { label: "虫の声", every: [5, 12], sound: cricket(0.005) },
       { label: "根を伝う水滴", every: [6, 14], sound: drip(0.012) },
-      { label: "大樹の軋み", every: [30, 70], first: [10, 30], sound: creak("tree", 0.055) },
-      { label: "頁をめくる音", every: [60, 140], first: [25, 60], sound: pageTurn(0.016) },
       { label: "フクロウ", every: [60, 150], first: [20, 40], sound: owl([0.3, 0.7]) },
     ],
   },
@@ -646,7 +544,6 @@ const SCENES: Record<AmbienceKey, Scene> = {
     beds: [],
     events: [
       { label: "天文盤の歯車", every: [18, 40], first: [8, 20], sound: gears(0.06) },
-      { label: "天文盤の軋み", every: [30, 60], first: [15, 35], sound: creak("metal", 0.025) },
       { label: "ずっと下のフクロウ", every: [130, 260], first: [50, 90], sound: owl([0.85, 1]) },
     ],
   },
