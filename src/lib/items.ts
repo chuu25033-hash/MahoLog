@@ -472,7 +472,7 @@ export const DOCUMENTS: AncientDocument[] = [
     title: "余白の原典",
     era: "再創生",
     eraEn: "REGENESIS",
-    author: "名を持たない者たち",
+    author: "名を記さなかった者たち",
     color: "#d9d2f5",
     fragments: [
       "原典の封は、鍵でも呪文でも解けない。最後の頁が空白のまま閉じられているからだ。言葉たちは、続きを綴る者が現れるまで眠ることを選んだ。",
