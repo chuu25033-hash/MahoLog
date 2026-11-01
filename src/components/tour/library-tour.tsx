@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { Button } from "@/components/ui/button";
 import { markLibraryTourDone, useLibraryTourDone } from "@/lib/onboarding";
@@ -117,18 +117,15 @@ type Rect = { top: number; left: number; width: number; height: number };
 export function LibraryTour() {
   const done = useLibraryTourDone();
   const data = useStoredUserData();
+  // 設定の「書庫の案内をもう一度見る」から来たか。画面が移った直後は window.location がまだ古いので、ルーターから読む
+  const replay = useSearchParams().has("tour");
   // 既に詠唱を重ねている人には、改めて案内しない（設定から見返せる）
-  const veteran = (data?.chantHistory.length ?? 0) > 0 && !wantsReplay();
+  const veteran = (data?.chantHistory.length ?? 0) > 0 && !replay;
   if (done || !data || veteran) return null;
-  return <Tour />;
+  return <Tour replay={replay} />;
 }
 
-/** 設定の「書庫の案内をもう一度見る」から来たか */
-function wantsReplay() {
-  return typeof window !== "undefined" && new URLSearchParams(window.location.search).has("tour");
-}
-
-function Tour() {
+function Tour({ replay }: { replay: boolean }) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
@@ -141,7 +138,7 @@ function Tour() {
   function finish() {
     markLibraryTourDone();
     // 見返すために付けた印は消しておく
-    if (wantsReplay()) router.replace("/dashboard", { scroll: false });
+    if (replay) router.replace("/dashboard", { scroll: false });
   }
 
   const next = () => (last ? finish() : setIndex((i) => i + 1));
