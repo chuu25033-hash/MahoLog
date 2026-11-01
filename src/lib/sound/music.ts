@@ -785,7 +785,7 @@ export function songLayout(key: SongKey) {
 const LOOKAHEAD_SEC = 6;
 const TICK_MS = 1000;
 /** こもらせたとき・遠のいたとき・開いたときの、全体のフィルターの高さ（Hz） */
-const CLOSED = 1100;
+const CLOSED = 3000;
 const DISTANT = 2600;
 const OPEN = 16000;
 
@@ -858,7 +858,11 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
     const tone = mix.tone.frequency;
 
     // ---- 全体の遠さ: 前奏はこもった音から開き、間奏で遠のいて、最後の2小節でまた近づく
-    if (section === "intro" && inSection === INTRO_BARS - 1) tone.exponentialRampToValueAtTime(OPEN, t + barSec);
+    // 前奏の頭から終わりまで、均等に開いていく（途中で急に明るくならないように）
+    if (section === "intro" && inSection === 0) {
+      tone.setValueAtTime(CLOSED, t);
+      tone.exponentialRampToValueAtTime(OPEN, t + barSec * INTRO_BARS);
+    }
     if (section === "interlude" && inSection === 0) {
       tone.setValueAtTime(OPEN, t);
       tone.exponentialRampToValueAtTime(DISTANT, t + barSec * 2);
