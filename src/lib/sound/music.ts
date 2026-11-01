@@ -348,18 +348,6 @@ function hallImpulse(ctx: BaseAudioContext, seconds: number) {
   return buffer;
 }
 
-/** 古い録音のような、ごく薄いヒス */
-function hissBuffer(ctx: BaseAudioContext) {
-  const buffer = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate);
-  const data = buffer.getChannelData(0);
-  let smooth = 0;
-  for (let i = 0; i < data.length; i++) {
-    smooth += 0.1 * (Math.random() * 2 - 1 - smooth);
-    data[i] = smooth * 0.3 + (Math.random() < 0.00012 ? (Math.random() * 2 - 1) * 0.4 : 0);
-  }
-  return buffer;
-}
-
 /** 倍音の重みから波形を作る */
 const wave = (ctx: BaseAudioContext, amps: number[]) => {
   const real = new Float32Array(amps.length + 1);
@@ -411,14 +399,7 @@ function createMix(ctx: BaseAudioContext, out: AudioNode, song: Song): Mix {
     return f;
   };
 
-  // 古い録音のヒス
-  const hiss = ctx.createBufferSource();
-  hiss.buffer = hissBuffer(ctx);
-  hiss.loop = true;
-  const hissLevel = ctx.createGain();
-  hissLevel.gain.value = 0.012;
-  hiss.connect(filter("bandpass", 3000, 0.4)).connect(hissLevel).connect(sum);
-  hiss.start();
+  // 古い録音のようなヒス（ザーという砂嵐の音）は、耳につくので敷かない
 
   return {
     ctx,
@@ -433,11 +414,8 @@ function createMix(ctx: BaseAudioContext, out: AudioNode, song: Song): Mix {
       warm: wave(ctx, [1, 0.42, 0.2, 0.1, 0.05, 0.025, 0.012]),
       bright: wave(ctx, [1, 0.75, 0.55, 0.42, 0.32, 0.24, 0.17, 0.12, 0.085, 0.06, 0.04, 0.03]),
     },
-    stop: () => {
-      try {
-        hiss.stop();
-      } catch {}
-    },
+    // 鳴り続ける音源は持たないので、止めるものはない（各音は自分の長さで止まる）
+    stop: () => {},
   };
 }
 
