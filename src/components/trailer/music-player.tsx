@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { soundManager } from "@/lib/sound/sound-manager";
-import { startAmbience, type AmbienceVoice } from "@/lib/sound/ambience";
+import { ambienceParts, playAmbiencePart, startAmbience, type AmbienceVoice } from "@/lib/sound/ambience";
 import { loadPiano, SONGS, songLayout, startSong, type SongKey, type SongVoice } from "@/lib/sound/music";
 
 const TRACKS: { key: SongKey; name: string; en: string }[] = [
@@ -144,6 +144,20 @@ export function MusicPlayer() {
   const [ambience, setAmbience] = useState(true);
   const audio = useRef<{ ctx: AudioContext; key: SongKey; song: SongVoice | null; ambience: AmbienceVoice | null } | null>(null);
 
+  // 環境音の素材を1つずつ鳴らす（曲とは別の AudioContext。鳴らしている素材は少しのあいだ光らせる）
+  const [preview, setPreview] = useState<{ key: SongKey; index: number } | null>(null);
+  const previewAudio = useRef<{ ctx: AudioContext; stop: (() => void) | null; timer: ReturnType<typeof setTimeout> | null } | null>(null);
+
+  const playPart = (key: SongKey, index: number, kind: "bed" | "event") => {
+    if (!previewAudio.current) previewAudio.current = { ctx: new AudioContext(), stop: null, timer: null };
+    const current = previewAudio.current;
+    current.stop?.();
+    if (current.timer) clearTimeout(current.timer);
+    current.stop = playAmbiencePart(current.ctx, current.ctx.destination, key, index);
+    setPreview({ key, index });
+    current.timer = setTimeout(() => setPreview(null), kind === "bed" ? 8000 : 2500);
+  };
+
   const release = () => {
     audio.current?.song?.stop();
     audio.current?.ambience?.stop();
@@ -157,6 +171,8 @@ export function MusicPlayer() {
     return () => {
       soundManager.setSilenced(false);
       release();
+      previewAudio.current?.stop?.();
+      void previewAudio.current?.ctx.close();
     };
   }, []);
 
@@ -265,6 +281,33 @@ export function MusicPlayer() {
             </li>
           ))}
         </ul>
+        <section className="flex flex-col gap-3">
+          <h2 className="flex flex-col leading-tight tracking-[0.2em] whitespace-nowrap text-starlight">
+            環境音の素材
+            <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60">AMBIENT SOUNDS</span>
+          </h2>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            その場所で使っている音を、曲のタイミングと関係なく1つずつ鳴らします。曲の後ろではとても小さく鳴らしているので、ここでは大きくして聴かせます。続く音（うなり）は8秒で消えます。
+          </p>
+          <ul className="flex flex-col gap-2">
+            {TRACKS.map((track) => (
+              <li key={track.key} className="flex flex-col gap-2 rounded-lg border border-white/10 px-4 py-3">
+                <span className="whitespace-nowrap text-starlight">{track.name}</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {ambienceParts(track.key).map((part, index) => (
+                    <button
+                      key={part.label + index}
+                      className={chip(preview?.key === track.key && preview.index === index)}
+                      onClick={() => playPart(track.key, index, part.kind)}
+                    >
+                      {part.label}
+                    </button>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
         <p className="text-xs leading-relaxed text-muted-foreground">
           「環境音だけ」はその場所の環境音を単体で流します。再生中はバーを押すか、なぞった位置の小節から鳴らし直せます。WAV は選んだ位置・長さで書き出し、終わりの{FADE_SEC}
           秒でフェードアウトし、音量をそろえます。1巡目の旋律は毎回同じです。

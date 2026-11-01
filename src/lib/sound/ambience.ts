@@ -414,9 +414,10 @@ type Scene = {
   space: number;
   /** 全体の大きさ */
   level: number;
-  beds: ((env: Env) => Bed)[];
+  /** 続く音 */
+  beds: { label: string; make: (env: Env) => Bed }[];
   /** ときどき鳴る音: 間隔（秒）の幅と、最初に鳴るまでの幅 */
-  events: { every: [number, number]; first?: [number, number]; sound: Sound }[];
+  events: { label: string; every: [number, number]; first?: [number, number]; sound: Sound }[];
 };
 
 const SCENES: Record<AmbienceKey, Scene> = {
@@ -425,24 +426,24 @@ const SCENES: Record<AmbienceKey, Scene> = {
     level: 1,
     beds: [],
     events: [
-      { every: [5, 12], sound: cricket(0.006) },
-      { every: [70, 150], first: [20, 40], sound: owl([0.3, 0.8]) },
+      { label: "遠くの虫", every: [5, 12], sound: cricket(0.006) },
+      { label: "フクロウ", every: [70, 150], first: [20, 40], sound: owl([0.3, 0.8]) },
     ],
   },
   prelude: {
     space: 3,
     level: 1,
     beds: [],
-    events: [{ every: [10, 22], sound: cricket(0.005) }],
+    events: [{ label: "まばらな虫", every: [10, 22], sound: cricket(0.005) }],
   },
   hearth: {
     space: 1.1,
     level: 1,
-    beds: [(env) => roar(env, { cutoff: 380, level: 0.022, flicker: 0.4 })],
+    beds: [{ label: "暖炉のうなり", make: (env) => roar(env, { cutoff: 380, level: 0.022, flicker: 0.4 }) }],
     events: [
-      { every: [45, 100], first: [15, 40], sound: pageTurn(0.03) },
-      { every: [35, 80], first: [20, 50], sound: creak({ low: 140, high: 220, level: 0.012, length: [0.5, 1.1] }) },
-      { every: [100, 220], first: [40, 80], sound: owl([0.75, 0.95]) },
+      { label: "頁をめくる音", every: [45, 100], first: [15, 40], sound: pageTurn(0.03) },
+      { label: "古い床の軋み", every: [35, 80], first: [20, 50], sound: creak({ low: 140, high: 220, level: 0.012, length: [0.5, 1.1] }) },
+      { label: "遠いフクロウ", every: [100, 220], first: [40, 80], sound: owl([0.75, 0.95]) },
     ],
   },
   forest: {
@@ -450,11 +451,11 @@ const SCENES: Record<AmbienceKey, Scene> = {
     level: 1,
     beds: [],
     events: [
-      { every: [5, 12], sound: cricket(0.005) },
-      { every: [6, 14], sound: drip(0.012) },
-      { every: [30, 70], first: [10, 30], sound: creak({ low: 90, high: 150, level: 0.007, length: [0.9, 1.8] }) },
-      { every: [60, 140], first: [25, 60], sound: pageTurn(0.016) },
-      { every: [60, 150], first: [20, 40], sound: owl([0.3, 0.7]) },
+      { label: "虫の声", every: [5, 12], sound: cricket(0.005) },
+      { label: "根を伝う水滴", every: [6, 14], sound: drip(0.012) },
+      { label: "大樹の軋み", every: [30, 70], first: [10, 30], sound: creak({ low: 90, high: 150, level: 0.007, length: [0.9, 1.8] }) },
+      { label: "頁をめくる音", every: [60, 140], first: [25, 60], sound: pageTurn(0.016) },
+      { label: "フクロウ", every: [60, 150], first: [20, 40], sound: owl([0.3, 0.7]) },
     ],
   },
   stars: {
@@ -462,26 +463,27 @@ const SCENES: Record<AmbienceKey, Scene> = {
     level: 1,
     beds: [],
     events: [
-      { every: [18, 40], first: [8, 20], sound: gears(0.01) },
-      { every: [30, 60], first: [15, 35], sound: creak({ low: 200, high: 320, level: 0.006, length: [0.6, 1.2] }) },
-      { every: [130, 260], first: [50, 90], sound: owl([0.85, 1]) },
+      { label: "天文盤の歯車", every: [18, 40], first: [8, 20], sound: gears(0.01) },
+      { label: "天文盤の軋み", every: [30, 60], first: [15, 35], sound: creak({ low: 200, high: 320, level: 0.006, length: [0.6, 1.2] }) },
+      { label: "ずっと下のフクロウ", every: [130, 260], first: [50, 90], sound: owl([0.85, 1]) },
     ],
   },
   frost: {
     space: 6,
     level: 1,
     beds: [],
-    events: [
-      { every: [6, 15], sound: tinkle(0.009) },
-    ],
+    events: [{ label: "氷の粒が触れ合う音", every: [6, 15], sound: tinkle(0.009) }],
   },
   forge: {
     space: 2.2,
     level: 1,
-    beds: [(env) => roar(env, { cutoff: 220, level: 0.03, flicker: 0.25 }), (env) => roar(env, { cutoff: 700, level: 0.008, flicker: 0.5 })],
+    beds: [
+      { label: "炉の低いうなり", make: (env) => roar(env, { cutoff: 220, level: 0.03, flicker: 0.25 }) },
+      { label: "炉の炎のゆらぎ", make: (env) => roar(env, { cutoff: 700, level: 0.008, flicker: 0.5 }) },
+    ],
     events: [
-      { every: [2, 6], sound: lava(0.03) },
-      { every: [22, 45], first: [8, 18], sound: dragonBreath(0.016) },
+      { label: "溶岩の泡", every: [2, 6], sound: lava(0.03) },
+      { label: "火竜の寝息", every: [22, 45], first: [8, 18], sound: dragonBreath(0.016) },
     ],
   },
   sanctum: {
@@ -489,7 +491,7 @@ const SCENES: Record<AmbienceKey, Scene> = {
     level: 1,
     beds: [],
     // 大聖堂の鐘（曲と同じヘ長調の F）
-    events: [{ every: [45, 100], first: [15, 35], sound: bell({ note: 53, level: 0.014 }) }],
+    events: [{ label: "遠い鐘", every: [45, 100], first: [15, 35], sound: bell({ note: 53, level: 0.014 }) }],
   },
   zenith: {
     space: 6,
@@ -497,8 +499,8 @@ const SCENES: Record<AmbienceKey, Scene> = {
     beds: [],
     // 遠い星の鳴る音（曲と同じロ長調の B）
     events: [
-      { every: [50, 110], first: [20, 40], sound: bell({ note: 83, level: 0.008 }) },
-      { every: [20, 40], sound: tinkle(0.007) },
+      { label: "遠い星の鳴る音", every: [50, 110], first: [20, 40], sound: bell({ note: 83, level: 0.008 }) },
+      { label: "星のきらめき", every: [20, 40], sound: tinkle(0.007) },
     ],
   },
 };
@@ -523,7 +525,7 @@ export function startAmbience(ctx: BaseAudioContext, out: AudioNode, key: Ambien
   space.connect(filterOf(ctx, "lowpass", 4000)).connect(output);
   const env: Env = { ctx, dry: output, wet: space };
 
-  const beds = scene.beds.map((make) => make(env));
+  const beds = scene.beds.map((b) => b.make(env));
   const events = scene.events.map((e) => ({ ...e, next: start + rand(...(e.first ?? e.every)) }));
   let nextSway = start;
 
@@ -570,4 +572,51 @@ export function startAmbience(ctx: BaseAudioContext, out: AudioNode, key: Ambien
       output.disconnect();
     },
   };
+}
+
+// ---------------------------------------------------------------- 1つずつ聴く（試聴ページ用）
+
+/** その場所で使っている音の一覧（続く音が先、ときどき鳴る音が後） */
+export function ambienceParts(key: AmbienceKey) {
+  const scene = SCENES[key];
+  return [...scene.beds.map((b) => ({ label: b.label, kind: "bed" as const })), ...scene.events.map((e) => ({ label: e.label, kind: "event" as const }))];
+}
+
+/** 続く音を1つずつ聴くときに流す長さ（秒） */
+const BED_PREVIEW_SEC = 8;
+
+/**
+ * ambienceParts の index 番目の音を1回だけ鳴らす（続く音は8秒流して消す）。曲の後ろ用にとても小さく作ってあるので、
+ * boost 倍に持ち上げて鳴らす。戻り値で途中で止める
+ */
+export function playAmbiencePart(ctx: BaseAudioContext, out: AudioNode, key: AmbienceKey, index: number, boost = 6) {
+  const scene = SCENES[key];
+  const output = ctx.createGain();
+  output.gain.value = boost;
+  output.connect(out);
+  const space = ctx.createConvolver();
+  space.buffer = spaceImpulse(ctx, scene.space);
+  space.connect(filterOf(ctx, "lowpass", 4000)).connect(output);
+  const env: Env = { ctx, dry: output, wet: space };
+  const at = ctx.currentTime + 0.05;
+  const stop = () => output.disconnect();
+
+  if (index < scene.beds.length) {
+    const bed = scene.beds[index].make(env);
+    for (let t = 0; t < BED_PREVIEW_SEC; t += SWAY_SEC) bed.sway(at + t);
+    output.gain.setValueAtTime(0, at);
+    output.gain.linearRampToValueAtTime(boost, at + 1);
+    output.gain.setValueAtTime(boost, at + BED_PREVIEW_SEC - 1.5);
+    output.gain.linearRampToValueAtTime(0, at + BED_PREVIEW_SEC);
+    for (const s of bed.sources) s.stop(at + BED_PREVIEW_SEC + 0.1);
+    return () => {
+      for (const s of bed.sources)
+        try {
+          s.stop();
+        } catch {}
+      stop();
+    };
+  }
+  scene.events[index - scene.beds.length]?.sound(env, at);
+  return stop;
 }
