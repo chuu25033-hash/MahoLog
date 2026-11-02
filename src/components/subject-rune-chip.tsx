@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 
 /**
  * 選択中の科目を「理科 › 物理」の形で、1px の二重線とルーン文字の枠に収めて示す。
- * 1行で置ける幅に収まらないときだけ、科目名を上に、詳細科目を下に積む（字は削らない）
+ * 1行で置ける幅に収まらないときだけ、科目名を上に、詳細科目を下に積む。
+ * 詳細科目の無い（カスタム科目など）長い名前は、名前を文節で2段に折る（どちらも字は削らない）
  */
 export function SubjectRuneChip({
   name,
@@ -27,7 +28,7 @@ export function SubjectRuneChip({
   useLayoutEffect(() => {
     const parent = chipRef.current?.parentElement;
     const measure = measureRef.current;
-    if (!parent || !measure || !subSubject) {
+    if (!parent || !measure) {
       setStacked(false);
       return;
     }
@@ -49,6 +50,15 @@ export function SubjectRuneChip({
     </span>
   );
   const nameText = <span style={{ color, textShadow: `0 0 10px ${color}80` }}>{name}</span>;
+  // 積むときの名前: 置ける幅で文節ごとに折り、段の長さをそろえる（区切りの無い英字も枠の中で折る）
+  const wrappedName = (
+    <span
+      className="min-w-0 text-balance whitespace-normal [overflow-wrap:anywhere] [word-break:auto-phrase]"
+      style={{ color, textShadow: `0 0 10px ${color}80` }}
+    >
+      {name}
+    </span>
+  );
   const oneLine = (
     <>
       {rune("ᚱ")}
@@ -79,12 +89,12 @@ export function SubjectRuneChip({
       <span className="pointer-events-none absolute inset-[3px] rounded-[2px] border" style={{ borderColor: `${color}30` }} />
       {stacked ? (
         <>
-          <span className="flex items-center gap-2 whitespace-nowrap">
+          <span className="flex max-w-full items-center gap-2">
             {rune("ᚱ")}
-            {nameText}
+            {wrappedName}
             {rune("ᛟ")}
           </span>
-          <span className="text-[#e8fbfd] [word-break:auto-phrase]">{subSubject}</span>
+          {subSubject && <span className="text-[#e8fbfd] [word-break:auto-phrase]">{subSubject}</span>}
         </>
       ) : (
         oneLine
