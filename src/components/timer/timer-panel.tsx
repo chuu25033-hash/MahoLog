@@ -47,7 +47,7 @@ import {
 import type { StudyMode, Subject, SubjectTotal } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { usePortraitPhone } from "@/lib/use-portrait-phone";
-import { ComboIndicator, MeteorSign } from "./combo-indicator";
+import { ComboGuide, ComboIndicator, MeteorSign } from "./combo-indicator";
 import { PortraitTimer } from "./portrait-timer";
 import { ResultDialog, type StudyResult } from "./result-dialog";
 import { notifyFinish, requestRestNoticePermission, showRestEndNotification, useClock } from "./use-clock";
@@ -511,7 +511,7 @@ export function TimerPanel({
         </p>
       )}
       <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
-        詠唱を終えると静息に入る（無窮の詠唱は{COMBO_MIN_MINUTES}分以上のとき）。{COMBO_MIN_MINUTES}分以上の詠唱を、静息明けから{COMBO_GRACE_MINUTES}分のうちに次へつなげば、星脈との同調が高まる
+        詠唱を終えると静息に入る（無窮の詠唱は{COMBO_MIN_MINUTES}分以上のとき）。{COMBO_MIN_MINUTES}分以上の詠唱を、静息明けから{COMBO_GRACE_MINUTES}分のうちに次へつなげば、<ComboGuide />が高まる
       </p>
       {data.starEcho > 0 && (
         <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
