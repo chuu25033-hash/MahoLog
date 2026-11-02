@@ -25,7 +25,7 @@ import { loadChantSession, saveChantSession, sessionElapsedMs, type ChantPhase, 
 import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
 import { cycleMarkMultiplier } from "@/lib/cycles";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
-import { radarAxesOf, resolveSubSubject, subSubjectLimitsOf } from "@/lib/subjects";
+import { radarAxesOf, resolveSubSubject, ruleNameOf, subSubjectLimitsOf } from "@/lib/subjects";
 import { soundManager } from "@/lib/sound/sound-manager";
 import { setChantPresence } from "@/lib/worldline-store";
 import { COMBO_GRACE_MINUTES, COMBO_MIN_MINUTES, restEndNotice } from "@/lib/combo";
@@ -177,7 +177,7 @@ export function TimerPanel({
   const resting = phase === "break";
   const color = resting ? "#cfe9ff" : (subject?.color ?? "#a882fb");
   const lineColor = resting ? "#a882fb" : skin.lineColor;
-  const boost = subject ? areaMultiplier(area, subject.name) : 1;
+  const boost = subject ? areaMultiplier(area, ruleNameOf(subject)) : 1;
 
   /** 計った詠唱を刻む。minutes は詠唱の間で実際に計った時間、endedAt は詠唱が終わった時刻（裏で満了していたら満了の時刻） */
   const save = useCallback(
@@ -217,8 +217,8 @@ export function TimerPanel({
         // TODO: Supabase 接続時はボーナス分の MP も DB に保存する（現状はローカル表示のみ）
         // 加護は手元にある秘宝・神話遺物・復元した文書だけが授ける（錬成に捧げた秘宝は外れる）
         const owned = (id: string) => hasItem(getUserData(), id);
-        const areaBoost = areaMultiplier(area, subject.name);
-        const blessing = blessingMultiplier(owned, subject.name);
+        const areaBoost = areaMultiplier(area, ruleNameOf(subject));
+        const blessing = blessingMultiplier(owned, ruleNameOf(subject));
         const usedCatalyst = userActions.consumeCatalyst();
         const { cycle } = getUserData();
         const cycleMark = cycleMarkMultiplier(cycle.count);

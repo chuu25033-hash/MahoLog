@@ -4,7 +4,7 @@ import type { ComponentProps } from "react";
 import { PageLoading } from "@/components/page-loading";
 import { timerSummary, totalsByAxis } from "@/lib/aggregate";
 import { startOfJstWeek } from "@/lib/date";
-import { activeSubjectsOf, radarAxesOf } from "@/lib/subjects";
+import { activeSubjectsOf, radarAxesOf, withCustomNames } from "@/lib/subjects";
 import { localStudyLogs, useStoredUserData } from "@/lib/user-store";
 import { TimerPanel } from "./timer-panel";
 
@@ -16,7 +16,8 @@ export function TimerView(props: ComponentProps<typeof TimerPanel>) {
   const stored = useStoredUserData();
   if (!stored) return <PageLoading />;
   const keys = stored.userProfile.activeSubjects;
-  const subjects = activeSubjectsOf(props.subjects, keys);
+  // カスタム科目は、設定で付けた名前で表す
+  const subjects = activeSubjectsOf(withCustomNames(props.subjects, stored.userProfile.customSubjectNames), keys);
   const settings = {
     initialFocusMin: stored.settings.defaultFocusMinutes,
     initialSubjectId: stored.userProfile.subject,

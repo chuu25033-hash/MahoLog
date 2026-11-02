@@ -1,9 +1,16 @@
 // 主科目（大カテゴリ）ごとの詳細科目。科目名で引くので、Supabase の科目も名前が同じなら同じ分類になる
 import type { Subject } from "./types";
 
-/** 詳細科目を自由記述する主科目 */
-export const CUSTOM_SUBJECT_NAME = "カスタム";
+/**
+ * 利用者が名前を付けられるカスタム科目（科目 ID）。詳細科目は自由記述する。
+ * s7 はもとの「カスタム」で、これまでの記録はカスタム1に引き継ぐ
+ */
+export const CUSTOM_SUBJECT_IDS: readonly string[] = ["s7", "s8", "s9"];
+/** 名前を付ける前の、もとの「カスタム」科目の名前 */
+const CUSTOM_SUBJECT_NAME = "カスタム";
 export const CUSTOM_SUB_SUBJECT_MAX = 20;
+/** カスタム科目に付けられる名前の長さ。魔法陣の頂点に並べても重ならないよう短めに */
+export const CUSTOM_SUBJECT_NAME_MAX = 8;
 
 const SUB_SUBJECTS: Record<string, readonly string[]> = {
   国語: ["現代文", "古文", "漢文", "国語全般"],
@@ -14,13 +21,29 @@ const SUB_SUBJECTS: Record<string, readonly string[]> = {
   情報: ["情報", "プログラミング", "Web開発", "情報処理試験"],
 };
 
-export function isCustomSubject(subject: Pick<Subject, "name"> | undefined) {
-  return subject?.name === CUSTOM_SUBJECT_NAME;
+export function isCustomSubject(subject: Pick<Subject, "id" | "name"> | undefined) {
+  return !!subject && (CUSTOM_SUBJECT_IDS.includes(subject.id) || subject.name === CUSTOM_SUBJECT_NAME);
+}
+
+/** 利用者が付けた名前をカスタム科目に当てる。名前が空なら「カスタム1」のような初めの名前のまま */
+export function withCustomNames<T extends Pick<Subject, "id" | "name">>(subjects: T[], names: Record<string, string> | undefined): T[] {
+  return subjects.map((s) => {
+    const name = isCustomSubject(s) ? names?.[s.id]?.trim().slice(0, CUSTOM_SUBJECT_NAME_MAX) : undefined;
+    return name ? { ...s, name } : s;
+  });
+}
+
+/**
+ * エリアや遺物の加護を判定するときの科目名。カスタム科目に「数学」のような名前を付けても、
+ * その科目の加護は受けない（名前を付ける前と同じ扱い）
+ */
+export function ruleNameOf(subject: Pick<Subject, "id" | "name">) {
+  return isCustomSubject(subject) ? CUSTOM_SUBJECT_NAME : subject.name;
 }
 
 /** 主科目で選べる詳細科目（カスタム・未分類の科目は空） */
-export function subSubjectsOf(subject: Pick<Subject, "name"> | undefined): readonly string[] {
-  return (subject && SUB_SUBJECTS[subject.name]) ?? [];
+export function subSubjectsOf(subject: Pick<Subject, "id" | "name"> | undefined): readonly string[] {
+  return (subject && !isCustomSubject(subject) && SUB_SUBJECTS[subject.name]) || [];
 }
 
 /**
@@ -28,7 +51,7 @@ export function subSubjectsOf(subject: Pick<Subject, "name"> | undefined): reado
  * limit: 詳細科目だけを魔法陣の軸にした主科目で選べる詳細科目。渡されれば必ずその中から選ぶ
  */
 export function resolveSubSubject(
-  subject: Pick<Subject, "name"> | undefined,
+  subject: Pick<Subject, "id" | "name"> | undefined,
   subSubject: string | null | undefined,
   limit?: readonly string[],
 ) {
@@ -65,13 +88,17 @@ export function parseAxisKey(key: string): { subjectId: string; subSubject: stri
 }
 
 /** 詳細科目を魔法陣の軸にできる主科目か（カスタムは自由記述なので軸にしない） */
-export function canSplitSubject(subject: Pick<Subject, "name">) {
+export function canSplitSubject(subject: Pick<Subject, "id" | "name">) {
   return !isCustomSubject(subject) && subSubjectsOf(subject).length > 0;
 }
 
-/** 設定画面で選んだ魔法陣の軸を、科目の並び順にそろえて返す。未設定・足りない場合はすべての主科目を使う */
+/** 「詠唱に使う科目」を選ぶ前は外しておくカスタム科目（カスタム2・3）。使うときは設定で選ぶ */
+const HIDDEN_BY_DEFAULT: readonly string[] = ["s8", "s9"];
+
+/** 設定画面で選んだ魔法陣の軸を、科目の並び順にそろえて返す。未設定・足りない場合はカスタム2・3を除くすべての主科目を使う */
 export function radarAxesOf<T extends Pick<Subject, "id" | "name">>(subjects: T[], activeKeys: string[] | null | undefined): RadarAxis<T>[] {
-  const whole = subjects.map((s) => ({ key: s.id, subjectId: s.id, subSubject: null, subject: s }));
+  const shown = subjects.filter((s) => !HIDDEN_BY_DEFAULT.includes(s.id));
+  const whole = (shown.length >= MIN_ACTIVE_SUBJECTS ? shown : subjects).map((s) => ({ key: s.id, subjectId: s.id, subSubject: null, subject: s }));
   if (!activeKeys) return whole;
   const axes = subjects.flatMap((s) => [
     ...(activeKeys.includes(s.id) ? [{ key: s.id, subjectId: s.id, subSubject: null, subject: s }] : []),
@@ -83,7 +110,7 @@ export function radarAxesOf<T extends Pick<Subject, "id" | "name">>(subjects: T[
   return axes.length >= MIN_ACTIVE_SUBJECTS ? axes.slice(0, MAX_ACTIVE_SUBJECTS) : whole;
 }
 
-/** 設定画面で選んだ「詠唱に使う科目」（魔法陣の軸を持つ主科目）。未設定・足りない場合はすべての科目を使う */
+/** 設定画面で選んだ「詠唱に使う科目」（魔法陣の軸を持つ主科目）。未設定・足りない場合はカスタム2・3を除くすべての科目を使う */
 export function activeSubjectsOf<T extends Pick<Subject, "id" | "name">>(subjects: T[], activeKeys: string[] | null | undefined): T[] {
   const ids = new Set(radarAxesOf(subjects, activeKeys).map((a) => a.subjectId));
   return subjects.filter((s) => ids.has(s.id));

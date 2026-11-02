@@ -16,7 +16,10 @@ export const demoSubjects: Subject[] = [
   { id: "s4", name: "理科", color: "#e2c974", is_active: true, sort_order: 4 },
   { id: "s5", name: "社会", color: "#b9a2f7", is_active: true, sort_order: 5 },
   { id: "s6", name: "情報", color: "#f2a46b", is_active: true, sort_order: 6 },
-  { id: "s7", name: "カスタム", color: "#c9d3e6", is_active: true, sort_order: 7 },
+  // カスタム科目は設定で名前を付けられる（s7 はもとの「カスタム」）
+  { id: "s7", name: "カスタム1", color: "#c9d3e6", is_active: true, sort_order: 7 },
+  { id: "s8", name: "カスタム2", color: "#d5c6e8", is_active: true, sort_order: 8 },
+  { id: "s9", name: "カスタム3", color: "#bfe0d4", is_active: true, sort_order: 9 },
 ];
 
 const plan: [string, number, number][] = [

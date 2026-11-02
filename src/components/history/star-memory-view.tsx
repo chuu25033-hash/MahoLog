@@ -9,6 +9,8 @@ import { demoSubjects } from "@/lib/demo";
 import { formatMinutes } from "@/lib/game";
 import { startOfJstMonth } from "@/lib/date";
 import { addMonths, firstChantMonth, observedNightsFrom, weekSizes, type ObservedNight } from "@/lib/star-memory";
+import { withCustomNames } from "@/lib/subjects";
+import type { Subject } from "@/lib/types";
 import { totalChantMinutes, useStoredUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
@@ -54,7 +56,6 @@ const ATTRIBUTES: Record<Attribute, { label: string; stops: [string, string, str
 
 const SUBJECT_ATTRIBUTE: Record<string, Attribute> = { s1: "purple", s2: "cyan", s3: "aqua", s4: "aqua", s5: "purple" };
 
-const subjectOf = (id: string) => demoSubjects.find((s) => s.id === id);
 
 const dateLabel = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", weekday: "short" });
 
@@ -208,6 +209,7 @@ export function StarMemoryView() {
       month={month}
       nights={nights}
       allMinutes={totalChantMinutes(stored)}
+      subjects={withCustomNames(demoSubjects, stored.userProfile.customSubjectNames)}
       onPrev={month > first ? () => setMonth(addMonths(month, -1)) : undefined}
       onNext={month < thisMonth ? () => setMonth(addMonths(month, 1)) : undefined}
     />
@@ -238,12 +240,15 @@ function StarMemory({
   month,
   nights,
   allMinutes,
+  subjects,
   onPrev,
   onNext,
 }: {
   month: Date;
   nights: ObservedNight[];
   allMinutes: number;
+  /** カスタム科目は設定で付けた名前で表す */
+  subjects: Subject[];
   onPrev?: () => void;
   onNext?: () => void;
 }) {
@@ -299,7 +304,7 @@ function StarMemory({
 
         <aside className="flex min-h-0 scroll-area scrollbar-none flex-col">
           <div className="my-auto flex flex-col gap-3">
-            <NightDetail night={selected} />
+            <NightDetail night={selected} subjects={subjects} />
             <ConstellationList month={month} sizes={sizes} nights={nights} completed={completed} />
           </div>
         </aside>
@@ -610,7 +615,7 @@ function CelestialChart({
   );
 }
 
-function NightDetail({ night }: { night: ObservedNight }) {
+function NightDetail({ night, subjects }: { night: ObservedNight; subjects: Subject[] }) {
   const totals = new Map<string, number>();
   night.sessions.forEach((s) => totals.set(s.subjectId, (totals.get(s.subjectId) ?? 0) + s.minutes));
   const breakdown = [...totals.entries()].sort((a, b) => b[1] - a[1]);
@@ -665,7 +670,7 @@ function NightDetail({ night }: { night: ObservedNight }) {
             </h3>
             <ul className="flex flex-col gap-1.5">
               {breakdown.map(([id, minutes]) => {
-                const subject = subjectOf(id);
+                const subject = subjects.find((s) => s.id === id);
                 return (
                   <li key={id} className="flex items-center gap-2 text-xs">
                     <span className="w-16 shrink-0 tracking-wider">{subject?.name ?? "—"}</span>

@@ -54,8 +54,10 @@ export type UserProfile = {
   subject: string | null;
   /** 詳細科目（カスタムは自由記述） */
   subSubject: string | null;
-  /** 魔法陣の軸（3つ以上）: 主科目 ID か「科目 ID::詳細科目」。null ならすべての主科目 */
+  /** 魔法陣の軸（3つ以上）: 主科目 ID か「科目 ID::詳細科目」。null ならカスタム2・3を除くすべての主科目 */
   activeSubjects: string[] | null;
+  /** カスタム科目（科目 ID）に利用者が付けた名前。無ければ「カスタム1」のような初めの名前 */
+  customSubjectNames: Record<string, string>;
 };
 
 export type ChantRecord = {
@@ -144,7 +146,7 @@ const unlockedAt = (totalMp: number) => AREAS.filter((a) => isAreaUnlocked(a, to
 /** 初回起動時の状態: Rank I「門前の解読者」、はじまりの小屋から */
 export function initialUserData(): UserData {
   return {
-    userProfile: { username: demoProfile.username, avatar: demoProfile.avatar_url, rank: rankOf(calcLevel(0)).numeral, totalMp: 0, currentStageId: "1-1", subject: null, subSubject: null, activeSubjects: null },
+    userProfile: { username: demoProfile.username, avatar: demoProfile.avatar_url, rank: rankOf(calcLevel(0)).numeral, totalMp: 0, currentStageId: "1-1", subject: null, subSubject: null, activeSubjects: null, customSubjectNames: {} },
     chantHistory: [],
     dailyReward: { lastClaimedDate: null, streak: 0 },
     inventory: {},
@@ -643,6 +645,15 @@ export const userActions = {
   /** 主軸カテゴリと詳細科目 */
   setSubject(subject: string | null, subSubject: string | null) {
     update((s) => ({ ...s, userProfile: { ...s.userProfile, subject, subSubject } }));
+  },
+
+  /** カスタム科目の名前。空にすると初めの名前に戻る */
+  setCustomSubjectName(subjectId: string, name: string) {
+    update((s) => {
+      const names = { ...s.userProfile.customSubjectNames, [subjectId]: name };
+      if (!name) delete names[subjectId];
+      return { ...s, userProfile: { ...s.userProfile, customSubjectNames: names } };
+    });
   },
 
   /** 魔法陣の軸（主科目 ID か「科目 ID::詳細科目」）。主軸カテゴリの軸がすべて外れたら主軸の指定も外す */

@@ -75,7 +75,7 @@ export function SubjectPicker({
               placeholder="例: 行政書士、心理学"
               onChange={(e) => onChange(subject.id, e.target.value || null)}
               onBlur={(e) => onChange(subject.id, e.target.value.trim() || null)}
-              aria-label="カスタム科目"
+              aria-label={`${subject.name}の詳細科目`}
               className="h-7 w-full rounded-md border border-white/15 bg-white/[0.03] px-2.5 text-xs tracking-wider outline-none transition-colors placeholder:text-muted-foreground/60 focus-visible:border-starlight/55 disabled:opacity-50"
             />
           ) : (

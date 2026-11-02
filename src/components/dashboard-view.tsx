@@ -26,7 +26,7 @@ import { startOfJstMonth, startOfJstWeek } from "@/lib/date";
 import { cycleLabel } from "@/lib/cycles";
 import { formatMinutes, levelProgress, rankOf } from "@/lib/game";
 import { sessionElapsedMs, useChantSession, type ChantSession } from "@/lib/chant-session";
-import { radarAxesOf } from "@/lib/subjects";
+import { radarAxesOf, withCustomNames } from "@/lib/subjects";
 import { usePortraitPhone } from "@/lib/use-portrait-phone";
 import type { Subject } from "@/lib/types";
 import { equippedTitle, localProfile, localStudyLogs, useStoredUserData, userActions, useUserData } from "@/lib/user-store";
@@ -39,9 +39,11 @@ const MODE_LABEL = { pomodoro: "律動の詠唱", stopwatch: "無窮の詠唱" }
  * 魔術書庫。デモモードでは端末に保存した観測データから集計する。
  * 魔法陣（レーダー）は設定画面で選んだ「詠唱に使う科目」だけで描く
  */
-export function DashboardView({ summary, subjects, isDemo }: { summary: DashboardSummary; subjects: Subject[]; isDemo: boolean }) {
+export function DashboardView({ summary, subjects: baseSubjects, isDemo }: { summary: DashboardSummary; subjects: Subject[]; isDemo: boolean }) {
   const stored = useStoredUserData();
   if (!stored) return <PageLoading />;
+  // カスタム科目は、設定で付けた名前で表す
+  const subjects = withCustomNames(baseSubjects, stored.userProfile.customSubjectNames);
   const summed = isDemo ? dashboardSummary(localProfile(stored), subjects, localStudyLogs(stored)) : summary;
   // 紋章は設定画面で選び、端末に保存したものを掲げる
   const base = { ...summed, profile: { ...summed.profile, avatar_url: stored.userProfile.avatar } };

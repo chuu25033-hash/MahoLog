@@ -33,12 +33,15 @@ import {
   MIN_ACTIVE_SUBJECTS,
   activeSubjectsOf,
   axisKey,
+  CUSTOM_SUBJECT_NAME_MAX,
   canSplitSubject,
+  isCustomSubject,
   parseAxisKey,
   radarAxesOf,
   resolveSubSubject,
   subSubjectLimitsOf,
   subSubjectsOf,
+  withCustomNames,
 } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
 import { FOCUS_MINUTE_OPTIONS, hasDevBackup, initialUserData, userActions, useStoredUserData } from "@/lib/user-store";
@@ -48,7 +51,7 @@ const USERNAME_MAX = 16;
 
 /** 設定画面: 探究者の情報・学習設定・演出・探求データの管理。Supabase 接続時はログアウトもここから */
 export function SettingsView({
-  subjects,
+  subjects: baseSubjects,
   isDemo,
   signOutAction,
 }: {
@@ -59,6 +62,8 @@ export function SettingsView({
   const data = useStoredUserData();
   if (!data) return <PageLoading />;
   const { userProfile, settings } = data;
+  // カスタム科目は、ここで付けた名前で表す
+  const subjects = withCustomNames(baseSubjects, userProfile.customSubjectNames);
   const activeSubjects = activeSubjectsOf(subjects, userProfile.activeSubjects);
   const axes = radarAxesOf(subjects, userProfile.activeSubjects);
   const subLimits = subSubjectLimitsOf(axes);
@@ -199,6 +204,8 @@ export function SettingsView({
         </Panel>
 
         <Panel icon={Hexagon} title="詠唱の領域" label="DOMAINS">
+          <CustomSubjectNamesField subjects={baseSubjects} names={userProfile.customSubjectNames} />
+
           <ActiveSubjectsField subjects={subjects} activeKeys={axes.map((a) => a.key)} />
 
           <Field
@@ -421,6 +428,35 @@ function Panel({
       </h2>
       <div className="flex min-h-0 flex-1 flex-col gap-4 scroll-area scrollbar-none p-4 short:gap-3 short:p-3 lg:p-5">{children}</div>
     </section>
+  );
+}
+
+/** カスタム科目の名前を付ける。空にすると「カスタム1」のような初めの名前に戻る */
+function CustomSubjectNamesField({ subjects, names }: { subjects: Subject[]; names: Record<string, string> }) {
+  const customs = subjects.filter((s) => isCustomSubject(s));
+  if (customs.length === 0) return null;
+  return (
+    <Field label="カスタム科目の名前" hint={`${CUSTOM_SUBJECT_NAME_MAX}字まで`}>
+      <p className="mb-2 text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
+        自分で名付けた科目は、詠唱画面や魔法陣、魔導の軌跡にもその名前で表れます
+      </p>
+      <div className="flex flex-col gap-1.5">
+        {customs.map((s) => (
+          <label key={s.id} className="flex items-center gap-2.5">
+            <span className="size-1.5 shrink-0 rounded-full" style={{ background: s.color, boxShadow: `0 0 6px ${s.color}` }} />
+            <input
+              value={names[s.id] ?? ""}
+              maxLength={CUSTOM_SUBJECT_NAME_MAX}
+              placeholder={s.name}
+              onChange={(e) => userActions.setCustomSubjectName(s.id, e.target.value)}
+              onBlur={(e) => userActions.setCustomSubjectName(s.id, e.target.value.trim())}
+              aria-label={`${s.name}の名前`}
+              className="h-8 w-full rounded-lg border border-white/15 bg-white/[0.03] px-2.5 text-xs tracking-wider outline-none transition-colors placeholder:text-muted-foreground/60 focus-visible:border-starlight/55"
+            />
+          </label>
+        ))}
+      </div>
+    </Field>
   );
 }
 
