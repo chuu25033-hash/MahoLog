@@ -231,8 +231,9 @@ export function MagicRadar({
   const chartData = data.map((d) => ({ ...d, ratio: Math.max(d.minutes / maxMinutes, MIN_RATIO) }));
 
   return (
+    // 頂点の科目名は図の枠の外へ出ることがある（結果画面の小さな陣では左右の名前が欠けていた）ので、図の外も描く
     <div
-      className="relative h-full w-full [&_.recharts-radar-polygon]:[filter:drop-shadow(0_0_6px_var(--radar-glow))]"
+      className="relative h-full w-full [&_.recharts-radar-polygon]:[filter:drop-shadow(0_0_6px_var(--radar-glow))] [&_.recharts-surface]:overflow-visible"
       style={{ "--radar-glow": `${skin.lineColor}73` } as CSSProperties}
     >
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center [container-type:size]">
