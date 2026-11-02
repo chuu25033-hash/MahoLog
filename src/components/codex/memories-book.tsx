@@ -82,7 +82,7 @@ export function MemoriesBook({
         <DialogDescription
           render={<div />}
           key={page}
-          className="min-h-0 flex-1 animate-in overflow-y-auto overscroll-contain fade-in text-sm leading-loose tracking-wider text-foreground/90 duration-700"
+          className="min-h-0 flex-1 animate-in overflow-x-hidden overflow-y-auto overscroll-contain fade-in text-sm leading-loose tracking-wider text-foreground/90 duration-700"
         >
           {page === 0 ? (
             <Contents data={data} documents={documents} hasLastPage={!!origin} onOpen={go} />
@@ -232,10 +232,36 @@ function Chapter({ data, doc, index, name, minutes }: { data: UserData; doc: Anc
       {restored && (
         <p className="mt-1 text-center text-[13px] [word-break:auto-phrase]" style={{ color: doc.color, textShadow: `0 0 10px ${doc.color}66` }}>
           <span className="mb-1 block font-display text-[10px] tracking-[0.4em] opacity-70">✦</span>
-          {fillCoda(doc.coda, name, minutes)}
+          <CodaText text={fillCoda(doc.coda, name, minutes)} />
         </p>
       )}
     </article>
+  );
+}
+
+/** 結び。署名（――以降）があれば本文から切り離して、行を改めて置く */
+function CodaText({ text }: { text: string }) {
+  const at = text.lastIndexOf("――");
+  if (at < 0) return text;
+  return (
+    <>
+      {text.slice(0, at)}
+      <span className="mt-1.5 block">
+        <Signature line={text.slice(at)} />
+      </span>
+    </>
+  );
+}
+
+/** 署名の一行。名前や刻の途中で折り返さず、折り返すなら「、」の後だけにする（それでも幅に収まらない長い名前だけは途中で折る） */
+function Signature({ line }: { line: string }) {
+  const at = line.indexOf("、");
+  if (at < 0) return <span className="inline-block max-w-full [overflow-wrap:anywhere] [word-break:keep-all]">{line}</span>;
+  return (
+    <>
+      <span className="inline-block max-w-full [overflow-wrap:anywhere] [word-break:keep-all]">{line.slice(0, at + 1)}</span>
+      <span className="inline-block max-w-full [overflow-wrap:anywhere] [word-break:keep-all]">{line.slice(at + 1)}</span>
+    </>
   );
 }
 
@@ -245,7 +271,7 @@ function LastPage({ restored, line }: { restored: boolean; line: string }) {
     <div className="flex h-full items-center justify-center px-2 text-center">
       {restored ? (
         <p className="animate-in text-[13px] tracking-[0.15em] text-starlight/90 duration-[2400ms] [animation-delay:600ms] [animation-fill-mode:both] fade-in [word-break:auto-phrase]">
-          {line}
+          <Signature line={line} />
         </p>
       ) : (
         <span className="sr-only">この頁は、まだ空白のまま閉じられている</span>
