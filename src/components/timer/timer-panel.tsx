@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { FastForward, Hourglass, MapPin, Moon, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
+import { ChevronDown, FastForward, Hourglass, MapPin, Moon, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
 import { saveStudyLog } from "@/app/actions/study";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { BackToLibrary } from "@/components/back-to-library";
+import { DropTierList } from "@/components/drop-tier-list";
 import { ItemArt } from "@/components/item-art";
 import { MagicCircle } from "@/components/magic-circle";
 import { SubjectPicker } from "@/components/subject-picker";
@@ -158,6 +159,8 @@ export function TimerPanel({
 
   // ストップウォッチ放置確認
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // 「流れ星の区切り」の札を開いているか
+  const [tiersOpen, setTiersOpen] = useState(false);
   const [confirmBaseMs, setConfirmBaseMs] = useState(resumed?.confirmBaseMs ?? 0);
   const checkpointRef = useRef(0);
 
@@ -577,6 +580,23 @@ export function TimerPanel({
         <span className="ml-1 font-display text-aqua">×{area.boost.multiplier}</span>
         {boost > 1 && <span className="ml-1 text-starlight text-glow-gold">適用中</span>}
       </p>
+      {/* 何分で流れ星がいくつ降るか。小さな札を押すと開く */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setTiersOpen((v) => !v)}
+          aria-expanded={tiersOpen}
+          className="flex items-center gap-1 rounded-full border border-white/10 py-0.5 pr-2 pl-2 text-[11px] text-muted-foreground transition-colors hover:border-starlight/40 hover:text-starlight"
+        >
+          流れ星の区切り
+          <ChevronDown className={cn("size-3 transition-transform duration-300", tiersOpen && "rotate-180")} />
+        </button>
+        {tiersOpen && (
+          <div className="mt-1.5 animate-in rounded-lg border border-white/10 bg-white/[0.02] p-2 text-[11px] fade-in duration-300">
+            <DropTierList />
+          </div>
+        )}
+      </div>
       <div>
         <p className="mb-1 text-[11px] text-muted-foreground">触媒（次回の詠唱に使用）</p>
         <div className="flex flex-wrap gap-1">
