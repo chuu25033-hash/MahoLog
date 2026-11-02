@@ -31,7 +31,7 @@ import {
 } from "./items";
 import { mockObservedNights } from "./star-memory";
 import { activeSubjectsOf, parseAxisKey } from "./subjects";
-import { comboOnFinish, comboOnStart, initialCombo, type ComboState } from "./combo";
+import { comboOnFinish, comboOnRest, comboOnStart, initialCombo, type ComboState } from "./combo";
 import { ACHIEVEMENT_TITLES, EARLY_ACCESS_OPEN, checkUnlockedTitles, findTitle, type Tally, type Title, type UserStats, type UserTitleState } from "./titles";
 import { TASKS, drawCatalyst, measureTask, periodKey, type TaskBoard, type TaskScope } from "./tasks";
 import { generateWorldlineCode } from "./worldlines";
@@ -537,6 +537,11 @@ export const userActions = {
   finishCombo(finish: { minutes: number; endedAt: number; breakMin: number }): ComboState {
     update((s) => ({ ...s, combo: comboOnFinish(s.combo, finish) }));
     return load().combo;
+  },
+
+  /** 静息の時計が動き出したとき、同調の「静息が明ける時刻」をその時計に合わせる */
+  restCombo(restEndAt: number) {
+    update((s) => ({ ...s, combo: comboOnRest(s.combo, restEndAt) }));
   },
 
   /** 星の余韻（流れ星の区切りに届かなかった端数）を書き留める */

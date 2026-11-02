@@ -1,7 +1,9 @@
 // 星脈との同調（コンボ）: 25分以上の詠唱を、静息を挟みながら途切れずに紡ぐほど高まる。
 // 判定はすべて時刻（ms）の差で行うので、画面を閉じていた間や端末が休止していた間も正しく数えられる。
 //
-// 続く条件: 前の詠唱を終えた時刻 + 静息時間 + 猶予（10分）までに、次の詠唱を始める。
+// 続く条件: 静息が明けた時刻 + 猶予（10分）までに、次の詠唱を始める。
+//   静息が明ける時刻は、「静息に入る」を押していればその静息の時計が明ける時刻、押していなければ詠唱を終えた時刻 + 静息時間。
+//   静息に入るのが遅れたり一時停止したりしても、静息明けを後ろへずらせるのは合わせて10分まで（越えた分は猶予から引かれる）。
 // 途切れる条件: 猶予を過ぎて始めた、または25分未満で詠唱を終えた。
 
 /** 同調が1つ高まる詠唱の長さ（分） */
@@ -9,6 +11,9 @@ export const COMBO_MIN_MINUTES = 25;
 
 /** 静息が明けてから、次の詠唱を始めれば同調が続く猶予（分） */
 export const COMBO_GRACE_MINUTES = 10;
+
+/** 静息に入るのが遅れたり一時停止したりして、静息明けを後ろへずらせる長さの上限（分） */
+export const COMBO_REST_DELAY_MAX_MINUTES = 10;
 
 /** 魔力に倍率が乗り始める同調数 */
 export const COMBO_MP_FROM = 2;
@@ -32,17 +37,20 @@ export type ComboState = {
   lastEndAt: number | null;
   /** その詠唱の後に取る静息の長さ（分） */
   breakMin: number;
+  /** 「静息に入る」を押してから、静息の時計が明ける時刻（ms）。null なら詠唱を終えた時刻 + 静息時間で明ける */
+  restEndAt: number | null;
   /** これまでの最長の同調数（称号の判定に使う） */
   best: number;
 };
 
-export const initialCombo = (): ComboState => ({ count: 0, lastEndAt: null, breakMin: 5, best: 0 });
+export const initialCombo = (): ComboState => ({ count: 0, lastEndAt: null, breakMin: 5, restEndAt: null, best: 0 });
 
 const MINUTE = 60_000;
 
 /** 静息が明ける時刻（ms）。同調していなければ null */
 export function restEndsAt(state: ComboState): number | null {
-  return state.lastEndAt === null ? null : state.lastEndAt + state.breakMin * MINUTE;
+  if (state.lastEndAt === null) return null;
+  return state.restEndAt ?? state.lastEndAt + state.breakMin * MINUTE;
 }
 
 /** 次の詠唱をこの時刻までに始めれば同調が続く（ms）。同調していなければ null */
@@ -59,7 +67,7 @@ export function isComboAlive(state: ComboState, now = Date.now()): boolean {
 
 /** 詠唱を始めたとき: 猶予を過ぎていれば同調をほどく（最長記録は残す） */
 export function comboOnStart(state: ComboState, now = Date.now()): ComboState {
-  return isComboAlive(state, now) ? state : { ...state, count: 0, lastEndAt: null };
+  return isComboAlive(state, now) ? state : { ...state, count: 0, lastEndAt: null, restEndAt: null };
 }
 
 /**
@@ -70,9 +78,19 @@ export function comboOnFinish(
   state: ComboState,
   { minutes, endedAt, breakMin }: { minutes: number; endedAt: number; breakMin: number },
 ): ComboState {
-  if (minutes < COMBO_MIN_MINUTES) return { ...state, count: 0, lastEndAt: null };
+  if (minutes < COMBO_MIN_MINUTES) return { ...state, count: 0, lastEndAt: null, restEndAt: null };
   const count = state.count + 1;
-  return { count, lastEndAt: endedAt, breakMin, best: Math.max(state.best, count) };
+  return { count, lastEndAt: endedAt, breakMin, restEndAt: null, best: Math.max(state.best, count) };
+}
+
+/**
+ * 静息の時計が動き出したとき（「静息に入る」・一時停止からの再開）: 静息が明ける時刻を、その時計に合わせる。
+ * 後ろへずらせるのは、詠唱を終えた時刻 + 静息時間から COMBO_REST_DELAY_MAX_MINUTES まで。同調がもうほどけていれば変えない
+ */
+export function comboOnRest(state: ComboState, restEndAt: number, now = Date.now()): ComboState {
+  if (!isComboAlive(state, now) || state.lastEndAt === null) return state;
+  const latest = state.lastEndAt + (state.breakMin + COMBO_REST_DELAY_MAX_MINUTES) * MINUTE;
+  return { ...state, restEndAt: Math.min(restEndAt, latest) };
 }
 
 /** 同調による魔力の倍率（2同調から +10% × 同調数、最大 +50%） */
@@ -106,8 +124,8 @@ export function comboView(state: ComboState, now = Date.now()): ComboView {
   return { kind: "grace", count: state.count, graceLeftMs: deadline - now };
 }
 
-/** 残りの ms を「あと◯分」の分（切り上げ）にする */
-export const minutesLeft = (ms: number) => Math.max(0, Math.ceil(ms / MINUTE));
+/** 残りの ms を「あと◯分」の分（切り上げ）にする。時計と同じく秒未満は切り捨ててから数えるので、時計が 04:00 なら4分、04:01 なら5分になる */
+export const minutesLeft = (ms: number) => Math.max(0, Math.ceil(Math.floor(ms / 1000) / 60));
 
 // ---- 報せ ----
 

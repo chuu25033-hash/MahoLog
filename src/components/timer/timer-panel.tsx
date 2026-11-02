@@ -301,7 +301,14 @@ export function TimerPanel({
     reset();
     resume();
     setPhase("break");
+    userActions.restCombo(Date.now() + breakMin * 60_000);
     soundManager.playSe("restStart");
+  };
+
+  /** 静息を一時停止から再開する。同調の「静息が明ける時刻」も、残りの長さで合わせ直す */
+  const resumeRest = () => {
+    userActions.restCombo(Date.now() + Math.max(0, breakMin * 60_000 - read()));
+    resume();
   };
 
   // リザルトの間も静息の時計は刻み続け、この画面は 0.25 秒ごとに描き直される。
@@ -674,7 +681,7 @@ export function TimerPanel({
                 <Pause /> 一時停止
               </Button>
             ) : (
-              <Button size="lg" variant="secondary" onClick={resume}>
+              <Button size="lg" variant="secondary" onClick={resumeRest}>
                 <Play /> 再開
               </Button>
             )}
@@ -702,7 +709,8 @@ export function TimerPanel({
         </button>
       )}
       {phase === "focus" && <MeteorSign elapsedMs={elapsedMs} />}
-      <ComboIndicator phase={phase} />
+      {/* 静息の間は、時計と同じ残り時間で「次の詠唱まで」を示す */}
+      <ComboIndicator phase={phase} restLeftMs={phase === "break" ? Math.max(0, breakMin * 60_000 - elapsedMs) : undefined} />
       {phase !== "idle" && wakeNotice && (
         <p className="text-[10px] tracking-wider text-muted-foreground/70 [word-break:auto-phrase]">{wakeNotice}</p>
       )}

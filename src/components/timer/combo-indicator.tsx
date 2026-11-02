@@ -10,6 +10,7 @@ import {
   COMBO_MIN_MINUTES,
   COMBO_MP_FROM,
   COMBO_MP_MAX,
+  COMBO_REST_DELAY_MAX_MINUTES,
   COMBO_TITLE_COUNT,
   comboDropBoost,
   comboMpMultiplier,
@@ -41,11 +42,25 @@ function useNow(intervalMs = 5_000) {
  * 星脈との同調（コンボ）の状態。
  * 静息中は「次の詠唱まであと◯分（同調維持中）」、静息が明けたら猶予の残りを、詠唱中は今の同調数を控えめに添える
  */
-export function ComboIndicator({ phase, className }: { phase: ChantPhase; className?: string }) {
+export function ComboIndicator({
+  phase,
+  restLeftMs,
+  className,
+}: {
+  phase: ChantPhase;
+  /** 静息の時計の残り（ms）。渡すと、静息の残りはこの時計で示す（一時停止の間も時計に合う） */
+  restLeftMs?: number;
+  className?: string;
+}) {
   const { combo } = useUserData();
   const now = useNow();
   const view = comboView(combo, now);
   if (view.kind === "none") return null;
+  // 静息の時計が動いている間は、その時計の残りをそのまま使う（時計と同じ瞬間に分が替わる）
+  const resting = restLeftMs !== undefined ? restLeftMs > 0 : view.kind === "resting";
+  const restLeft = restLeftMs ?? (view.kind === "resting" ? view.restLeftMs : 0);
+  // 静息明けを上限より後ろへずらしたときは、その分だけ明けてからの猶予が短くなる
+  const graceAfterRest = Math.min(COMBO_GRACE_MINUTES, minutesLeft(Math.max(0, view.graceLeftMs - restLeft)));
 
   if (phase === "focus") {
     return (
@@ -61,10 +76,10 @@ export function ComboIndicator({ phase, className }: { phase: ChantPhase; classN
         同調 <span className="font-display text-sm text-starlight text-glow-gold">{view.count}</span>連 維持中
       </p>
       <p className="text-[11px] tracking-wider text-muted-foreground [word-break:auto-phrase]">
-        {view.kind === "resting" ? (
+        {resting ? (
           <>
-            次の詠唱まであと <span className="font-display text-foreground">{minutesLeft(view.restLeftMs)}</span>分
-            <span className="text-muted-foreground/70">（明けてから{COMBO_GRACE_MINUTES}分のうちに始めれば続く）</span>
+            次の詠唱まであと <span className="font-display text-foreground">{minutesLeft(restLeft)}</span>分
+            <span className="text-muted-foreground/70">（明けてから{graceAfterRest}分のうちに始めれば続く）</span>
           </>
         ) : (
           <>
@@ -118,6 +133,9 @@ export function ComboGuide() {
               <ul className="flex list-disc flex-col gap-0.5 pl-5 text-foreground/85 marker:text-starlight/50">
                 <li>{COMBO_MIN_MINUTES}分以上の詠唱を終えるたびに、同調が1つ高まる</li>
                 <li>静息が明けてから{COMBO_GRACE_MINUTES}分のうちに次の詠唱を始めれば、同調が続く</li>
+                <li>
+                  静息に入るのが遅れたり一時停止したりして静息明けが後ろへずれるのは、合わせて{COMBO_REST_DELAY_MAX_MINUTES}分まで。越えた分は、明けてからの猶予が短くなる
+                </li>
                 <li>律動の詠唱・無窮の詠唱のどちらでも数える</li>
               </ul>
             </section>
