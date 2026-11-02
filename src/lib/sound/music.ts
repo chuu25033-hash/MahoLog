@@ -102,6 +102,8 @@ type Song = {
   stars: number;
   /** 旋律の素 */
   seed: number;
+  /** A メロの右手の和音の置き方（16分の位置と長さ）。無ければ1拍目と3拍目の裏に置く */
+  verseComp?: [at: number, len: number][];
 };
 
 export type SongKey = AmbienceKey;
@@ -181,6 +183,8 @@ export const SONGS: Record<SongKey, Song> = {
     felt: 0.72,
     stars: 0.4,
     seed: 4021,
+    // 乾いた小さな部屋では裏に和音が重なると拍がずれて聞こえるので、2拍目に置いて頭を立て、3拍目の裏で少し前へ押す
+    verseComp: [[4, 6], [10, 6]],
   },
   // 樹海・図書室: イ短調のドリア。i → IV が揺れ続ける、深い森と古い本の静けさ
   forest: {
@@ -909,7 +913,7 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
           ? [[0, 6], [6, 4], [10, 6]]
           : section === "pre"
             ? [[0, 8], [8, 8]]
-            : [[2, 8], [10, 6]];
+            : (song.verseComp ?? [[2, 8], [10, 6]]);
     for (const [s, len] of comp) {
       const c = chordIn(chords, s);
       rightHand = voiceChord(c.color, rightHand, 60);
