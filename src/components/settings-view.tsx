@@ -29,6 +29,7 @@ import { jstDateKey } from "@/lib/date";
 import { resetLibraryTour } from "@/lib/onboarding";
 import { soundManager } from "@/lib/sound/sound-manager";
 import {
+  MAX_ACTIVE_SUBJECTS,
   MIN_ACTIVE_SUBJECTS,
   activeSubjectsOf,
   axisKey,
@@ -270,20 +271,25 @@ export function SettingsView({
   );
 }
 
+const MIN_WARNING = "秘術を構築するには最低3つの領域（科目）の選択が必要です";
+const MAX_WARNING = `魔法陣に刻めるのは${MAX_ACTIVE_SUBJECTS}領域までです`;
+
 /**
  * 魔法陣の軸の複数選択。科目まるごとか、その中の詳細科目（古文・物理など）を軸にできる。
  * 同じ科目のまるごとと詳細科目は重ねない（まるごとを選ぶと詳細科目は外れ、詳細科目を選ぶとまるごとは外れる）。
- * 魔法陣を組めるよう3軸未満には減らせない
+ * 魔法陣を組めるよう3軸未満には減らせず、頂点の名前が読めるよう12軸より多くは選べない
  */
 function ActiveSubjectsField({ subjects, activeKeys }: { subjects: Subject[]; activeKeys: string[] }) {
-  const [warning, setWarning] = useState(false);
+  // 消えていく間も文言が切り替わらないよう、最後の報せを残したまま表示だけを外す
+  const [warning, setWarning] = useState({ text: MIN_WARNING, shown: false });
 
   function commit(next: string[]) {
-    if (next.length < MIN_ACTIVE_SUBJECTS) {
-      setWarning(true);
+    const text = next.length < MIN_ACTIVE_SUBJECTS ? MIN_WARNING : next.length > MAX_ACTIVE_SUBJECTS ? MAX_WARNING : null;
+    if (text) {
+      setWarning({ text, shown: true });
       return;
     }
-    setWarning(false);
+    setWarning((w) => ({ ...w, shown: false }));
     userActions.setActiveSubjects(next);
   }
 
@@ -358,10 +364,10 @@ function ActiveSubjectsField({ subjects, activeKeys }: { subjects: Subject[]; ac
         role="status"
         className={cn(
           "mt-2 text-[11px] leading-relaxed tracking-wider text-starlight/80 transition-opacity duration-500 [word-break:auto-phrase]",
-          warning ? "opacity-100" : "opacity-0",
+          warning.shown ? "opacity-100" : "opacity-0",
         )}
       >
-        秘術を構築するには最低3つの領域（科目）の選択が必要です
+        {warning.text}
       </p>
     </Field>
   );

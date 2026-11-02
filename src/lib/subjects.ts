@@ -40,7 +40,8 @@ export function resolveSubSubject(
 
 /** 魔法陣（N角形）を組むのに必要な最小の軸の数 */
 export const MIN_ACTIVE_SUBJECTS = 3;
-
+/** 魔法陣の頂点の上限。これより多いと頂点の名前が重なって読めない */
+export const MAX_ACTIVE_SUBJECTS = 12;
 /**
  * 魔法陣の1軸。主科目まるごとか、主科目の中の詳細科目ひとつ。
  * 保存するときの鍵は、主科目なら科目 ID、詳細科目なら「科目 ID::詳細科目」
@@ -78,7 +79,8 @@ export function radarAxesOf<T extends Pick<Subject, "id" | "name">>(subjects: T[
       .filter((sub) => activeKeys.includes(axisKey(s.id, sub)))
       .map((sub) => ({ key: axisKey(s.id, sub), subjectId: s.id, subSubject: sub, subject: s })),
   ]);
-  return axes.length >= MIN_ACTIVE_SUBJECTS ? axes : whole;
+  // 上限より前に保存した選択が多すぎても、科目の並びで先の12軸までにする
+  return axes.length >= MIN_ACTIVE_SUBJECTS ? axes.slice(0, MAX_ACTIVE_SUBJECTS) : whole;
 }
 
 /** 設定画面で選んだ「詠唱に使う科目」（魔法陣の軸を持つ主科目）。未設定・足りない場合はすべての科目を使う */
