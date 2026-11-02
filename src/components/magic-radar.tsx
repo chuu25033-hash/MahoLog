@@ -7,6 +7,9 @@ import type { SubjectTotal } from "@/lib/types";
 
 export const MIN_RADAR_SUBJECTS = 3;
 
+/** 伸びていない科目を描く位置（外周を 1 とした比率）。形が1本の線につぶれて消えないための最小限の幅 */
+const MIN_RATIO = 0.015;
+
 /** 頂点に添える小さな星の輝き */
 function SparkleDot({
   cx,
@@ -191,7 +194,10 @@ export function MagicRadar({
   // 期間ごとに魔法陣の大きさが変わるので、最大科目を 1 とした比率で描き 4 本の同心多角形を固定で引く
   const maxMinutes = Math.max(60, ...data.map((d) => d.minutes));
   const ringTicks = [0, 0.25, 0.5, 0.75, 1];
-  const chartData = data.map((d) => ({ ...d, ratio: d.minutes / maxMinutes }));
+  // 1科目だけが伸びると形が中心からの1本の線になり、真上・真下・真横の頂点では幅か高さが 0 になる。
+  // 線のグラデーションと光のにじみは形の幅と高さを基準に描くので、そのままでは線ごと消える。
+  // 伸びていない科目もごくわずかに中心から離して、形が線につぶれないようにする（見た目にはほぼ中心）
+  const chartData = data.map((d) => ({ ...d, ratio: Math.max(d.minutes / maxMinutes, MIN_RATIO) }));
 
   return (
     <div className="relative h-full w-full [&_.recharts-radar-polygon]:[filter:drop-shadow(0_0_6px_rgba(113,226,239,0.45))]">
