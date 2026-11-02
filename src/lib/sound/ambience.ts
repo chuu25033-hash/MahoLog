@@ -520,6 +520,15 @@ const SCENES: Record<AmbienceKey, Scene> = {
     beds: [],
     events: [{ label: "まばらな虫", every: [10, 22], sound: cricket(0.005) }],
   },
+  rest: {
+    space: 4.5,
+    level: 1,
+    beds: [],
+    events: [
+      { label: "遠くの虫", every: [12, 26], sound: cricket(0.004) },
+      { label: "星のきらめき", every: [25, 50], first: [10, 20], sound: tinkle(0.005) },
+    ],
+  },
   hearth: {
     space: 1.1,
     level: 1,

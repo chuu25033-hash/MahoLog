@@ -377,6 +377,15 @@ const SE: Record<SeKey, (ctx: AudioContext, out: AudioNode) => void> = {
       tone(ctx, out, { freq: freq * 2.01, at: i * 0.14, attack: 0.15, decay: 1, peak: 0.005 });
     });
   },
+  // 静息に入る: 魔法陣の光がほどけ、息をつくように降りる和音。低い礎の音が長く残る
+  restStart: (ctx, out) => {
+    whoosh(ctx, out, { from: 900, to: 220, duration: 1.6, peak: 0.025 });
+    [784, 587.3, 493.9, 392].forEach((freq, i) => {
+      tone(ctx, out, { freq, at: i * 0.18, attack: 0.08, decay: 2.2, peak: 0.045 });
+    });
+    tone(ctx, out, { freq: 196, at: 0.5, attack: 0.5, decay: 3.2, peak: 0.05 });
+    tone(ctx, out, { freq: 293.7, at: 0.75, attack: 0.5, decay: 3, peak: 0.025 });
+  },
   // 昇華音: 駆け上がる分散和音と、残る光
   reward: (ctx, out) => {
     [349.2, 440, 523.25, 698.5, 880, 1046.5].forEach((freq, i) => {

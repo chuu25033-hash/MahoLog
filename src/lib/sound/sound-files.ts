@@ -2,8 +2,8 @@
 // 登録の無い音、読み込めなかった音は Web Audio API で生成した音で代わりに鳴らす。
 // 例: ambience: { hearth: "/sounds/ambience/hearth.mp3" }, se: { tap: "/sounds/se/tap.mp3" }
 
-/** 環境音（title はタイトルの曲、prelude は星天の導きなど魔術書庫に入る前の画面、ほかは滞在ステージごと） */
-export type AmbienceKey = "title" | "prelude" | "hearth" | "forest" | "stars" | "frost" | "forge" | "sanctum" | "zenith";
+/** 環境音（title はタイトルの曲、prelude は星天の導きなど魔術書庫に入る前の画面、rest は静息の間、ほかは滞在ステージごと） */
+export type AmbienceKey = "title" | "prelude" | "rest" | "hearth" | "forest" | "stars" | "frost" | "forge" | "sanctum" | "zenith";
 
 /** 操作・演出の効果音 */
 export type SeKey =
@@ -11,6 +11,7 @@ export type SeKey =
   | "tap"
   | "chantStart"
   | "chantComplete"
+  | "restStart"
   | "reward"
   | "levelUp"
   | "rankUp"
@@ -44,6 +45,7 @@ export const SOUND_FILES: {
     // reward: "/sounds/se/reward.mp3",                     //                     試練・星天の導きの報酬
     // chantStart: "/sounds/se/chant-start.mp3",            //                     詠唱の開始
     // chantComplete: "/sounds/se/chant-complete.mp3",      //                     詠唱の完了
+    // restStart: "/sounds/se/rest-start.mp3",              //                     静息に入る
     // levelUp: "/sounds/se/level-up.mp3",                  //                     探求度の上昇
     // rankUp: "/sounds/se/rank-up.mp3",                    //                     魔術階級の昇格
     // begin: "/sounds/se/begin.mp3",                       //                     旅立ち・新しい地の解放

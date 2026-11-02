@@ -49,6 +49,8 @@ class SoundManager {
   /** 一度でも音を起こせたか。起こせた後は、ブラウザに止められても操作を待たずに起こし直せる */
   private unlocked = false;
   private ambienceKey: AmbienceKey | null = null;
+  /** 静息の間は、滞在中の環境音に代えて静息の曲を流す */
+  private restMusic = false;
   private current: { key: AmbienceKey; voice: Voice } | null = null;
   private ambienceGen = 0;
   private buffers = new Map<string, Promise<AudioBuffer | null>>();
@@ -71,6 +73,13 @@ class SoundManager {
   setAmbience(key: AmbienceKey | null) {
     if (this.ambienceKey === key) return;
     this.ambienceKey = key;
+    void this.syncAmbience();
+  }
+
+  /** 静息の間だけ、静息の曲に替える（明けたら滞在中の環境音へクロスフェードで戻す） */
+  setRestMusic(on: boolean) {
+    if (this.restMusic === on) return;
+    this.restMusic = on;
     void this.syncAmbience();
   }
 
@@ -263,7 +272,7 @@ class SoundManager {
   private async syncAmbience() {
     const bus = this.bus;
     if (!bus || bus.ctx.state !== "running") return;
-    const want = this.enabled && !this.silenced ? this.ambienceKey : null;
+    const want = this.enabled && !this.silenced ? (this.restMusic && this.ambienceKey ? "rest" : this.ambienceKey) : null;
     if ((this.current?.key ?? null) === want) return;
     const gen = ++this.ambienceGen;
 

@@ -146,6 +146,24 @@ export const SONGS: Record<SongKey, Song> = {
     stars: 0.7,
     seed: 311,
   },
+  // 静息: 変ニ長調。詠唱を終えて、星空の下でひと息つく。ゆっくり、柔らかく、打楽器は鳴らさない
+  rest: {
+    bpm: 58,
+    tonic: 1,
+    minor: false,
+    verse: ["Dbmaj7", "Bbm9", "Gbmaj7", "Abadd9"],
+    pre: ["Ebm9", "Fm7", "Gbmaj7", "Absus4"],
+    chorus: ["Gbmaj7", "Ab6", "Fm7", "Bbm9"],
+    interlude: ["Gbmaj7", "Gbmaj7", "Dbmaj7", "Dbmaj7"],
+    swing: 0.1,
+    center: 73,
+    kit: null,
+    drums: 0,
+    room: { seconds: 5, wet: 1.2 },
+    felt: 0.7,
+    stars: 0.9,
+    seed: 5055,
+  },
   // 小屋: 変ホ長調。暖炉の残り火のそばで、ひとり静かに
   hearth: {
     bpm: 70,

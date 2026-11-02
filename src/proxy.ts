@@ -5,7 +5,7 @@ export async function proxy(request: NextRequest) {
   return updateSession(request);
 }
 
-// 画像と音声（ピアノの録音など）は、ログインの確認を通さずにそのまま返す
+// 画像と音声（ピアノの録音など）、通知の service worker は、ログインの確認を通さずにそのまま返す
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|.*\.(?:svg|png|jpg|jpeg|gif|webp|mp3)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|.*\.(?:svg|png|jpg|jpeg|gif|webp|mp3)$).*)"],
 };

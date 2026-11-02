@@ -8,6 +8,7 @@ import { loadPiano, SONGS, songLayout, startSong, type SongKey, type SongVoice }
 const TRACKS: { key: SongKey; name: string; en: string }[] = [
   { key: "title", name: "タイトル", en: "Title" },
   { key: "prelude", name: "旅立ちの前", en: "Prelude" },
+  { key: "rest", name: "静息", en: "Rest" },
   { key: "hearth", name: "小屋", en: "Hearth" },
   { key: "forest", name: "樹海・図書室", en: "Forest" },
   { key: "stars", name: "観測塔・星空", en: "Stars" },

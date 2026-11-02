@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { FastForward, Hourglass, MapPin, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
+import { FastForward, Hourglass, MapPin, Moon, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
 import { saveStudyLog } from "@/app/actions/study";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { BackToLibrary } from "@/components/back-to-library";
@@ -50,7 +50,7 @@ import { usePortraitPhone } from "@/lib/use-portrait-phone";
 import { ComboGuide, ComboIndicator, MeteorSign } from "./combo-indicator";
 import { PortraitTimer } from "./portrait-timer";
 import { ResultDialog, type StudyResult } from "./result-dialog";
-import { notifyFinish, requestRestNoticePermission, showRestEndNotification, useClock } from "./use-clock";
+import { notifyFinish, requestRestNoticePermission, showChantEndNotification, showRestEndNotification, useClock } from "./use-clock";
 import { useWakeLock, wakeLockNotice } from "./use-wake-lock";
 
 const BREAK_OPTIONS = [5, 10, 20] as const;
@@ -135,7 +135,7 @@ export function TimerPanel({
       setFocusMin(initialFocusMin);
     }
   }
-  const { elapsedMs, running, snapshot, start: resume, startAt, pause, reset, read } = useClock(resumed?.clock);
+  const { elapsedMs, running, snapshot, start: resume, pause, reset, read } = useClock(resumed?.clock);
 
   const [totalMp, setTotalMp] = useState(initialTotalMp);
   const [weekTotals, setWeekTotals] = useState(initialWeekTotals);
@@ -174,7 +174,8 @@ export function TimerPanel({
   const axes = useMemo(() => radarAxesOf(subjects, activeKeys), [subjects, activeKeys]);
   const subLimits = subSubjectLimitsOf(axes);
   const subSubject = resolveSubSubject(subject, subSubjectInput, subject && subLimits[subject.id]);
-  const resting = phase === "break";
+  // 静息を待つ間も、静息の色で示す
+  const resting = phase === "break" || phase === "rest";
   const color = resting ? "#cfe9ff" : (subject?.color ?? "#a882fb");
   const lineColor = resting ? "#a882fb" : skin.lineColor;
   const boost = subject ? areaMultiplier(area, ruleNameOf(subject)) : 1;
@@ -294,14 +295,14 @@ export function TimerPanel({
     [area, axes, breakMin, isDemo, mode, subject, subSubject, subjects, totalMp, weekTotals],
   );
 
-  /** 詠唱を終えた時刻 endedAt から静息を始める（裏で満了していたら、その時刻から静息は流れている） */
-  const beginRest = useCallback(
-    (endedAt: number) => {
-      startAt(endedAt);
-      setPhase("break");
-    },
-    [startAt],
-  );
+  /** 「静息に入る」: 押した時から、決めた長さの静息を数え下ろす */
+  const beginRest = () => {
+    setNotice(null);
+    reset();
+    resume();
+    setPhase("break");
+    soundManager.playSe("restStart");
+  };
 
   // リザルトの間も静息の時計は刻み続け、この画面は 0.25 秒ごとに描き直される。
   // リザルトまで描き直すと魔法陣のレーダーが作り直されてちかちかするので、結果が変わったときだけ組み立てる
@@ -326,6 +327,13 @@ export function TimerPanel({
     return () => setChantPresence(false);
   }, [phase, area.id]);
 
+  // 静息の間は、静息の曲に替える
+  useEffect(() => {
+    if (phase !== "break") return;
+    soundManager.setRestMusic(true);
+    return () => soundManager.setRestMusic(false);
+  }, [phase]);
+
   // 魔力を集束している間は、環境音を控えめにする
   useEffect(() => {
     soundManager.setDucked(phase === "focus" && running);
@@ -339,14 +347,16 @@ export function TimerPanel({
     const id = setTimeout(() => {
       // 裏に回っていたり画面を閉じていたりして遅れて気づいても、満了した時刻で区切る
       const endedAt = Date.now() - Math.max(0, read() - targetMs);
-      notifyFinish(getUserData().settings.chime);
+      const { chime } = getUserData().settings;
+      notifyFinish(chime);
+      showChantEndNotification(chime);
       reset();
-      // 詠唱を刻み、満了した時刻からそのまま静息に入る
+      // 詠唱を刻み、静息に入るのを待つ（静息は「静息に入る」で始める）
       save(focusMin, endedAt);
-      beginRest(endedAt);
+      setPhase("rest");
     }, Math.max(0, targetMs - read()));
     return () => clearTimeout(id);
-  }, [mode, phase, running, focusMin, read, reset, save, beginRest]);
+  }, [mode, phase, running, focusMin, read, reset, save]);
 
   // 静息: 決めた長さで明け、同調が続いていれば猶予を報せる
   useEffect(() => {
@@ -401,15 +411,14 @@ export function TimerPanel({
     soundManager.playSe("chantStart");
   };
 
-  /** 詠唱を終えて刻む。25分以上なら同調が高まり、そのまま静息に入る */
+  /** 詠唱を終えて刻む。25分以上なら同調が高まり、静息に入るのを待つ */
   const finishWith = (minutes: number) => {
     const endedAt = Date.now();
     reset();
     setConfirmBaseMs(0);
     soundManager.playSe("chantComplete");
     save(minutes, endedAt);
-    if (minutes >= COMBO_MIN_MINUTES) beginRest(endedAt);
-    else setPhase("idle");
+    setPhase(minutes >= COMBO_MIN_MINUTES ? "rest" : "idle");
   };
 
   const finish = () => finishWith(Math.floor(read() / 60_000));
@@ -427,6 +436,8 @@ export function TimerPanel({
   const displayMs =
     phase === "break"
       ? breakMin * 60_000 - elapsedMs
+      : phase === "rest"
+        ? breakMin * 60_000
       : mode === "pomodoro"
         ? phase === "idle"
           ? focusTargetMs
@@ -443,6 +454,7 @@ export function TimerPanel({
   const statusLabel = {
     idle: "詠唱準備",
     focus: running ? "魔力集束中…" : "詠唱中断",
+    rest: "詠唱完了",
     break: running ? "静息中" : "静息中断",
   }[phase];
 
@@ -511,7 +523,7 @@ export function TimerPanel({
         </p>
       )}
       <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
-        詠唱を終えると静息に入る（無窮の詠唱は{COMBO_MIN_MINUTES}分以上のとき）。{COMBO_MIN_MINUTES}分以上の詠唱を、静息明けから{COMBO_GRACE_MINUTES}分のうちに次へつなげば、<ComboGuide />が高まる
+        詠唱を終えたら「静息に入る」で静息を始める（無窮の詠唱は{COMBO_MIN_MINUTES}分以上のとき）。{COMBO_MIN_MINUTES}分以上の詠唱を、静息明けから{COMBO_GRACE_MINUTES}分のうちに次へつなげば、<ComboGuide />が高まる
       </p>
       {data.starEcho > 0 && (
         <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
@@ -642,6 +654,16 @@ export function TimerPanel({
             )}
             <Button size="lg" onClick={finish}>
               <Square /> 終了して記録
+            </Button>
+          </>
+        )}
+        {phase === "rest" && (
+          <>
+            <Button size="lg" onClick={beginRest} disabled={saving}>
+              <Moon /> 静息に入る
+            </Button>
+            <Button size="lg" variant="outline" onClick={() => setPhase("idle")}>
+              静息を取らない
             </Button>
           </>
         )}

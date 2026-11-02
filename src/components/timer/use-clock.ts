@@ -53,20 +53,54 @@ export function useClock(initial?: ClockSnapshot) {
   return { elapsedMs, running, snapshot: state, start, startAt, pause, reset, read };
 }
 
+/** 終わりを報せる振動。手に持っていなくても気づけるよう、長めに3度ふるわせる（振動に対応した Android の端末だけ） */
+const FINISH_VIBRATION = [500, 200, 500, 200, 800];
+
 /** 終了通知（魔力集束のチャイム + 振動）。設定で完了の報せを切っていれば鳴らさない */
 export function notifyFinish(chime = true) {
   if (!chime) return;
   try {
-    navigator.vibrate?.([200, 100, 200]);
+    navigator.vibrate?.(FINISH_VIBRATION);
   } catch {}
   soundManager.playSe("chantComplete");
 }
 
-/** 端末の通知を出してよいか、詠唱を始めるとき（ユーザーの操作の中）に一度だけ尋ねる */
+/** 端末の通知を出してよいか、詠唱を始めるとき（ユーザーの操作の中）に一度だけ尋ねる。通知を出す service worker もここで置く */
 export function requestRestNoticePermission() {
   try {
     if (typeof Notification !== "undefined" && Notification.permission === "default") void Notification.requestPermission();
   } catch {}
+  try {
+    void navigator.serviceWorker?.register("/sw.js").catch(() => undefined);
+  } catch {}
+}
+
+/**
+ * 端末の通知を出す。詠唱の間を見ていないとき（裏に回っているとき）だけ出す。
+ * Android の Chrome はページから直接通知を出せないので service worker から出し、通知と一緒に振動させる
+ */
+function showSystemNotification(title: string, body: string, tag: string) {
+  try {
+    if (typeof Notification === "undefined" || Notification.permission !== "granted" || !document.hidden) return;
+    const options = { body, tag, icon: "/icon.svg", vibrate: FINISH_VIBRATION, requireInteraction: false } as NotificationOptions;
+    const direct = () => {
+      try {
+        new Notification(title, options);
+      } catch {}
+    };
+    const sw = navigator.serviceWorker;
+    if (!sw) return direct();
+    void sw
+      .getRegistration()
+      .then((reg) => (reg ? reg.showNotification(title, options) : direct()))
+      .catch(direct);
+  } catch {}
+}
+
+/** 詠唱が満了したことを端末の通知で報せる */
+export function showChantEndNotification(chime = true) {
+  if (!chime) return;
+  showSystemNotification("詠唱が満ちた", "魔力が星に刻まれた。戻って静息に入ろう", "maholog-chant-end");
 }
 
 /**
@@ -75,10 +109,5 @@ export function requestRestNoticePermission() {
  */
 export function showRestEndNotification(notice: RestEndNotice | null, chime = true) {
   if (!notice || !chime) return;
-  try {
-    if (typeof Notification === "undefined" || Notification.permission !== "granted" || !document.hidden) return;
-    new Notification(notice.title, { body: notice.body, tag: "maholog-rest-end", icon: "/icon.svg" });
-  } catch {
-    // Android の Chrome などページから直接通知を出せない環境では、戻ったときの報せだけにする
-  }
+  showSystemNotification(notice.title, notice.body, "maholog-rest-end");
 }
