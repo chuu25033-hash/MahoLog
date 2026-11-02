@@ -328,7 +328,7 @@ function ActiveSubjectsField({ subjects, activeKeys }: { subjects: Subject[]; ac
                 aria-checked={checked}
                 onClick={() => toggle(s.id)}
                 className={cn(
-                  "mr-1 flex w-[6.75rem] shrink-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs tracking-wider whitespace-nowrap transition-all duration-300",
+                  "mr-1 flex min-w-[6.75rem] shrink-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs tracking-wider whitespace-nowrap transition-all duration-300",
                   checked
                     ? "border-white/25 bg-white/[0.05] text-foreground"
                     : "border-white/10 text-muted-foreground hover:border-white/25",
