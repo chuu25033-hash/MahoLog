@@ -501,27 +501,54 @@ function DropReveal({
             </p>
           </div>
         )}
-        <ul className={cn("grid w-full gap-2", drops.length === 1 ? "grid-cols-1" : drops.length === 3 ? "grid-cols-3" : "grid-cols-2", drops.length === 4 && "sm:grid-cols-4")}>
-          {drops.map((drop, i) => (
-            <li
-              key={i}
-              className="flex animate-in flex-col items-center gap-0.5 text-center fade-in slide-in-from-bottom-4 duration-1000 [animation-fill-mode:both]"
-              style={{ animationDelay: `${i * 250}ms` }}
-            >
-              <ItemArt icon={drop.item.svgIcon} rarity={drop.item.rarity} color={drop.item.color} seed={drop.item.id} className="size-14 short:size-12" />
-              <span className={cn("rounded-full border px-2 text-[10px] tracking-[0.2em] whitespace-nowrap", RARITY_TONE[drop.item.rarity])}>
-                RARE {drop.item.rarity}
-                {drops.length === 1 && ` · ${drop.item.type}`}
-              </span>
-              <span className={cn("tracking-[0.1em] text-foreground [word-break:auto-phrase]", drops.length === 1 ? "text-sm" : "text-xs")}>
-                {drop.item.kind === "fragment" ? drop.item.name : `『${drop.item.name}』`}
-              </span>
-              {meteor?.upgradedIndex === i && (
-                <span className="text-[10px] tracking-wider whitespace-nowrap text-starlight">流星群の輝きで秘宝以上に</span>
-              )}
-              <span className="text-[10px] leading-snug text-muted-foreground [word-break:auto-phrase]">{dropNote(drop)}</span>
-            </li>
-          ))}
+        {meteorPassed && (
+          <p className="mb-1 animate-in text-[10px] tracking-wider text-muted-foreground fade-in duration-1000 [word-break:auto-phrase]">
+            流星群は、星脈のゆらぎとともに遠ざかった
+          </p>
+        )}
+        {/* スマホで2つ以上降ったときは、横に並べると1枠が狭く文字が窮屈になるので、絵を左・文字を右にした1行ずつで並べる */}
+        <ul
+          className={cn(
+            "grid w-full gap-2",
+            drops.length === 1 ? "grid-cols-1" : drops.length === 3 ? "grid-cols-3" : "grid-cols-2",
+            drops.length === 4 && "sm:grid-cols-4",
+            drops.length > 1 && "max-sm:grid-cols-1 max-sm:gap-2.5",
+          )}
+        >
+          {drops.map((drop, i) => {
+            const row = drops.length > 1;
+            return (
+              <li
+                key={i}
+                className={cn(
+                  "flex animate-in flex-col items-center gap-0.5 text-center fade-in slide-in-from-bottom-4 duration-1000 [animation-fill-mode:both]",
+                  row && "max-sm:flex-row max-sm:gap-3 max-sm:text-left",
+                )}
+                style={{ animationDelay: `${i * 250}ms` }}
+              >
+                <ItemArt
+                  icon={drop.item.svgIcon}
+                  rarity={drop.item.rarity}
+                  color={drop.item.color}
+                  seed={drop.item.id}
+                  className={cn("size-14 shrink-0 short:size-12", row && "max-sm:size-12")}
+                />
+                <div className={cn("flex min-w-0 flex-col items-center gap-0.5", row && "max-sm:flex-1 max-sm:items-start")}>
+                  <span className={cn("rounded-full border px-2 text-[10px] tracking-[0.2em] whitespace-nowrap", RARITY_TONE[drop.item.rarity])}>
+                    RARE {drop.item.rarity}
+                    {drops.length === 1 && ` · ${drop.item.type}`}
+                  </span>
+                  <span className={cn("tracking-[0.1em] text-foreground [word-break:auto-phrase]", drops.length === 1 ? "text-sm" : "text-xs max-sm:text-[13px]")}>
+                    {drop.item.kind === "fragment" ? drop.item.name : `『${drop.item.name}』`}
+                  </span>
+                  {meteor?.upgradedIndex === i && (
+                    <span className="text-[10px] tracking-wider whitespace-nowrap text-starlight">流星群の輝きで秘宝以上に</span>
+                  )}
+                  <span className="text-[10px] leading-snug text-muted-foreground [word-break:auto-phrase]">{dropNote(drop)}</span>
+                </div>
+              </li>
+            );
+          })}
         </ul>
         {ore > 0 && (
           <p
