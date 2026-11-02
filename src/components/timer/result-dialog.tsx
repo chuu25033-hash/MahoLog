@@ -48,6 +48,8 @@ export type StudyResult = {
   echo: number;
   /** 流星群の接近による特別観測（30分未満は null） */
   meteor: MeteorShower | null;
+  /** 30分以上で流星群が近づいたが、降りずに遠ざかったか */
+  meteorPassed: boolean;
   /** この詠唱を含めた星脈との同調数 */
   combo: number;
   /** 同調による魔力の倍率 */
@@ -370,7 +372,7 @@ function ResultPanel({
             流れ星は、{DROP_SLOT_MINUTES}分以上続けた詠唱にだけ降る
           </p>
         ) : (
-          <DropReveal stage={chest} drops={result.drops} ore={result.ore} echo={result.echo} meteor={result.meteor} onOpen={() => onChestChange("open")} />
+          <DropReveal stage={chest} drops={result.drops} ore={result.ore} echo={result.echo} meteor={result.meteor} meteorPassed={result.meteorPassed} onOpen={() => onChestChange("open")} />
         )}
       </div>
 
@@ -470,6 +472,7 @@ function DropReveal({
   ore,
   echo,
   meteor,
+  meteorPassed,
   onOpen,
 }: {
   stage: ChestStage;
@@ -477,6 +480,7 @@ function DropReveal({
   ore: number;
   echo: number;
   meteor: MeteorShower | null;
+  meteorPassed: boolean;
   onOpen: () => void;
 }) {
   const opened = stage === "open";
@@ -497,7 +501,7 @@ function DropReveal({
             <p className="text-xs tracking-[0.3em] whitespace-nowrap text-starlight text-glow-gold">流星群の接近 ― 特別観測</p>
             <p className="font-display text-[9px] tracking-[0.3em] whitespace-nowrap text-starlight/60">METEOR SHOWER</p>
             <p className="text-[10px] leading-snug tracking-wider text-muted-foreground [word-break:auto-phrase]">
-              長き詠唱に星脈がゆらぎ、先人の秘宝が地上へ手繰り寄せられた
+              {meteor.lucky ? "長き詠唱に星脈がゆらぎ、先人の秘宝が地上へ手繰り寄せられた" : "長き詠唱に星脈がゆらぎ、星屑の原石が降り注いだ"}
             </p>
           </div>
         )}

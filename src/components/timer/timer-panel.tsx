@@ -233,7 +233,7 @@ export function TimerPanel({
         // 星脈との同調: 25分以上の詠唱なら1つ高まり、届かなければほどける（同調数はこの詠唱を含める）
         const combo = userActions.finishCombo({ minutes, endedAt, breakMin });
         // 流れ星は詠唱時間の区切り（25分ごとに1つ・最大4つ）で降る。25分に届かなかった端数は星の余韻として次の詠唱へ持ち越す。
-        // 30分以上なら流星群が近づき、原石を添えて流れ星の1つを秘宝以上へ。同調は魔力と稀品以上の確率に乗る
+        // 30分以上なら流星群が近づき、長さに応じた確率で降りて原石を添え、長さに応じた確率で流れ星の1つを秘宝以上へ。同調は魔力と稀品以上の確率に乗る
         const reward = calculateFinalReward({
           minutes: res.savedMinutes,
           baseMp,
@@ -295,6 +295,7 @@ export function TimerPanel({
           ore: reward.ore,
           echo: fall.echo,
           meteor: reward.meteor,
+          meteorPassed: reward.meteorPassed,
           combo: reward.combo,
           comboMp: reward.comboMp,
           comboDrop: reward.comboDrop,

@@ -12,7 +12,7 @@ import {
   restEndNotice,
   type ComboState,
 } from "../combo";
-import { calculateFinalReward, METEOR_ORE_MAX, METEOR_ORE_MIN } from "../reward";
+import { calculateFinalReward, METEOR_ORE_MAX, METEOR_ORE_MIN, meteorShowerChance, meteorUpgradeChance } from "../reward";
 
 const MIN = 60_000;
 const T0 = Date.UTC(2026, 10, 1, 10, 0);
@@ -103,20 +103,59 @@ describe("流星群の接近と最終的な授かり物", () => {
   it("30分未満では流星群は来ない", () => {
     const r = calculateFinalReward({ minutes: 29, baseMp: 29, combo: 1, area, random: () => 0 });
     expect(r.meteor).toBeNull();
+    expect(r.meteorPassed).toBe(false);
     expect(r.ore).toBe(0);
   });
 
-  it("30分以上で原石 2〜5 個が添えられ、流れ星の1つが秘宝以上になる", () => {
-    for (const x of [0, 0.3, 0.6, 0.999]) {
-      // 常品が引かれる乱数でも、流星群が秘宝以上へ引き上げる
+  it("30分以上でも、降りる確率に外れると流星群は遠ざかる", () => {
+    // 30分の降りる確率は 50%。乱数 0.6 は外れる
+    const r = calculateFinalReward({ minutes: 30, baseMp: 30, combo: 1, area, random: () => 0.6 });
+    expect(r.meteor).toBeNull();
+    expect(r.meteorPassed).toBe(true);
+    expect(r.ore).toBe(0);
+    expect(r.fall.byRarity.C).toBe(1);
+  });
+
+  it("流星群が降りる確率は詠唱が長いほど上がり、100分で必ず降りる", () => {
+    expect(meteorShowerChance(29)).toBe(0);
+    expect(meteorShowerChance(30)).toBe(50);
+    expect(meteorShowerChance(50)).toBe(70);
+    expect(meteorShowerChance(75)).toBe(90);
+    expect(meteorShowerChance(100)).toBe(100);
+  });
+
+  it("30分以上で原石 2〜5 個が添えられ、確率に当たれば流れ星の1つが秘宝以上になる", () => {
+    // 乱数 0 は引き上げの確率（30%）に当たり、常品が引かれていても秘宝以上へ引き上げる
+    const r = calculateFinalReward({ minutes: 30, baseMp: 30, combo: 1, area, random: () => 0 });
+    expect(r.meteor).not.toBeNull();
+    expect(r.meteor!.lucky).toBe(true);
+    expect(r.meteor!.ore).toBeGreaterThanOrEqual(METEOR_ORE_MIN);
+    expect(r.meteor!.ore).toBeLessThanOrEqual(METEOR_ORE_MAX);
+    expect(r.fall.items).toHaveLength(1);
+    expect(r.fall.byRarity.A + r.fall.byRarity.S).toBe(1);
+  });
+
+  it("確率に外れると、原石だけが添えられ流れ星はそのまま", () => {
+    // 乱数 0.3〜0.49 は、降りる確率（50%）に当たり、引き上げの確率（30%）に外れる
+    for (const x of [0.3, 0.45]) {
       const r = calculateFinalReward({ minutes: 30, baseMp: 30, combo: 1, area, random: () => x });
-      expect(r.meteor).not.toBeNull();
+      expect(r.meteorPassed).toBe(false);
+      expect(r.meteor!.lucky).toBe(false);
+      expect(r.meteor!.upgradedIndex).toBeNull();
       expect(r.meteor!.ore).toBeGreaterThanOrEqual(METEOR_ORE_MIN);
-      expect(r.meteor!.ore).toBeLessThanOrEqual(METEOR_ORE_MAX);
-      expect(r.fall.items.some((i) => i.rarity === "A" || i.rarity === "S")).toBe(true);
-      expect(r.fall.items).toHaveLength(1);
-      expect(r.fall.byRarity.A + r.fall.byRarity.S).toBeGreaterThanOrEqual(1);
+      expect(r.fall.byRarity.C).toBe(1);
     }
+  });
+
+  it("引き上げの確率は詠唱が長いほど上がり、100分で必ず当たる", () => {
+    expect(meteorUpgradeChance(29)).toBe(0);
+    expect(meteorUpgradeChance(30)).toBe(30);
+    expect(meteorUpgradeChance(50)).toBe(50);
+    expect(meteorUpgradeChance(75)).toBe(75);
+    expect(meteorUpgradeChance(100)).toBe(100);
+    expect(meteorUpgradeChance(180)).toBe(100);
+    const r = calculateFinalReward({ minutes: 100, baseMp: 100, combo: 1, area, random: () => 0.999 });
+    expect(r.meteor!.lucky).toBe(true);
   });
 
   it("流星群の原石は、区切りの原石に足される", () => {

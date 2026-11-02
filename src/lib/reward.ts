@@ -1,8 +1,10 @@
 // 詠唱を終えたときの最終的な授かり物: 流れ星（lib/drops.ts）に、流星群の接近と星脈との同調（lib/combo.ts）を重ねる。
 //
 // 流星群の接近: 1回の詠唱が30分以上に届くと、長き詠唱で星脈がゆらぎ、流星群が近づく。
-//   詠唱中は静かな兆しを見せるだけで、授かり物はリザルトでまとめて解き放つ。
-//   星屑の原石を 2〜5 個（無作為）確定で添え、流れ星の1つを RARE A（秘宝）以上へ引き上げる。
+//   実際に降りるかは詠唱の長さに応じた確率で決まる（30分〜 50%・50分〜 70%・75分〜 90%・100分〜 必ず）。
+//   詠唱中は静かな兆しを見せるだけで、降りたかどうかと授かり物はリザルトでまとめて明かす。
+//   星屑の原石を 2〜5 個（無作為）確定で添え、詠唱の長さに応じた確率で流れ星の1つを RARE A（秘宝）以上へ引き上げる
+//   （30分〜 30%・50分〜 50%・75分〜 75%・100分〜 必ず）。
 // 同調: 魔力に倍率（2同調〜）、流れ星の稀品以上の確率に補正（3同調〜）を乗せる。
 import type { Area, Rarity } from "./areas";
 import { comboDropBoost, comboMpMultiplier, COMBO_TITLE_COUNT } from "./combo";
@@ -15,6 +17,32 @@ export const METEOR_SHOWER_MINUTES = 30;
 export const METEOR_ORE_MIN = 2;
 export const METEOR_ORE_MAX = 5;
 
+/** 流星群が実際に降りる確率（%）。届いた区切りのうち最も長いものを使う */
+export const METEOR_SHOWER_CHANCES: { minMinutes: number; chance: number }[] = [
+  { minMinutes: METEOR_SHOWER_MINUTES, chance: 50 },
+  { minMinutes: 50, chance: 70 },
+  { minMinutes: 75, chance: 90 },
+  { minMinutes: 100, chance: 100 },
+];
+
+/** 詠唱時間（分）での、流星群が降りる確率（%）。30分未満は 0 */
+export function meteorShowerChance(minutes: number): number {
+  return METEOR_SHOWER_CHANCES.findLast((c) => minutes >= c.minMinutes)?.chance ?? 0;
+}
+
+/** 流星群が流れ星を秘宝以上へ引き上げる確率（%）。届いた区切りのうち最も長いものを使う */
+export const METEOR_UPGRADE_CHANCES: { minMinutes: number; chance: number }[] = [
+  { minMinutes: METEOR_SHOWER_MINUTES, chance: 30 },
+  { minMinutes: 50, chance: 50 },
+  { minMinutes: 75, chance: 75 },
+  { minMinutes: 100, chance: 100 },
+];
+
+/** 詠唱時間（分）での、流星群の引き上げの確率（%）。30分未満は 0 */
+export function meteorUpgradeChance(minutes: number): number {
+  return METEOR_UPGRADE_CHANCES.findLast((c) => minutes >= c.minMinutes)?.chance ?? 0;
+}
+
 /** 流星群の引き上げが、秘宝ではなく至宝になる確率（%） */
 export const METEOR_UPGRADE_S_CHANCE = 2;
 const RANK: Record<Rarity, number> = { C: 0, B: 1, A: 2, S: 3 };
@@ -22,6 +50,8 @@ const RANK: Record<Rarity, number> = { C: 0, B: 1, A: 2, S: 3 };
 export type MeteorShower = {
   /** 流星群が添えた星屑の原石の数（流れ星の区切りの原石とは別） */
   ore: number;
+  /** 引き上げの確率に当たったか（外れたときは原石だけが添えられる） */
+  lucky: boolean;
   /** 秘宝以上へ引き上げた流れ星の位置（items の添字）。もとから秘宝以上だった、または引き上げ先が無いときは null */
   upgradedIndex: number | null;
   /** 引き上げる前の品 */
@@ -31,8 +61,10 @@ export type MeteorShower = {
 export type FinalReward = {
   /** 流れ星（流星群の引き上げを済ませたもの） */
   fall: DropResult;
-  /** 流星群の接近（30分未満は null） */
+  /** 流星群の接近（30分未満、または降りなかったときは null） */
   meteor: MeteorShower | null;
+  /** 30分以上で流星群が近づいたが、降りずに遠ざかったか */
+  meteorPassed: boolean;
   /** 星屑の原石の合計（流れ星の区切り + 流星群） */
   ore: number;
   /** 同調を乗せた獲得魔力 */
@@ -98,7 +130,7 @@ function upgradeOne(
 /**
  * 詠唱の時間と同調数から、最終的な授かり物（流れ星・星屑の原石・魔力）を決める。
  * 1. 流れ星を引く（稀品以上の確率に 加護 × 同調 の補正）
- * 2. 30分以上なら流星群: 原石 2〜5 個を添え、流れ星の1つを秘宝以上へ
+ * 2. 30分以上なら流星群が近づき、長さに応じた確率で降りる。降りれば原石 2〜5 個を添え、詠唱の長さに応じた確率で流れ星の1つを秘宝以上へ
  * 3. 魔力に同調の倍率を乗せる
  */
 export function calculateFinalReward({
@@ -118,17 +150,21 @@ export function calculateFinalReward({
   let fall = calculateItemDrops(minutes, { area, cycle, boost, echo, story, pity, random });
 
   let meteor: MeteorShower | null = null;
-  if (minutes >= METEOR_SHOWER_MINUTES) {
+  const approached = minutes >= METEOR_SHOWER_MINUTES;
+  const arrived = approached && random() * 100 < meteorShowerChance(minutes);
+  if (arrived) {
     const ore = randomInt(METEOR_ORE_MIN, METEOR_ORE_MAX, random);
-    const upgraded = upgradeOne(fall, { area, cycle, boost, random });
+    const lucky = random() * 100 < meteorUpgradeChance(minutes);
+    const upgraded = lucky ? upgradeOne(fall, { area, cycle, boost, random }) : { fall, upgradedIndex: null, replaced: null };
     fall = upgraded.fall;
-    meteor = { ore, upgradedIndex: upgraded.upgradedIndex, replaced: upgraded.replaced };
+    meteor = { ore, lucky, upgradedIndex: upgraded.upgradedIndex, replaced: upgraded.replaced };
   }
 
   const comboMp = comboMpMultiplier(combo);
   return {
     fall,
     meteor,
+    meteorPassed: approached && !arrived,
     ore: fall.ore + (meteor?.ore ?? 0),
     mp: Math.round(baseMp * comboMp),
     comboMp,
