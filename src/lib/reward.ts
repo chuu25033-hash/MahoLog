@@ -6,7 +6,7 @@
 // 同調: 魔力に倍率（2同調〜）、流れ星の稀品以上の確率に補正（3同調〜）を乗せる。
 import type { Area, Rarity } from "./areas";
 import { comboDropBoost, comboMpMultiplier, COMBO_TITLE_COUNT } from "./combo";
-import { boostedRates, calculateItemDrops, type DropResult } from "./drops";
+import { boostedRates, calculateItemDrops, type DropResult, type StoryLimit } from "./drops";
 import { dropPool, pickDropItem, type Item } from "./items";
 
 /** 流星群が近づく、1回の詠唱の長さ（分） */
@@ -60,6 +60,8 @@ export type RewardInput = {
   blessingDrop?: number;
   /** これまでに持ち越した星の余韻（分） */
   echo?: number;
+  /** 物語の断片の1日の上限 */
+  story?: StoryLimit;
   random?: () => number;
 };
 
@@ -108,11 +110,12 @@ export function calculateFinalReward({
   cycle = 1,
   blessingDrop = 1,
   echo = 0,
+  story,
   random = Math.random,
 }: RewardInput): FinalReward {
   const comboDrop = comboDropBoost(combo);
   const boost = blessingDrop * comboDrop;
-  let fall = calculateItemDrops(minutes, { area, cycle, boost, echo, random });
+  let fall = calculateItemDrops(minutes, { area, cycle, boost, echo, story, random });
 
   let meteor: MeteorShower | null = null;
   if (minutes >= METEOR_SHOWER_MINUTES) {

@@ -29,6 +29,16 @@ export const DROP_SLOT_MINUTES = 25;
 /** 1回の詠唱で降る流れ星の上限 */
 export const MAX_DROP_SLOTS = 4;
 
+/**
+ * 1日（JST）に流れ星から授かれる、まだ見ぬ古代文書の断片の数。
+ * 物語は断片で読み進めるので、長く放置しても先へは進まず、毎日少しずつ紡いだ人と同じ速さで進む。
+ * 上限に届いた日は、まだ見ぬ断片の代わりに同じ稀品の別の品（伝承の品・持っている断片）が降る
+ */
+export const STORY_FRAGMENTS_PER_DAY = 2;
+
+/** 物語の断片の上限: 今日あと何葉授かれるかと、その品がまだ見ぬ断片か */
+export type StoryLimit = { left: number; isNew: (item: Item) => boolean };
+
 /** 100分以降は、どれだけ続けても最後の区切り（4枠）のまま */
 export const DROP_TIERS: DropTier[] = [
   { minMinutes: 25, slots: 1, rates: { C: 85, B: 12, A: 2.9, S: 0.1 }, guaranteed: 0, ore: 0 },
@@ -62,6 +72,8 @@ export type DropOptions = {
   boost?: number;
   /** これまでに持ち越した星の余韻（分） */
   echo?: number;
+  /** 物語の断片の1日の上限（渡さなければ上限なし） */
+  story?: StoryLimit;
   random?: () => number;
 };
 
@@ -100,7 +112,7 @@ function rollRarity(rates: RarityRates, available: Rarity[], random: () => numbe
  */
 export function calculateItemDrops(
   durationMinutes: number,
-  { area, cycle = 1, boost = 1, echo = 0, random = Math.random }: DropOptions,
+  { area, cycle = 1, boost = 1, echo = 0, story, random = Math.random }: DropOptions,
 ): DropResult {
   const byRarity: RarityRates = { C: 0, B: 0, A: 0, S: 0 };
   const carried = Math.min(DROP_SLOT_MINUTES - 1, Math.max(0, Math.floor(echo)));
@@ -117,11 +129,24 @@ export function calculateItemDrops(
   const upper = available.filter((r) => r !== "C");
 
   const items: Item[] = [];
+  // この流れ星で授かった、まだ見ぬ断片（同じ断片が2つ降っても1葉と数える）
+  const storyIds = new Set<string>();
+  const isStory = (item: Item) => item.kind === "fragment" && !storyIds.has(item.id) && !!story?.isNew(item);
   for (let i = 0; i < slots; i++) {
     const guaranteed = i >= slots - tier.guaranteed;
-    const rarity = rollRarity(rates, guaranteed && upper.length > 0 ? upper : available, random);
+    let rarity = rollRarity(rates, guaranteed && upper.length > 0 ? upper : available, random);
     if (!rarity) continue;
-    items.push(pickDropItem(pool, rarity, random));
+    let item = pickDropItem(pool, rarity, random);
+    if (story && isStory(item)) {
+      if (storyIds.size < story.left) storyIds.add(item.id);
+      else {
+        // 今日の断片は降り尽くした: 同じ稀品の別の品から選び直し、無ければ触媒にする
+        const rest = pool[rarity].filter((it) => !isStory(it));
+        if (rest.length === 0) rarity = "C";
+        item = pickDropItem(rest.length > 0 ? { ...pool, [rarity]: rest } : pool, rarity, random);
+      }
+    }
+    items.push(item);
     byRarity[rarity]++;
   }
   return { tier, items, byRarity, ore: tier.ore, echo: nextEcho };

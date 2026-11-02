@@ -30,6 +30,7 @@ import { soundManager } from "@/lib/sound/sound-manager";
 import { setChantPresence } from "@/lib/worldline-store";
 import { COMBO_GRACE_MINUTES, COMBO_MIN_MINUTES, restEndNotice } from "@/lib/combo";
 import { CATALYSTS, STARDUST_ORE, blessingMultiplier, dropMultiplier } from "@/lib/items";
+import { STORY_FRAGMENTS_PER_DAY } from "@/lib/drops";
 import { calculateFinalReward } from "@/lib/reward";
 import {
   FOCUS_MINUTE_OPTIONS,
@@ -39,6 +40,8 @@ import {
   getUserData,
   hasItem,
   isZenithOpen,
+  storyFragmentsLeft,
+  storyLimitOf,
   localStudyLogs,
   todayChantMinutes,
   userActions,
@@ -236,11 +239,14 @@ export function TimerPanel({
           cycle: cycle.count,
           blessingDrop: dropMultiplier(owned),
           echo: getUserData().starEcho,
+          // 物語の断片は1日2葉まで（放置しても物語は早く進まない）
+          story: storyLimitOf(getUserData()),
         });
         const { fall } = reward;
         const gainedMp = reward.mp;
         userActions.setStarEcho(fall.echo);
         const drops = fall.items.map((item) => ({ item, isNew: userActions.addItem(item) }));
+        userActions.countStoryFragments(drops.filter((d) => d.isNew && d.item.kind === "fragment").length);
         if (reward.ore > 0) userActions.addItem(STARDUST_ORE, reward.ore);
         // 星天の塔では、詠唱した時間で階層を昇る
         const climb = area.zenith ? userActions.climbZenith(res.savedMinutes) : null;
@@ -532,6 +538,11 @@ export function TimerPanel({
       <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
         詠唱を終えたら「静息に入る」で静息を始める（無窮の詠唱は{COMBO_MIN_MINUTES}分以上のとき）。{COMBO_MIN_MINUTES}分以上の詠唱を、静息明けから{COMBO_GRACE_MINUTES}分のうちに次へつなげば、<ComboGuide />が高まる
       </p>
+      {storyFragmentsLeft(data) === 0 && (
+        <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
+          今日の古代文書の断片は降り尽くした。まだ見ぬ断片は、明日また{STORY_FRAGMENTS_PER_DAY}葉まで流れ星に混じる
+        </p>
+      )}
       {data.starEcho > 0 && (
         <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
           星の余韻 <span className="font-display text-starlight">{data.starEcho}</span>分。25分以上の次の詠唱に足され、25分ごとに流れ星がひとつ降る

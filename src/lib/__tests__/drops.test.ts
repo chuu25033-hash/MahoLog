@@ -138,3 +138,30 @@ describe("秘宝の加護", () => {
     expect(rates.B / rates.S).toBeCloseTo(3);
   });
 });
+
+describe("物語の断片の1日の上限", () => {
+  const isNew = () => true;
+  const fragments = (items: { kind: string; id: string }[]) => items.filter((it) => it.kind === "fragment");
+
+  it("上限に届いた日は、まだ見ぬ断片が降らない", () => {
+    for (let n = 0; n < 300; n++) {
+      const fall = calculateItemDrops(100, { area, story: { left: 0, isNew } });
+      expect(fragments(fall.items)).toHaveLength(0);
+      expect(fall.items).toHaveLength(4);
+    }
+  });
+
+  it("残りの数より多くは降らない", () => {
+    for (let n = 0; n < 300; n++) {
+      const fall = calculateItemDrops(100, { area, story: { left: 1, isNew } });
+      expect(new Set(fragments(fall.items).map((it) => it.id)).size).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("持っている断片は上限に数えず、そのまま降る", () => {
+    const always = () => 0.5;
+    const free = calculateItemDrops(100, { area, random: always });
+    const limited = calculateItemDrops(100, { area, story: { left: 0, isNew: () => false }, random: always });
+    expect(limited.items.map((it) => it.id)).toEqual(free.items.map((it) => it.id));
+  });
+});

@@ -5,6 +5,7 @@
 import { useSyncExternalStore } from "react";
 import { AREAS, isAreaUnlocked, resolveArea } from "./areas";
 import { jstDateKey, startOfJstDay } from "./date";
+import { STORY_FRAGMENTS_PER_DAY, type StoryLimit } from "./drops";
 import { demoProfile } from "./demo";
 import { calcLevel, rankOf } from "./game";
 import { CLEAR_MP, chapterOf, milestonesBetween, zenithFloor, type Chapter, type ChapterTheme } from "./cycles";
@@ -139,6 +140,8 @@ export type UserData = {
   dissolvedTotal: number;
   /** 星脈との同調（連続詠唱のコンボ。lib/combo.ts） */
   combo: ComboState;
+  /** その日（JST）に流れ星から授かった、まだ見ぬ古代文書の断片の数（1日の上限は STORY_FRAGMENTS_PER_DAY） */
+  storyFragments: { day: string; count: number };
 };
 
 const unlockedAt = (totalMp: number) => AREAS.filter((a) => isAreaUnlocked(a, totalMp)).map((a) => a.id);
@@ -161,6 +164,7 @@ export function initialUserData(): UserData {
     titles: { unlocked: {}, unseen: [] },
     dissolvedTotal: 0,
     combo: initialCombo(),
+    storyFragments: { day: "", count: 0 },
   };
 }
 
@@ -186,6 +190,7 @@ function normalize(saved: Partial<UserData>): UserData {
     zenith,
     titles: { ...base.titles, ...saved.titles },
     combo: { ...base.combo, ...saved.combo },
+    storyFragments: { ...base.storyFragments, ...saved.storyFragments },
   });
 }
 
@@ -468,6 +473,18 @@ export function isDiscovered(data: UserData, id: string) {
 }
 
 /** いま手元にあるか（触媒を使い切ったり、秘宝を錬成に捧げたりすると図鑑には残るが手元からは消える） */
+/** 今日あと何葉、流れ星からまだ見ぬ古代文書の断片を授かれるか */
+export function storyFragmentsLeft(data: UserData, now = new Date()): number {
+  const today = jstDateKey(now);
+  const used = data.storyFragments.day === today ? data.storyFragments.count : 0;
+  return Math.max(0, STORY_FRAGMENTS_PER_DAY - used);
+}
+
+/** 流れ星の判定に渡す、物語の断片の上限 */
+export function storyLimitOf(data: UserData, now = new Date()): StoryLimit {
+  return { left: storyFragmentsLeft(data, now), isNew: (item) => !isDiscovered(data, item.id) };
+}
+
 export function hasItem(data: UserData, id: string) {
   return (data.inventory[id] ?? 0) > 0;
 }
@@ -521,6 +538,16 @@ export const userActions = {
   },
 
   /** ドロップ・授かり物を count 個登録。初獲得なら true */
+  /** 流れ星から授かった、まだ見ぬ断片の数を今日の分に足す */
+  countStoryFragments(n: number, now = new Date()) {
+    if (n <= 0) return;
+    const today = jstDateKey(now);
+    update((s) => ({
+      ...s,
+      storyFragments: { day: today, count: (s.storyFragments.day === today ? s.storyFragments.count : 0) + n },
+    }));
+  },
+
   addItem(item: Item, count = 1): boolean {
     const isNew = !isDiscovered(load(), item.id);
     update((s) => ({ ...s, inventory: { ...s.inventory, [item.id]: (s.inventory[item.id] ?? 0) + count } }));
