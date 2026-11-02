@@ -138,7 +138,11 @@ function DocumentCard({
             >
               {ROMAN[i]}
               {count > 1 && <span className="absolute -top-1.5 -right-1 font-display text-[9px] text-aqua">×{count}</span>}
-              <WhisperText text={f.name} />
+              {/* 端の札では吹き出しを札の端にそろえ、画面の外へはみ出させない（見えていなくても横に動く原因になる） */}
+              <WhisperText
+                text={f.name}
+                className={cn(i === 0 && "left-0 translate-x-0", i === fragments.length - 1 && "right-0 left-auto translate-x-0")}
+              />
             </span>
           );
         })}
