@@ -27,6 +27,8 @@ export type TaskDef = {
 
 /** 回数・科目を数える試練で1回と数える詠唱の長さ（日数は1日の合計で見る）。短い詠唱を細切れにして数を稼げないよう、最短の詠唱時間に揃える */
 export const COUNTED_CHANT_MIN_MINUTES = 15;
+/** 多領域の調律で調律する領域の数の上限。科目が多いほど重くならないよう、これより多い科目はどれで調律してもよい */
+export const ATTUNE_DOMAIN_LIMIT = 5;
 
 export const TASKS: TaskDef[] = [
   { id: "d-visit", scope: "daily", title: "毎日の訪れ", description: "星天の導きを受け取り、今宵の探求に備える", unit: "回", reward: { kind: "mp", mp: 20 } },
@@ -43,8 +45,8 @@ export const TASKS: TaskDef[] = [
   {
     id: "w-all",
     scope: "weekly",
-    title: "全領域の調律",
-    description: `詠唱に使う全科目（魔法陣の全領域）で、それぞれ${COUNTED_CHANT_MIN_MINUTES}分以上の詠唱を行う`,
+    title: "多領域の調律",
+    description: `詠唱に使う科目のうち${ATTUNE_DOMAIN_LIMIT}科目（${ATTUNE_DOMAIN_LIMIT}科目以下なら全科目）で、それぞれ${COUNTED_CHANT_MIN_MINUTES}分以上の詠唱を行う`,
     unit: "領域",
     reward: { kind: "catalyst", rare: true },
   },
@@ -89,7 +91,7 @@ export function measureTask(def: TaskDef, { history, activeSubjectIds, mainSubje
       case "w-total":
         return [minutes, 120];
       case "w-all":
-        return [new Set(countedChants.map((r) => r.subjectId).filter((id) => activeSubjectIds.includes(id))).size, activeSubjectIds.length];
+        return [new Set(countedChants.map((r) => r.subjectId).filter((id) => activeSubjectIds.includes(id))).size, Math.min(activeSubjectIds.length, ATTUNE_DOMAIN_LIMIT)];
       case "w-days": {
         // 1日の合計で見る。10分を2回でも、その日に学んだことに変わりはない
         const perDay = new Map<string, number>();
