@@ -225,11 +225,36 @@ function drawRadar(ctx: CanvasRenderingContext2D, totals: SubjectTotal[], serif:
   ctx.textBaseline = "alphabetic";
 }
 
+/** 数字の帯の値。数字と英字は Cinzel、「時間」「分」などの和文は明朝で小さく添える */
+function drawStatValue(ctx: CanvasRenderingContext2D, value: string, x: number, y: number, serif: string, display: string) {
+  const runs = value.match(/[ぁ-んァ-ン一-龥]+|[^ぁ-んァ-ン一-龥]+/g) ?? [value];
+  const fonts = runs.map((r) => (/[ぁ-んァ-ン一-龥]/.test(r) ? `500 20px ${serif}` : `600 30px ${display}`));
+  const spacing = 3;
+  const gap = 4;
+  const widths = runs.map((r, i) => {
+    ctx.font = fonts[i];
+    const chars = [...r];
+    return chars.reduce((w, c) => w + ctx.measureText(c).width, 0) + spacing * (chars.length - 1);
+  });
+  const total = widths.reduce((a, b) => a + b, 0) + gap * (runs.length - 1);
+  let cursor = x - total / 2;
+  runs.forEach((r, i) => {
+    ctx.font = fonts[i];
+    spacedText(ctx, r, cursor, y, spacing, "left");
+    cursor += widths[i] + gap;
+  });
+}
+
 export async function renderShareCard(input: ShareCardInput): Promise<Blob> {
   const { canvas, ctx } = createCanvas(W, H);
   const sample = `${input.username}${input.title ?? ""}${input.rankTitle}${input.radar.map((t) => t.name).join("")}秘術探究者七夜の魔法陣今週学んだ時間累積魔力探求度日々の学びは、夜空を彩る星となる。`;
   const serif = await fontFamily("--font-mincho", "serif", sample);
   const display = await fontFamily("--font-cinzel", "serif", "MAHOLOG RANK PHASE MP 0123456789 IVX");
+  // 数字の帯で使う太さも先に読み込む（読み込まれていないと代わりの字や疑似の太字になる）
+  await Promise.all([
+    document.fonts.load(`600 30px ${display}`, "0123456789,MPPHASE").catch(() => {}),
+    document.fonts.load(`500 20px ${serif}`, "時間分").catch(() => {}),
+  ]);
 
   drawNightSky(ctx, W, H, 110);
   drawFrame(ctx, W, H);
@@ -291,8 +316,7 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob> {
     ctx.font = `18px ${serif}`;
     spacedText(ctx, s.label, x, 574, 4);
     ctx.fillStyle = "#f0dc9a";
-    ctx.font = `600 30px ${/[ぁ-んァ-ン一-龥]/.test(s.value) ? serif : display}`;
-    spacedText(ctx, s.value, x, 612, 3);
+    drawStatValue(ctx, s.value, x, 612, serif, display);
   });
 
   ctx.fillStyle = GOLD;
