@@ -200,6 +200,13 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
     playGrowthSe(step);
   }, [step]);
 
+  // 縦にはみ出すときも、各パネルは一番上から見せる。
+  // 開いたときは枠そのものに焦点を置く（既定では中のボタンや下端の × に焦点が移り、一番下までスクロールされてしまう）
+  const contentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    contentRef.current?.scrollTo({ top: 0 });
+  }, [step]);
+
   return (
     <Dialog
       open
@@ -214,6 +221,8 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
       }}
     >
       <DialogContent
+        ref={contentRef}
+        initialFocus={contentRef}
         onClick={advanceChest}
         className={cn(
           "flex max-h-[calc(100dvh-1rem)] flex-col gap-4 scroll-area rounded-2xl p-6 ring-starlight/25 backdrop-blur-xl short:gap-3 short:p-4 max-sm:p-5",
