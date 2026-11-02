@@ -22,6 +22,7 @@ describe("カスタム科目の名前", () => {
     expect(isCustomSubject(math)).toBe(true);
     expect(subSubjectsOf(math)).toEqual([]);
     expect(ruleNameOf(math)).toBe("カスタム");
-    expect(resolveSubSubject(math, " 微分 ")).toBe("微分");
+    // カスタム科目は詳細科目を持たない（前に書いた詳細科目が残っていても外す）
+    expect(resolveSubSubject(math, " 微分 ")).toBeNull();
   });
 });

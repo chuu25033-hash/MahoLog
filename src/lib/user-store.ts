@@ -53,7 +53,7 @@ export type UserProfile = {
   currentStageId: string;
   /** 主軸カテゴリ（主科目 ID）。詠唱画面で最初に選ばれる */
   subject: string | null;
-  /** 詳細科目（カスタムは自由記述） */
+  /** 詳細科目（カスタム科目は持たない） */
   subSubject: string | null;
   /** 魔法陣の軸（3つ以上）: 主科目 ID か「科目 ID::詳細科目」。null ならカスタム2・3を除くすべての主科目 */
   activeSubjects: string[] | null;

@@ -1,11 +1,11 @@
 "use client";
 
 import { useRef } from "react";
-import { CUSTOM_SUB_SUBJECT_MAX, isCustomSubject, resolveSubSubject, subSubjectsOf } from "@/lib/subjects";
+import { resolveSubSubject, subSubjectsOf } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-/** 主科目（大カテゴリ）→ 詳細科目の二段で選ぶ。カスタムは詳細科目を自由記述する */
+/** 主科目（大カテゴリ）→ 詳細科目の二段で選ぶ。名前を付けるカスタム科目は、名前そのものが属性なので詳細科目を持たない */
 export function SubjectPicker({
   subjects,
   subjectId,
@@ -65,40 +65,27 @@ export function SubjectPicker({
         {subjects.length === 0 && <span className="text-xs text-muted-foreground/70">有効な科目がありません</span>}
       </div>
 
-      {subject && (subs.length > 0 || isCustomSubject(subject)) && (
+      {subject && subs.length > 0 && (
         <div className="flex flex-wrap items-center gap-1 border-l pl-2.5" style={{ borderColor: `${subject.color}55` }}>
-          {isCustomSubject(subject) ? (
-            <input
-              value={subSubject ?? ""}
-              maxLength={CUSTOM_SUB_SUBJECT_MAX}
-              disabled={disabled}
-              placeholder="例: 行政書士、心理学"
-              onChange={(e) => onChange(subject.id, e.target.value || null)}
-              onBlur={(e) => onChange(subject.id, e.target.value.trim() || null)}
-              aria-label={`${subject.name}の詳細科目`}
-              className="h-7 w-full rounded-md border border-white/15 bg-white/[0.03] px-2.5 text-xs tracking-wider outline-none transition-colors placeholder:text-muted-foreground/60 focus-visible:border-starlight/55 disabled:opacity-50"
-            />
-          ) : (
-            subs.map((name) => {
-              const active = name === current;
-              return (
-                <button
-                  key={name}
-                  disabled={disabled}
-                  aria-pressed={active}
-                  onClick={() => onChange(subject.id, active ? (limit ? name : null) : name)}
-                  className={cn(
-                    "rounded-[3px] border px-2 py-0.5 text-[11px] tracking-wider whitespace-nowrap transition-all duration-300 disabled:cursor-not-allowed",
-                    active ? "text-foreground" : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
-                    disabled && !active && "opacity-30",
-                  )}
-                  style={active ? { borderColor: `${subject.color}aa`, background: `${subject.color}14` } : undefined}
-                >
-                  {name}
-                </button>
-              );
-            })
-          )}
+          {subs.map((name) => {
+            const active = name === current;
+            return (
+              <button
+                key={name}
+                disabled={disabled}
+                aria-pressed={active}
+                onClick={() => onChange(subject.id, active ? (limit ? name : null) : name)}
+                className={cn(
+                  "rounded-[3px] border px-2 py-0.5 text-[11px] tracking-wider whitespace-nowrap transition-all duration-300 disabled:cursor-not-allowed",
+                  active ? "text-foreground" : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
+                  disabled && !active && "opacity-30",
+                )}
+                style={active ? { borderColor: `${subject.color}aa`, background: `${subject.color}14` } : undefined}
+              >
+                {name}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

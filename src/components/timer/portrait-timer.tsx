@@ -92,7 +92,7 @@ export function PortraitTimer({
       </footer>
 
       <Dialog open={sheetOpen} onOpenChange={setSheetOpen}>
-        <DialogContent className="top-auto bottom-0 left-0 max-h-[85dvh] w-full max-w-none translate-x-0 translate-y-0 gap-3 rounded-t-2xl rounded-b-none p-4 pb-[max(1rem,env(safe-area-inset-bottom))] ring-starlight/25 backdrop-blur-2xl sm:max-w-none data-open:slide-in-from-bottom-8 data-open:zoom-in-100">
+        <DialogContent className="top-auto bottom-0 left-0 max-h-[85dvh] w-full overflow-x-hidden max-w-none translate-x-0 translate-y-0 gap-3 rounded-t-2xl rounded-b-none p-4 pb-[max(1rem,env(safe-area-inset-bottom))] ring-starlight/25 backdrop-blur-2xl sm:max-w-none data-open:slide-in-from-bottom-8 data-open:zoom-in-100">
           <DialogHeader>
             <DialogTitle className="text-sm tracking-[0.25em]">詠唱の支度</DialogTitle>
           </DialogHeader>

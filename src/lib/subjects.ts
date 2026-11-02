@@ -2,13 +2,12 @@
 import type { Subject } from "./types";
 
 /**
- * 利用者が名前を付けられるカスタム科目（科目 ID）。詳細科目は自由記述する。
+ * 利用者が名前を付けられるカスタム科目（科目 ID）。付けた名前そのものが属性なので、詳細科目は持たない。
  * s7 はもとの「カスタム」で、これまでの記録はカスタム1に引き継ぐ
  */
 export const CUSTOM_SUBJECT_IDS: readonly string[] = ["s7", "s8", "s9"];
 /** 名前を付ける前の、もとの「カスタム」科目の名前 */
 const CUSTOM_SUBJECT_NAME = "カスタム";
-export const CUSTOM_SUB_SUBJECT_MAX = 20;
 /** カスタム科目に付けられる名前の長さ。魔法陣の頂点に並べても重ならないよう短めに */
 export const CUSTOM_SUBJECT_NAME_MAX = 8;
 
@@ -57,7 +56,6 @@ export function resolveSubSubject(
 ) {
   if (limit && limit.length > 0) return subSubject && limit.includes(subSubject) ? subSubject : limit[0];
   if (!subSubject) return null;
-  if (isCustomSubject(subject)) return subSubject.trim().slice(0, CUSTOM_SUB_SUBJECT_MAX) || null;
   return subSubjectsOf(subject).includes(subSubject) ? subSubject : null;
 }
 
@@ -87,7 +85,7 @@ export function parseAxisKey(key: string): { subjectId: string; subSubject: stri
   return at < 0 ? { subjectId: key, subSubject: null } : { subjectId: key.slice(0, at), subSubject: key.slice(at + AXIS_SEP.length) };
 }
 
-/** 詳細科目を魔法陣の軸にできる主科目か（カスタムは自由記述なので軸にしない） */
+/** 詳細科目を魔法陣の軸にできる主科目か（カスタムは詳細科目を持たないので軸にしない） */
 export function canSplitSubject(subject: Pick<Subject, "id" | "name">) {
   return !isCustomSubject(subject) && subSubjectsOf(subject).length > 0;
 }
