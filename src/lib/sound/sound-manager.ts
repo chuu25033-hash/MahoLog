@@ -55,6 +55,18 @@ class SoundManager {
   private ambienceGen = 0;
   private buffers = new Map<string, Promise<AudioBuffer | null>>();
   private lastCueAt = 0;
+  /** 開発中に読み直されて、新しいものに役目を譲った後か */
+  private disposed = false;
+
+  /** 鳴らしている曲を止め、AudioContext を閉じる（開発中にこのファイルが読み直されたとき、古いものが鳴り続けないように） */
+  dispose() {
+    this.disposed = true;
+    this.ambienceGen += 1;
+    this.current?.voice.stop();
+    this.current = null;
+    void this.bus?.ctx.close().catch(() => undefined);
+    this.bus = null;
+  }
 
   /** 音声全般の ON / OFF */
   setEnabled(enabled: boolean) {
@@ -227,6 +239,7 @@ class SoundManager {
   }
 
   private ensureBus(): Bus | null {
+    if (this.disposed) return null;
     if (this.bus) return this.bus;
     if (typeof window === "undefined" || typeof AudioContext === "undefined") return null;
     try {
@@ -342,4 +355,9 @@ class SoundManager {
   }
 }
 
+// 開発中のホットリロードでこのファイルが読み直されると、新しい soundManager が作られる。
+// 前のものを止めておかないと、その曲が誰にも止められずに鳴り続け、新しい曲と二重に流れる
+const registry = globalThis as typeof globalThis & { __maholog_sound_manager?: SoundManager };
+registry.__maholog_sound_manager?.dispose();
 export const soundManager = new SoundManager();
+registry.__maholog_sound_manager = soundManager;
