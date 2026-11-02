@@ -165,3 +165,18 @@ describe("物語の断片の1日の上限", () => {
     expect(limited.items.map((it) => it.id)).toEqual(free.items.map((it) => it.id));
   });
 });
+
+describe("星の救い", () => {
+  it("救いの詠唱では、25分でも流れ星が秘宝以上になる", () => {
+    for (let n = 0; n < 300; n++) {
+      const fall = calculateItemDrops(25, { area, pity: true });
+      expect(fall.items).toHaveLength(1);
+      expect(["A", "S"]).toContain(fall.items[0].rarity);
+    }
+  });
+
+  it("救いでなければ、いつもの確率のまま", () => {
+    const fall = calculateItemDrops(25, { area, random: () => 0 });
+    expect(fall.items[0].rarity).toBe("C");
+  });
+});

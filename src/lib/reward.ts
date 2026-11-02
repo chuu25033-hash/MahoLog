@@ -6,7 +6,7 @@
 // 同調: 魔力に倍率（2同調〜）、流れ星の稀品以上の確率に補正（3同調〜）を乗せる。
 import type { Area, Rarity } from "./areas";
 import { comboDropBoost, comboMpMultiplier, COMBO_TITLE_COUNT } from "./combo";
-import { boostedRates, calculateItemDrops, type DropResult, type StoryLimit } from "./drops";
+import { calculateItemDrops, type DropResult, type StoryLimit } from "./drops";
 import { dropPool, pickDropItem, type Item } from "./items";
 
 /** 流星群が近づく、1回の詠唱の長さ（分） */
@@ -15,8 +15,8 @@ export const METEOR_SHOWER_MINUTES = 30;
 export const METEOR_ORE_MIN = 2;
 export const METEOR_ORE_MAX = 5;
 
-/** 流星群で引き上げる先の格（秘宝・至宝） */
-const UPPER: Rarity[] = ["A", "S"];
+/** 流星群の引き上げが、秘宝ではなく至宝になる確率（%） */
+export const METEOR_UPGRADE_S_CHANCE = 2;
 const RANK: Record<Rarity, number> = { C: 0, B: 1, A: 2, S: 3 };
 
 export type MeteorShower = {
@@ -62,6 +62,8 @@ export type RewardInput = {
   echo?: number;
   /** 物語の断片の1日の上限 */
   story?: StoryLimit;
+  /** 星の救い: 流れ星の1つを必ず秘宝以上にする */
+  pity?: boolean;
   random?: () => number;
 };
 
@@ -70,7 +72,7 @@ const randomInt = (min: number, max: number, random: () => number) => min + Math
 
 /**
  * 流星群で、流れ星の1つを秘宝以上へ引き上げる。いちばん格の低い品を選び、
- * その区切りの確率（加護込み）で秘宝・至宝のどちらかを引く。すでに秘宝以上なら引き上げない
+ * 基本は秘宝にし、METEOR_UPGRADE_S_CHANCE の確率でだけ至宝にする（至宝の無いステージでは秘宝）。すでに秘宝以上なら引き上げない
  */
 function upgradeOne(
   fall: DropResult,
@@ -83,12 +85,9 @@ function upgradeOne(
   if (RANK[target.rarity as Rarity] >= RANK.A) return none;
 
   const pool = dropPool(area, cycle);
-  const available = UPPER.filter((r) => pool[r].length > 0);
-  if (available.length === 0) return none;
-  const rates = boostedRates(fall.tier.rates, boost);
-  const total = available.reduce((acc, r) => acc + rates[r], 0);
-  let x = random() * total;
-  const rarity = available.find((r) => (x -= rates[r]) < 0) ?? available[available.length - 1];
+  const wantS = random() * 100 < METEOR_UPGRADE_S_CHANCE * boost;
+  const rarity: Rarity | null = wantS && pool.S.length > 0 ? "S" : pool.A.length > 0 ? "A" : pool.S.length > 0 ? "S" : null;
+  if (!rarity) return none;
 
   const item = pickDropItem(pool, rarity, random);
   const items = fall.items.map((it, i) => (i === index ? item : it));
@@ -111,11 +110,12 @@ export function calculateFinalReward({
   blessingDrop = 1,
   echo = 0,
   story,
+  pity,
   random = Math.random,
 }: RewardInput): FinalReward {
   const comboDrop = comboDropBoost(combo);
   const boost = blessingDrop * comboDrop;
-  let fall = calculateItemDrops(minutes, { area, cycle, boost, echo, story, random });
+  let fall = calculateItemDrops(minutes, { area, cycle, boost, echo, story, pity, random });
 
   let meteor: MeteorShower | null = null;
   if (minutes >= METEOR_SHOWER_MINUTES) {

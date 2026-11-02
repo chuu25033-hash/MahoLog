@@ -142,6 +142,8 @@ export type UserData = {
   combo: ComboState;
   /** その日（JST）に流れ星から授かった、まだ見ぬ古代文書の断片の数（1日の上限は STORY_FRAGMENTS_PER_DAY） */
   storyFragments: { day: string; count: number };
+  /** 秘宝以上の流れ星が降らないまま続いた、25分以上の詠唱の回数（星の救い。lib/drops.ts の PITY_MISSES） */
+  pityMisses: number;
 };
 
 const unlockedAt = (totalMp: number) => AREAS.filter((a) => isAreaUnlocked(a, totalMp)).map((a) => a.id);
@@ -165,6 +167,7 @@ export function initialUserData(): UserData {
     dissolvedTotal: 0,
     combo: initialCombo(),
     storyFragments: { day: "", count: 0 },
+    pityMisses: 0,
   };
 }
 
@@ -538,6 +541,11 @@ export const userActions = {
   },
 
   /** ドロップ・授かり物を count 個登録。初獲得なら true */
+  /** 流れ星が降ったあと: 秘宝以上が混じれば星の救いを数え直し、混じらなければ1つ数える */
+  countPity(hit: boolean) {
+    update((s) => ({ ...s, pityMisses: hit ? 0 : s.pityMisses + 1 }));
+  },
+
   /** 流れ星から授かった、まだ見ぬ断片の数を今日の分に足す */
   countStoryFragments(n: number, now = new Date()) {
     if (n <= 0) return;
