@@ -662,8 +662,8 @@ export function TimerPanel({
 
   // 魔法陣の中央に重ねる、状態・時刻・属性・操作
   const clockFace = (
-    // 幅は魔法陣の枠いっぱいに取り、長い科目札が画面の外へ出ずに2段へ折れるようにする
-    <div className="relative z-10 flex w-full flex-col items-center gap-2 px-4 text-center">
+    // 幅は魔法陣の枠いっぱいに取り、科目札の幅をその割合で決められるようにする
+    <div className="relative z-10 flex w-full flex-col items-center gap-2 text-center">
       <p className="text-xs tracking-[0.35em] text-aqua/70">{statusLabel}</p>
       <p
         className="font-display text-5xl font-normal text-[#e8fbfd] text-glow-aqua short:text-4xl lg:text-7xl"
@@ -685,7 +685,10 @@ export function TimerPanel({
           <span className="h-px w-6 bg-gradient-to-l from-transparent to-white/40" />
         </p>
       ) : (
-        <SubjectRuneChip name={subject.name} subSubject={subSubject} color={subject.color} />
+        // 札は内側の円（半径72）の幅に収め、1行で入らなければ2段に積む
+        <div className="flex w-[66%] justify-center">
+          <SubjectRuneChip name={subject.name} subSubject={subSubject} color={subject.color} />
+        </div>
       )}
 
       <div className="mt-2 flex gap-2">

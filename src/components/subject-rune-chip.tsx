@@ -31,7 +31,12 @@ export function SubjectRuneChip({
       setStacked(false);
       return;
     }
-    const check = () => setStacked(measure.offsetWidth > parent.clientWidth);
+    // 余白を除いた中身の幅と比べる
+    const check = () => {
+      const style = getComputedStyle(parent);
+      const inner = parent.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      setStacked(measure.offsetWidth > inner);
+    };
     check();
     const observer = new ResizeObserver(check);
     observer.observe(parent);
