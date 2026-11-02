@@ -30,7 +30,7 @@ import {
   type TitleItem,
 } from "./items";
 import { mockObservedNights } from "./star-memory";
-import { activeSubjectsOf } from "./subjects";
+import { activeSubjectsOf, parseAxisKey } from "./subjects";
 import { comboOnFinish, comboOnStart, initialCombo, type ComboState } from "./combo";
 import { ACHIEVEMENT_TITLES, EARLY_ACCESS_OPEN, checkUnlockedTitles, findTitle, type Tally, type Title, type UserStats, type UserTitleState } from "./titles";
 import { TASKS, drawCatalyst, measureTask, periodKey, type TaskBoard, type TaskScope } from "./tasks";
@@ -54,7 +54,7 @@ export type UserProfile = {
   subject: string | null;
   /** 詳細科目（カスタムは自由記述） */
   subSubject: string | null;
-  /** 詠唱に使う科目 ID（3つ以上）。null ならすべての科目 */
+  /** 魔法陣の軸（3つ以上）: 主科目 ID か「科目 ID::詳細科目」。null ならすべての主科目 */
   activeSubjects: string[] | null;
 };
 
@@ -197,7 +197,7 @@ function withPassedZenithFragments(inventory: Record<string, number>, zenithMinu
 }
 
 /** 試練の進捗を詠唱履歴から測り直す。期間が変わっていれば受取状況も巡り直す */
-function syncedTasks(data: UserData, subjects: Pick<Subject, "id">[], now: Date): UserData["tasks"] {
+function syncedTasks(data: UserData, subjects: Pick<Subject, "id" | "name">[], now: Date): UserData["tasks"] {
   const context = {
     // 後から書き留めた記録で試練を満たせると、詠唱を重ねる励みにならないので数えない
     history: data.chantHistory.filter((r) => !r.manual),
@@ -491,6 +491,7 @@ export function localStudyLogs(data: UserData): StudyLog[] {
   return data.chantHistory.map((r) => ({
     id: r.id,
     subject_id: r.subjectId,
+    sub_subject: r.subSubject ?? null,
     duration_minutes: r.minutes,
     mode: r.mode,
     created_at: r.date,
@@ -644,15 +645,16 @@ export const userActions = {
     update((s) => ({ ...s, userProfile: { ...s.userProfile, subject, subSubject } }));
   },
 
-  /** 詠唱に使う科目。主軸カテゴリが外れたら主軸の指定も外す */
-  setActiveSubjects(ids: string[]) {
+  /** 魔法陣の軸（主科目 ID か「科目 ID::詳細科目」）。主軸カテゴリの軸がすべて外れたら主軸の指定も外す */
+  setActiveSubjects(keys: string[]) {
     update((s) => {
-      const keepMain = s.userProfile.subject !== null && ids.includes(s.userProfile.subject);
+      const main = s.userProfile.subject;
+      const keepMain = main !== null && keys.some((k) => parseAxisKey(k).subjectId === main);
       return {
         ...s,
         userProfile: {
           ...s.userProfile,
-          activeSubjects: ids,
+          activeSubjects: keys,
           ...(keepMain ? {} : { subject: null, subSubject: null }),
         },
       };
@@ -697,7 +699,7 @@ export const userActions = {
   },
 
   /** 試練の進捗を最新にする（変化がなければ保存も通知もしない） */
-  syncTasks(subjects: Pick<Subject, "id">[], now = new Date()) {
+  syncTasks(subjects: Pick<Subject, "id" | "name">[], now = new Date()) {
     const current = load();
     const tasks = syncedTasks(current, subjects, now);
     if (JSON.stringify(tasks) === JSON.stringify(current.tasks)) return;
@@ -705,7 +707,7 @@ export const userActions = {
   },
 
   /** 達成した試練の報酬を受け取る: MP は累積魔力・階級へ、触媒は所持品へ。受け取れなければ null */
-  claimTask(taskId: string, subjects: Pick<Subject, "id">[], now = new Date()): TaskClaim | null {
+  claimTask(taskId: string, subjects: Pick<Subject, "id" | "name">[], now = new Date()): TaskClaim | null {
     const def = TASKS.find((t) => t.id === taskId);
     if (!def) return null;
     const tasks = syncedTasks(load(), subjects, now);

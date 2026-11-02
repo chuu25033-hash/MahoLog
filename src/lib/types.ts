@@ -19,6 +19,8 @@ export type Subject = {
 export type StudyLog = {
   id: string;
   subject_id: string;
+  /** 詳細科目（端末の詠唱履歴だけが持つ） */
+  sub_subject?: string | null;
   duration_minutes: number;
   mode: StudyMode;
   created_at: string;
@@ -28,7 +30,11 @@ export type StudyLog = {
 
 /** レーダーチャート1軸分 */
 export type SubjectTotal = {
+  /** 軸の鍵（主科目 ID か「科目 ID::詳細科目」） */
+  key: string;
   subjectId: string;
+  /** 詳細科目の軸なら、その詳細科目 */
+  subSubject: string | null;
   name: string;
   color: string;
   minutes: number;

@@ -2,8 +2,9 @@
 
 import type { ComponentProps } from "react";
 import { PageLoading } from "@/components/page-loading";
-import { timerSummary } from "@/lib/aggregate";
-import { activeSubjectsOf } from "@/lib/subjects";
+import { timerSummary, totalsByAxis } from "@/lib/aggregate";
+import { startOfJstWeek } from "@/lib/date";
+import { activeSubjectsOf, radarAxesOf } from "@/lib/subjects";
 import { localStudyLogs, useStoredUserData } from "@/lib/user-store";
 import { TimerPanel } from "./timer-panel";
 
@@ -14,7 +15,8 @@ import { TimerPanel } from "./timer-panel";
 export function TimerView(props: ComponentProps<typeof TimerPanel>) {
   const stored = useStoredUserData();
   if (!stored) return <PageLoading />;
-  const subjects = activeSubjectsOf(props.subjects, stored.userProfile.activeSubjects);
+  const keys = stored.userProfile.activeSubjects;
+  const subjects = activeSubjectsOf(props.subjects, keys);
   const settings = {
     initialFocusMin: stored.settings.defaultFocusMinutes,
     initialSubjectId: stored.userProfile.subject,
@@ -25,7 +27,9 @@ export function TimerView(props: ComponentProps<typeof TimerPanel>) {
     return <TimerPanel {...props} {...settings} subjects={subjects} initialWeekTotals={weekTotals} />;
   }
   // TimerPanel は初期値だけを使い、以降の更新は自身の状態で持つ
-  const { weekTotals, todayMinutes } = timerSummary(subjects, localStudyLogs(stored));
+  const logs = localStudyLogs(stored);
+  const { todayMinutes } = timerSummary(subjects, logs);
+  const weekTotals = totalsByAxis(radarAxesOf(subjects, keys), logs, startOfJstWeek(new Date()));
   return (
     <TimerPanel
       {...props}

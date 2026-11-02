@@ -1,5 +1,6 @@
 // 詠唱記録の集計（サーバー・クライアント共通）
 import { startOfJstDay, startOfJstMonth, startOfJstWeek } from "./date";
+import { radarAxesOf, type RadarAxis } from "./subjects";
 import type { Profile, StudyLog, Subject, SubjectTotal } from "./types";
 
 export function sumSince(logs: StudyLog[], since: Date) {
@@ -9,12 +10,19 @@ export function sumSince(logs: StudyLog[], since: Date) {
 }
 
 export function totalsBySubject(subjects: Subject[], logs: StudyLog[], since: Date): SubjectTotal[] {
-  return subjects.map((s) => ({
-    subjectId: s.id,
-    name: s.name,
-    color: s.color,
+  return totalsByAxis(radarAxesOf(subjects, null), logs, since);
+}
+
+/** 魔法陣の軸ごとの合計。詳細科目の軸は、その詳細科目で刻んだ詠唱だけを数える */
+export function totalsByAxis(axes: RadarAxis[], logs: StudyLog[], since: Date): SubjectTotal[] {
+  return axes.map((a) => ({
+    key: a.key,
+    subjectId: a.subjectId,
+    subSubject: a.subSubject,
+    name: a.subSubject ?? a.subject.name,
+    color: a.subject.color,
     minutes: logs
-      .filter((l) => l.subject_id === s.id && new Date(l.created_at) >= since)
+      .filter((l) => l.subject_id === a.subjectId && (!a.subSubject || l.sub_subject === a.subSubject) && new Date(l.created_at) >= since)
       .reduce((acc, l) => acc + l.duration_minutes, 0),
   }));
 }

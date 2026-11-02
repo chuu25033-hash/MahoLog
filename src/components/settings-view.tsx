@@ -28,7 +28,17 @@ import { THEME_LABEL, unlockedThemes } from "@/lib/cycles";
 import { jstDateKey } from "@/lib/date";
 import { resetLibraryTour } from "@/lib/onboarding";
 import { soundManager } from "@/lib/sound/sound-manager";
-import { MIN_ACTIVE_SUBJECTS, activeSubjectsOf, resolveSubSubject } from "@/lib/subjects";
+import {
+  MIN_ACTIVE_SUBJECTS,
+  activeSubjectsOf,
+  axisKey,
+  canSplitSubject,
+  parseAxisKey,
+  radarAxesOf,
+  resolveSubSubject,
+  subSubjectLimitsOf,
+  subSubjectsOf,
+} from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
 import { FOCUS_MINUTE_OPTIONS, hasDevBackup, initialUserData, userActions, useStoredUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
@@ -49,6 +59,8 @@ export function SettingsView({
   if (!data) return <PageLoading />;
   const { userProfile, settings } = data;
   const activeSubjects = activeSubjectsOf(subjects, userProfile.activeSubjects);
+  const axes = radarAxesOf(subjects, userProfile.activeSubjects);
+  const subLimits = subSubjectLimitsOf(axes);
   const mainSubject = activeSubjects.find((s) => s.id === userProfile.subject);
 
   return (
@@ -186,7 +198,7 @@ export function SettingsView({
         </Panel>
 
         <Panel icon={Hexagon} title="詠唱の領域" label="DOMAINS">
-          <ActiveSubjectsField subjects={subjects} activeIds={activeSubjects.map((s) => s.id)} />
+          <ActiveSubjectsField subjects={subjects} activeKeys={axes.map((a) => a.key)} />
 
           <Field
             label={
@@ -201,12 +213,13 @@ export function SettingsView({
               subjectId={mainSubject?.id ?? null}
               subSubject={mainSubject ? userProfile.subSubject : null}
               onChange={(subject, subSubject) => userActions.setSubject(subject, subSubject)}
+              subLimits={subLimits}
               allowNone
             />
             {mainSubject && (
               <SubjectRuneChip
                 name={mainSubject.name}
-                subSubject={resolveSubSubject(mainSubject, userProfile.subSubject)}
+                subSubject={resolveSubSubject(mainSubject, userProfile.subSubject, subLimits[mainSubject.id])}
                 color={mainSubject.color}
                 className="mt-3"
               />
@@ -257,52 +270,87 @@ export function SettingsView({
   );
 }
 
-/** 詠唱に使う科目の複数選択。魔法陣を組めるよう3科目未満には減らせない */
-function ActiveSubjectsField({ subjects, activeIds }: { subjects: Subject[]; activeIds: string[] }) {
+/**
+ * 魔法陣の軸の複数選択。科目まるごとか、その中の詳細科目（古文・物理など）を軸にできる。
+ * 同じ科目のまるごとと詳細科目は重ねない（まるごとを選ぶと詳細科目は外れ、詳細科目を選ぶとまるごとは外れる）。
+ * 魔法陣を組めるよう3軸未満には減らせない
+ */
+function ActiveSubjectsField({ subjects, activeKeys }: { subjects: Subject[]; activeKeys: string[] }) {
   const [warning, setWarning] = useState(false);
 
-  function toggle(id: string) {
-    if (!activeIds.includes(id)) {
-      setWarning(false);
-      userActions.setActiveSubjects(subjects.filter((s) => s.id === id || activeIds.includes(s.id)).map((s) => s.id));
-      return;
-    }
-    if (activeIds.length <= MIN_ACTIVE_SUBJECTS) {
+  function commit(next: string[]) {
+    if (next.length < MIN_ACTIVE_SUBJECTS) {
       setWarning(true);
       return;
     }
     setWarning(false);
-    userActions.setActiveSubjects(activeIds.filter((a) => a !== id));
+    userActions.setActiveSubjects(next);
+  }
+
+  /** key を選ぶ（同じ科目のまるごと／詳細科目は外す）か、選んでいれば外す */
+  function toggle(key: string) {
+    if (activeKeys.includes(key)) return commit(activeKeys.filter((k) => k !== key));
+    const { subjectId, subSubject } = parseAxisKey(key);
+    const kept = activeKeys.filter((k) => {
+      const axis = parseAxisKey(k);
+      return axis.subjectId !== subjectId || (subSubject !== null && axis.subSubject !== null);
+    });
+    // 並びは radarAxesOf が科目の順にそろえる
+    commit([...kept, key]);
   }
 
   return (
-    <Field label="詠唱に使う科目" hint={`${activeIds.length} 領域 ・ 正${activeIds.length}角形の魔法陣`}>
-      {/* 科目名が収まる幅を保ち、狭い列では1列に並べる */}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(6.75rem,1fr))] gap-1.5">
+    <Field label="詠唱に使う科目" hint={`${activeKeys.length} 領域 ・ 正${activeKeys.length}角形の魔法陣`}>
+      <p className="mb-2 text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
+        科目をまるごと選ぶか、右の詳細科目を選んでその科目だけを魔法陣の頂点にできます
+      </p>
+      <div className="flex flex-col gap-1.5">
         {subjects.map((s) => {
-          const checked = activeIds.includes(s.id);
+          const checked = activeKeys.includes(s.id);
+          const subs = canSplitSubject(s) ? subSubjectsOf(s) : [];
           return (
-            <button
-              key={s.id}
-              role="checkbox"
-              aria-checked={checked}
-              onClick={() => toggle(s.id)}
-              className={cn(
-                "flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs tracking-wider whitespace-nowrap transition-all duration-300",
-                checked
-                  ? "border-white/25 bg-white/[0.05] text-foreground"
-                  : "border-white/10 text-muted-foreground hover:border-white/25",
-              )}
-              style={checked ? { boxShadow: `0 0 10px -4px ${s.color}` } : undefined}
-            >
-              <span
-                className="flex size-3.5 shrink-0 items-center justify-center rounded-[3px] border"
-                style={{ borderColor: checked ? s.color : "rgba(255,255,255,0.25)", background: checked ? `${s.color}26` : undefined }}
+            <div key={s.id} className="flex flex-wrap items-center gap-1">
+              <button
+                role="checkbox"
+                aria-checked={checked}
+                onClick={() => toggle(s.id)}
+                className={cn(
+                  "mr-1 flex w-[6.75rem] shrink-0 items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs tracking-wider whitespace-nowrap transition-all duration-300",
+                  checked
+                    ? "border-white/25 bg-white/[0.05] text-foreground"
+                    : "border-white/10 text-muted-foreground hover:border-white/25",
+                )}
+                style={checked ? { boxShadow: `0 0 10px -4px ${s.color}` } : undefined}
               >
-                {checked && <Check className="size-2.5" strokeWidth={2} style={{ color: s.color }} />}
-              </span>
-              <span>{s.name}</span>
-            </button>
+                <span
+                  className="flex size-3.5 shrink-0 items-center justify-center rounded-[3px] border"
+                  style={{ borderColor: checked ? s.color : "rgba(255,255,255,0.25)", background: checked ? `${s.color}26` : undefined }}
+                >
+                  {checked && <Check className="size-2.5" strokeWidth={2} style={{ color: s.color }} />}
+                </span>
+                <span>{s.name}</span>
+              </button>
+              {subs.map((sub) => {
+                const key = axisKey(s.id, sub);
+                const on = activeKeys.includes(key);
+                return (
+                  <button
+                    key={key}
+                    role="checkbox"
+                    aria-checked={on}
+                    aria-label={`${s.name}・${sub}`}
+                    onClick={() => toggle(key)}
+                    className={cn(
+                      "rounded-[3px] border px-2 py-0.5 text-[11px] tracking-wider whitespace-nowrap transition-all duration-300",
+                      on ? "text-foreground" : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
+                    )}
+                    style={on ? { borderColor: `${s.color}aa`, background: `${s.color}14` } : undefined}
+                  >
+                    {sub}
+                  </button>
+                );
+              })}
+            </div>
           );
         })}
       </div>

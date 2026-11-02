@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { CUSTOM_SUB_SUBJECT_MAX, isCustomSubject, subSubjectsOf } from "@/lib/subjects";
+import { CUSTOM_SUB_SUBJECT_MAX, isCustomSubject, resolveSubSubject, subSubjectsOf } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ export function SubjectPicker({
   onChange,
   disabled = false,
   allowNone = false,
+  subLimits = {},
 }: {
   subjects: Subject[];
   subjectId: string | null;
@@ -21,9 +22,13 @@ export function SubjectPicker({
   disabled?: boolean;
   /** 選択中の主科目をもう一度押すと選択を外せる */
   allowNone?: boolean;
+  /** 詳細科目だけを魔法陣の軸にした主科目で選べる詳細科目。その科目では必ずどれかひとつを選ぶ */
+  subLimits?: Record<string, readonly string[]>;
 }) {
   const subject = subjects.find((s) => s.id === subjectId);
-  const subs = subSubjectsOf(subject);
+  const limit = subject ? subLimits[subject.id] : undefined;
+  const subs = limit ?? subSubjectsOf(subject);
+  const current = resolveSubSubject(subject, subSubject, limit) ?? subSubject;
   /** 主科目ごとに最後に選んだ詳細科目。別の主科目へ移って戻ったときに選び直さずに済むようにする */
   const lastSubs = useRef<Record<string, string | null>>({});
 
@@ -75,13 +80,13 @@ export function SubjectPicker({
             />
           ) : (
             subs.map((name) => {
-              const active = name === subSubject;
+              const active = name === current;
               return (
                 <button
                   key={name}
                   disabled={disabled}
                   aria-pressed={active}
-                  onClick={() => onChange(subject.id, active ? null : name)}
+                  onClick={() => onChange(subject.id, active ? (limit ? name : null) : name)}
                   className={cn(
                     "rounded-[3px] border px-2 py-0.5 text-[11px] tracking-wider whitespace-nowrap transition-all duration-300 disabled:cursor-not-allowed",
                     active ? "text-foreground" : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",

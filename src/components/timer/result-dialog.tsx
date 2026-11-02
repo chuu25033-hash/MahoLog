@@ -374,7 +374,13 @@ function ResultPanel({
               aria-hidden
             />
           )}
-          <MagicRadar data={radarData} highlightSubjectId={result.subject.id} animationDuration={1200} />
+          <MagicRadar
+            data={radarData}
+            highlightKey={
+              radarData.find((t) => t.subjectId === result.subject.id && (!t.subSubject || t.subSubject === result.subSubject))?.key
+            }
+            animationDuration={1200}
+          />
         </div>
         <TrialRewards subjects={subjects} onClaimed={onClaimed} />
       </div>

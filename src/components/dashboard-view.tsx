@@ -21,11 +21,12 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { WizardAvatar } from "@/components/wizard-avatar";
 import { ArrowGlyph, RankSigil } from "@/components/arcane-icons";
-import { dashboardSummary, type DashboardSummary } from "@/lib/aggregate";
+import { dashboardSummary, totalsByAxis, type DashboardSummary } from "@/lib/aggregate";
+import { startOfJstMonth, startOfJstWeek } from "@/lib/date";
 import { cycleLabel } from "@/lib/cycles";
 import { formatMinutes, levelProgress, rankOf } from "@/lib/game";
 import { sessionElapsedMs, useChantSession, type ChantSession } from "@/lib/chant-session";
-import { activeSubjectsOf } from "@/lib/subjects";
+import { radarAxesOf } from "@/lib/subjects";
 import { usePortraitPhone } from "@/lib/use-portrait-phone";
 import type { Subject } from "@/lib/types";
 import { equippedTitle, localProfile, localStudyLogs, useStoredUserData, userActions, useUserData } from "@/lib/user-store";
@@ -44,10 +45,18 @@ export function DashboardView({ summary, subjects, isDemo }: { summary: Dashboar
   const summed = isDemo ? dashboardSummary(localProfile(stored), subjects, localStudyLogs(stored)) : summary;
   // 紋章は設定画面で選び、端末に保存したものを掲げる
   const base = { ...summed, profile: { ...summed.profile, avatar_url: stored.userProfile.avatar } };
-  const activeIds = new Set(activeSubjectsOf(subjects, stored.userProfile.activeSubjects).map((s) => s.id));
-  const radar = Object.fromEntries(
-    Object.entries(base.radar).map(([range, totals]) => [range, totals.filter((t) => activeIds.has(t.subjectId))]),
-  ) as DashboardSummary["radar"];
+  const axes = radarAxesOf(
+    subjects.filter((s) => s.is_active),
+    stored.userProfile.activeSubjects,
+  );
+  // デモモードは端末の詠唱履歴（詳細科目つき）から軸ごとに測る。それ以外は主科目まるごとの軸だけを残す
+  const logs = isDemo ? localStudyLogs(stored) : null;
+  const radar: DashboardSummary["radar"] = logs
+    ? { week: totalsByAxis(axes, logs, startOfJstWeek(new Date())), month: totalsByAxis(axes, logs, startOfJstMonth(new Date())) }
+    : {
+        week: base.radar.week.filter((t) => axes.some((a) => a.key === t.key)),
+        month: base.radar.month.filter((t) => axes.some((a) => a.key === t.key)),
+      };
   return (
     <>
       <Dashboard {...base} radar={radar} subjects={subjects} />

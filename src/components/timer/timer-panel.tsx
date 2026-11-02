@@ -19,12 +19,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { timerSummary } from "@/lib/aggregate";
+import { totalsByAxis } from "@/lib/aggregate";
+import { startOfJstWeek } from "@/lib/date";
 import { loadChantSession, saveChantSession, sessionElapsedMs, type ChantPhase, type ChantSession } from "@/lib/chant-session";
 import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
 import { cycleMarkMultiplier } from "@/lib/cycles";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
-import { resolveSubSubject } from "@/lib/subjects";
+import { radarAxesOf, resolveSubSubject, subSubjectLimitsOf } from "@/lib/subjects";
 import { soundManager } from "@/lib/sound/sound-manager";
 import { setChantPresence } from "@/lib/worldline-store";
 import { COMBO_GRACE_MINUTES, COMBO_MIN_MINUTES, restEndNotice } from "@/lib/combo";
@@ -168,7 +169,11 @@ export function TimerPanel({
 
   // 設定で選択中の科目が外されたら、詠唱に使う科目の先頭に切り替える
   const subject = subjects.find((s) => s.id === subjectId) ?? subjects[0];
-  const subSubject = resolveSubSubject(subject, subSubjectInput);
+  // 詳細科目だけを魔法陣の軸にした科目では、選べる詳細科目をその軸に絞る
+  const activeKeys = data.userProfile.activeSubjects;
+  const axes = useMemo(() => radarAxesOf(subjects, activeKeys), [subjects, activeKeys]);
+  const subLimits = subSubjectLimitsOf(axes);
+  const subSubject = resolveSubSubject(subject, subSubjectInput, subject && subLimits[subject.id]);
   const resting = phase === "break";
   const color = resting ? "#cfe9ff" : (subject?.color ?? "#a882fb");
   const lineColor = resting ? "#a882fb" : skin.lineColor;
@@ -186,9 +191,10 @@ export function TimerPanel({
       // 詠唱画面は画面を移っても状態が残るので、魔法陣はいま選ばれている科目で組み直す。
       // デモモードは保存した詠唱履歴から測り直し、それ以外は手元の集計に無い科目を 0 分で補う
       const beforeTotals = isDemo
-        ? timerSummary(subjects, localStudyLogs(getUserData())).weekTotals
+        ? totalsByAxis(axes, localStudyLogs(getUserData()), startOfJstWeek(new Date()))
         : subjects.map(
-            (s) => weekTotals.find((t) => t.subjectId === s.id) ?? { subjectId: s.id, name: s.name, color: s.color, minutes: 0 },
+            (s) =>
+              weekTotals.find((t) => t.subjectId === s.id) ?? { key: s.id, subjectId: s.id, subSubject: null, name: s.name, color: s.color, minutes: 0 },
           );
       startSaving(async () => {
         const res = await saveStudyLog({ subjectId: subject.id, minutes, mode, demoTotalMp: totalMp });
@@ -205,7 +211,7 @@ export function TimerPanel({
           }
         }
         const afterTotals = beforeTotals.map((t) =>
-          t.subjectId === subject.id ? { ...t, minutes: t.minutes + res.savedMinutes } : t,
+          t.subjectId === subject.id && (!t.subSubject || t.subSubject === subSubject) ? { ...t, minutes: t.minutes + res.savedMinutes } : t,
         );
         // 獲得MP = 勉強時間 × エリアの属性ブースト × 秘宝の加護 × 触媒 × 周天の刻印
         // TODO: Supabase 接続時はボーナス分の MP も DB に保存する（現状はローカル表示のみ）
@@ -285,7 +291,7 @@ export function TimerPanel({
         });
       });
     },
-    [area, breakMin, isDemo, mode, subject, subSubject, subjects, totalMp, weekTotals],
+    [area, axes, breakMin, isDemo, mode, subject, subSubject, subjects, totalMp, weekTotals],
   );
 
   /** 詠唱を終えた時刻 endedAt から静息を始める（裏で満了していたら、その時刻から静息は流れている） */
@@ -481,6 +487,7 @@ export function TimerPanel({
         subjects={subjects}
         subjectId={subject?.id ?? null}
         subSubject={subSubjectInput}
+        subLimits={subLimits}
         onChange={(id, sub) => {
           setSubjectId(id ?? subjectId);
           setSubSubjectInput(sub);

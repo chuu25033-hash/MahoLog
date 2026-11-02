@@ -168,11 +168,12 @@ function CelestialBackdrop({ count }: { count: number }) {
  */
 export function MagicRadar({
   data,
-  highlightSubjectId,
+  highlightKey,
   animationDuration = 900,
 }: {
   data: SubjectTotal[];
-  highlightSubjectId?: string;
+  /** 今回伸びた軸の鍵 */
+  highlightKey?: string;
   animationDuration?: number;
 }) {
   const gradientId = useId().replace(/:/g, "");
@@ -215,7 +216,7 @@ export function MagicRadar({
             dataKey="name"
             tick={({ x, y, payload, textAnchor }) => {
               const item = chartData.find((d) => d.name === payload.value);
-              const active = item?.subjectId === highlightSubjectId;
+              const active = highlightKey !== undefined && item?.key === highlightKey;
               return (
                 <text
                   x={x}
@@ -246,7 +247,7 @@ export function MagicRadar({
                 cy={props.cy}
                 index={props.index ?? 0}
                 color={chartData[props.index ?? 0]?.color ?? "#71e2ef"}
-                highlight={highlightSubjectId !== undefined && chartData[props.index ?? 0]?.subjectId === highlightSubjectId}
+                highlight={highlightKey !== undefined && chartData[props.index ?? 0]?.key === highlightKey}
               />
             )}
             animationDuration={animationDuration}
