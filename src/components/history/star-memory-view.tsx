@@ -1,14 +1,15 @@
 "use client";
 
-import { useId, useState, type CSSProperties } from "react";
-import { Moon, Sparkles, Star } from "lucide-react";
+import { useId, useMemo, useState, type CSSProperties } from "react";
+import { ChevronLeft, ChevronRight, Moon, Sparkles, Star } from "lucide-react";
 import { BackToLibrary } from "@/components/back-to-library";
 import { ItemArt } from "@/components/item-art";
 import { PageLoading } from "@/components/page-loading";
 import { demoSubjects } from "@/lib/demo";
 import { formatMinutes } from "@/lib/game";
-import { MEMORY_WEEKS, observedNightsFrom, type ObservedNight } from "@/lib/star-memory";
-import { totalChantMinutes, useStoredUserData, type ChantRecord } from "@/lib/user-store";
+import { startOfJstMonth } from "@/lib/date";
+import { addMonths, firstChantMonth, observedNightsFrom, weekSizes, type ObservedNight } from "@/lib/star-memory";
+import { totalChantMinutes, useStoredUserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 /** 拡大縮小しても 1px を保つ光の線 */
@@ -17,7 +18,7 @@ const hairline = { vectorEffect: "non-scaling-stroke", fill: "none", strokeWidth
 const GOLD = "#e2c974";
 const AQUA = "#7fe8dc";
 const DIM = "#64748b";
-const ROMAN = ["I", "II", "III", "IV"];
+const ROMAN = ["I", "II", "III", "IV", "V"];
 const RUNES = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ";
 
 /** 一週間の7夜にちなむ七芒星 {7/3} */
@@ -28,15 +29,19 @@ function heptagram(r: number) {
   }).join(" ");
 }
 
-/** 週ごとに浮かび上がる星座 */
+/** 7夜ごとに浮かび上がる星座 */
 const CONSTELLATIONS = ["暁の竪琴座", "蒼銀の白鳥座", "紫晶の天秤座", "星冠座"];
+/** 29日以降の月末の数夜で描く小さな星座 */
+const LAST_CONSTELLATION = "宵灯の小鈴座";
 
-/** その週（月曜 0 時）の星座の名前。暦の週の通し番号で巡るので、同じ週はいつ見ても同じ名前になる */
-function constellationName(weekStart: Date | undefined) {
-  if (!weekStart) return CONSTELLATIONS[0];
-  const week = Math.floor((weekStart.getTime() + 9 * 60 * 60 * 1000) / (7 * 24 * 60 * 60 * 1000));
-  return CONSTELLATIONS[((week % CONSTELLATIONS.length) + CONSTELLATIONS.length) % CONSTELLATIONS.length];
+/** その月の w 番目の星座の名前。月ごとに巡る順をずらすので、同じ月はいつ見ても同じ名前になる */
+function constellationName(month: Date, w: number) {
+  if (w >= CONSTELLATIONS.length) return LAST_CONSTELLATION;
+  const jst = new Date(month.getTime() + 9 * 60 * 60 * 1000);
+  return CONSTELLATIONS[(jst.getUTCFullYear() * 12 + jst.getUTCMonth() + w) % CONSTELLATIONS.length];
 }
+
+const monthLabel = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "long" });
 
 type Attribute = "cyan" | "aqua" | "purple";
 
@@ -69,41 +74,54 @@ function polar(r: number, deg: number) {
 const ORBITS = [48, 60, 72];
 /** 中央の軌道 */
 const ORBIT_MID = ORBITS[1];
-/** 星座（週）の中心と、7夜が揃ったときに浮かぶ紋章の中心の半径。紋章が外周の目盛りにかからないよう、軌道より少し内側 */
+/** 星座の中心と、夜が揃ったときに浮かぶ紋章の中心の半径。紋章が外周の目盛りにかからないよう、軌道より少し内側 */
 const WEEK_CENTER_R = 56;
-/** 各週が占める円弧の広がり（度）。7夜を等間隔に並べる */
-const WEEK_SPAN = 76;
 
-/** 星座の中心: 左上から時計回りに週を四象限へ並べる */
-const WEEK_CENTERS = Array.from({ length: MEMORY_WEEKS }, (_, w) => {
-  const angle = -135 + w * 90;
-  return { ...polar(WEEK_CENTER_R, angle), angle };
-});
+type WeekArc = { size: number; start: number; span: number; angle: number; x: number; y: number; end: number };
+type ChartLayout = { weeks: WeekArc[]; step: number };
+
+/**
+ * 星座の並び: 左上から時計回りに、7夜の星座4つと月末の数夜の星座を円周へ並べる。
+ * 夜どうしの間隔はどの星座も同じで、星座と星座のあいだは夜の間隔より広く空ける。28日の月は四象限にちょうど収まる
+ */
+function chartLayout(sizes: number[]): ChartLayout {
+  const gap = sizes.length > 4 ? 18 : 14;
+  const step = (360 - sizes.length * gap) / sizes.reduce((acc, n) => acc + n - 1, 0);
+  let cursor = -180 + gap / 2;
+  const weeks = sizes.map((size) => {
+    const start = cursor;
+    const span = (size - 1) * step;
+    cursor += span + gap;
+    const angle = start + span / 2;
+    return { size, start, span, angle, ...polar(WEEK_CENTER_R, angle), end: start + span + gap / 2 };
+  });
+  return { weeks, step };
+}
 
 /**
  * 夜ごとに乗る軌道。週ごとに位相をずらした緩やかな波で軌道を渡るので、どの週も外側から内側まで図盤を広く使い、
  * 星は円弧に沿いながらうねって進む。外側の軌道に長く留まり、内側へは時折だけ沈む
  */
-const WEEK_ORBITS = Array.from({ length: MEMORY_WEEKS }, (_, w) =>
+const WEEK_ORBITS = Array.from({ length: 5 }, (_, w) =>
   Array.from({ length: 7 }, (_, d) => {
     const wave = Math.sin(w * 1.3 + 0.6 + d * 0.95);
     return ORBITS[wave > 0.2 ? 2 : wave > -0.75 ? 1 : 0];
   }),
 );
 
-function starPolar(week: number, weekday: number) {
-  return { r: WEEK_ORBITS[week][weekday], angle: WEEK_CENTERS[week].angle - WEEK_SPAN / 2 + (weekday * WEEK_SPAN) / 6 };
+function starPolar(layout: ChartLayout, week: number, night: number) {
+  return { r: WEEK_ORBITS[week][night], angle: layout.weeks[week].start + night * layout.step };
 }
 
-function starPosition(week: number, weekday: number) {
-  const { r, angle } = starPolar(week, weekday);
+function starPosition(layout: ChartLayout, week: number, night: number) {
+  const { r, angle } = starPolar(layout, week, night);
   return polar(r, angle);
 }
 
 /** 前夜から今夜へ時計回りの円弧で結ぶ。同じ軌道ならその軌道に沿い、軌道を跨ぐ夜は緩やかな弧で渡る */
-function tracePath(a: ObservedNight, b: ObservedNight) {
-  const pa = starPolar(a.week, a.weekday);
-  const pb = starPolar(b.week, b.weekday);
+function tracePath(layout: ChartLayout, a: ObservedNight, b: ObservedNight) {
+  const pa = starPolar(layout, a.week, a.nightIndex);
+  const pb = starPolar(layout, b.week, b.nightIndex);
   const from = polar(pa.r, pa.angle);
   const to = polar(pb.r, pb.angle);
   const radius = (pa.r + pb.r) / 2;
@@ -175,26 +193,65 @@ function diamond(x: number, y: number, r: number) {
   return `${x},${y - r} ${x + r},${y} ${x},${y + r} ${x - r},${y}`;
 }
 
-// 履歴か日付が変わるまでは同じ星図を使い回す（getSnapshot は同じ参照を返す必要がある）
-let cache: { history: ChantRecord[]; day: string; nights: ObservedNight[] } | null = null;
-function nightsOf(history: ChantRecord[]) {
-  const day = new Date().toDateString();
-  if (cache?.history !== history || cache.day !== day) cache = { history, day, nights: observedNightsFrom(history) };
-  return cache.nights;
-}
-
 export function StarMemoryView() {
   const stored = useStoredUserData();
-  if (!stored) return <PageLoading />;
-  return <StarMemory nights={nightsOf(stored.chantHistory)} allMinutes={totalChantMinutes(stored)} />;
+  const [month, setMonth] = useState(() => startOfJstMonth());
+  const history = stored?.chantHistory;
+  const nights = useMemo(() => (history ? observedNightsFrom(history, month) : []), [history, month]);
+  if (!stored || !history) return <PageLoading />;
+
+  const thisMonth = startOfJstMonth();
+  const first = firstChantMonth(history);
+  return (
+    <StarMemory
+      key={month.getTime()}
+      month={month}
+      nights={nights}
+      allMinutes={totalChantMinutes(stored)}
+      onPrev={month > first ? () => setMonth(addMonths(month, -1)) : undefined}
+      onNext={month < thisMonth ? () => setMonth(addMonths(month, 1)) : undefined}
+    />
+  );
 }
 
-/** allMinutes は通算の詠唱時間（星図に描く4週より前も含む） */
-function StarMemory({ nights, allMinutes }: { nights: ObservedNight[]; allMinutes: number }) {
-  const observed = nights.filter((n) => n.minutes > 0);
-  const [selected, setSelected] = useState<ObservedNight>(observed.at(-1) ?? nights[0]);
+/** 月を切り替える。前は詠唱履歴の最も古い月まで、先は今月まで */
+function MonthSwitcher({ month, onPrev, onNext }: { month: Date; onPrev?: () => void; onNext?: () => void }) {
+  const button =
+    "grid size-8 place-items-center rounded-full text-starlight transition-colors hover:bg-white/[0.06] disabled:pointer-events-none disabled:opacity-25";
+  return (
+    <nav aria-label="表示する月" className="flex shrink-0 items-center gap-1 portrait:justify-center">
+      <button type="button" onClick={onPrev} disabled={!onPrev} aria-label="前の月" className={button}>
+        <ChevronLeft className="size-4" strokeWidth={1.25} />
+      </button>
+      <p className="min-w-[6.5em] text-center text-sm tracking-[0.2em] whitespace-nowrap" aria-live="polite">
+        {monthLabel.format(month)}
+      </p>
+      <button type="button" onClick={onNext} disabled={!onNext} aria-label="次の月" className={button}>
+        <ChevronRight className="size-4" strokeWidth={1.25} />
+      </button>
+    </nav>
+  );
+}
 
-  const completed = Array.from({ length: MEMORY_WEEKS }, (_, w) => nights.filter((n) => n.week === w && n.minutes > 0).length === 7);
+/** allMinutes は通算の詠唱時間（星図に描く月より前も含む） */
+function StarMemory({
+  month,
+  nights,
+  allMinutes,
+  onPrev,
+  onNext,
+}: {
+  month: Date;
+  nights: ObservedNight[];
+  allMinutes: number;
+  onPrev?: () => void;
+  onNext?: () => void;
+}) {
+  const sizes = weekSizes(month);
+  const observed = nights.filter((n) => n.minutes > 0);
+  const [selected, setSelected] = useState<ObservedNight>(observed.at(-1) ?? nights.find((n) => n.today) ?? nights[0]);
+
+  const completed = sizes.map((size, w) => nights.filter((n) => n.week === w && n.minutes > 0).length === size);
   const totalMinutes = observed.reduce((acc, n) => acc + n.minutes, 0);
 
   return (
@@ -207,23 +264,26 @@ function StarMemory({ nights, allMinutes }: { nights: ObservedNight[]; allMinute
               魔導の軌跡
               <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">ARCANE TRACES</span>
             </h1>
-            <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">詠唱した夜は星となり、今週までの{MEMORY_WEEKS}週間の学びが夜空に自分だけの星座を描きます</p>
+            <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">詠唱した夜は星となり、ひと月の学びが夜空に自分だけの星座を描きます</p>
           </div>
         </div>
-        {/* 縦持ちでは4つが横に収まらないので、2つずつ2段に並べる */}
-        <dl className="flex shrink-0 gap-4 text-right portrait:grid portrait:grid-cols-2 portrait:gap-x-6 portrait:gap-y-2 portrait:text-left text-[11px] tracking-wider whitespace-nowrap text-muted-foreground">
-          {[
-            { label: "詠唱した夜", value: `${observed.length}` },
-            { label: `${MEMORY_WEEKS}週の詠唱`, value: formatMinutes(totalMinutes) },
-            { label: "完成した星座", value: `${completed.filter(Boolean).length}` },
-            { label: "通算の詠唱", value: formatMinutes(allMinutes) },
-          ].map(({ label, value }) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd className="font-display text-lg leading-tight text-starlight-gradient">{value}</dd>
-            </div>
-          ))}
-        </dl>
+        <div className="flex items-end gap-6 portrait:flex-col portrait:items-stretch portrait:gap-3">
+          <MonthSwitcher month={month} onPrev={onPrev} onNext={onNext} />
+          {/* 縦持ちでは4つが横に収まらないので、2つずつ2段に並べる */}
+          <dl className="flex shrink-0 gap-4 text-right portrait:grid portrait:grid-cols-2 portrait:gap-x-6 portrait:gap-y-2 portrait:text-left text-[11px] tracking-wider whitespace-nowrap text-muted-foreground">
+            {[
+              { label: "詠唱した夜", value: `${observed.length}` },
+              { label: "この月の詠唱", value: formatMinutes(totalMinutes) },
+              { label: "完成した星座", value: `${completed.filter(Boolean).length}` },
+              { label: "通算の詠唱", value: formatMinutes(allMinutes) },
+            ].map(({ label, value }) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd className="font-display text-lg leading-tight text-starlight-gradient">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
       </header>
 
       {/* 星図盤と詳細パネルを黄金比（1.618 : 1）で分け、パネルは星図盤の中心の高さに揃える */}
@@ -234,13 +294,13 @@ function StarMemory({ nights, allMinutes }: { nights: ObservedNight[]; allMinute
             className="pointer-events-none absolute top-1/2 left-1/2 size-[min(100cqw,100cqh)] -translate-1/2 rounded-full"
             style={{ background: "radial-gradient(closest-side, rgba(226,201,116,0.08), rgba(127,232,220,0.03) 70%, transparent)" }}
           />
-          <CelestialChart nights={nights} completed={completed} selected={selected} onSelect={setSelected} />
+          <CelestialChart sizes={sizes} nights={nights} completed={completed} selected={selected} onSelect={setSelected} />
         </section>
 
         <aside className="flex min-h-0 scroll-area scrollbar-none flex-col">
           <div className="my-auto flex flex-col gap-3">
             <NightDetail night={selected} />
-            <ConstellationList nights={nights} completed={completed} />
+            <ConstellationList month={month} sizes={sizes} nights={nights} completed={completed} />
           </div>
         </aside>
       </div>
@@ -249,17 +309,20 @@ function StarMemory({ nights, allMinutes }: { nights: ObservedNight[]; allMinute
 }
 
 function CelestialChart({
+  sizes,
   nights,
   completed,
   selected,
   onSelect,
 }: {
+  sizes: number[];
   nights: ObservedNight[];
   completed: boolean[];
   selected: ObservedNight;
   onSelect: (n: ObservedNight) => void;
 }) {
   const gradientId = useId().replace(/:/g, "");
+  const layout = chartLayout(sizes);
   const observed = nights.filter((n) => n.minutes > 0);
   // 詠唱した夜は日付順に灯る。前夜から線が伸びてくる星は、線が届いた瞬間に灯る
   const order = new Map(observed.map((n, i) => [n, i]));
@@ -322,9 +385,9 @@ function CelestialChart({
         <circle r="86" stroke={GOLD} strokeOpacity="0.2" {...hairline} />
       </g>
 
-      {/* 週の境: 四方の基点と区切りの子午線 */}
+      {/* 星座の境: 基点と区切りの子午線 */}
       <g stroke={GOLD}>
-        {[-90, 0, 90, 180].map((deg) => {
+        {layout.weeks.map(({ end: deg }) => {
           const tip = polar(86, deg);
           const inner = polar(32, deg);
           const outer = polar(80, deg);
@@ -372,12 +435,13 @@ function CelestialChart({
         <circle key={i} cx={d.x} cy={d.y} r={d.r} fill="#f4f1e6" opacity={d.o} />
       ))}
 
-      {/* 7夜が揃った週: 星座の象限に天体紋章が浮かび上がる */}
-      {WEEK_CENTERS.map((c, w) => {
+      {/* 夜が揃った星座: その区画に天体紋章が浮かび上がる。月末の数夜の星座は区画が狭いので、紋章も小さく */}
+      {layout.weeks.map((c, w) => {
         if (!completed[w]) return null;
-        const points = Array.from({ length: 7 }, (_, d) => starPosition(w, d));
-        const lastIndex = order.get(nights[w * 7 + 6]) ?? 0;
-        const half = WEEK_SPAN / 2 + 6;
+        const points = Array.from({ length: c.size }, (_, d) => starPosition(layout, w, d));
+        const lastIndex = order.get(nights[w * 7 + c.size - 1]) ?? 0;
+        const half = c.span / 2 + 6;
+        const scale = c.size === 7 ? 1 : 0.45;
         return (
           <g key={w} className="memory-silhouette" style={{ "--delay": `${litAt(lastIndex) + 0.3}s` } as CSSProperties}>
             <path d={annularSector(33, 79, c.angle - half, c.angle + half)} stroke={GOLD} strokeOpacity="0.22" {...hairline} fill={GOLD} fillOpacity="0.03" />
@@ -386,7 +450,7 @@ function CelestialChart({
               const b = polar(r, c.angle + half);
               return <path key={r} d={`M ${a.x} ${a.y} A ${r} ${r} 0 0 1 ${b.x} ${b.y}`} stroke={AQUA} strokeOpacity="0.2" {...hairline} />;
             })}
-            <g transform={`translate(${c.x} ${c.y})`}>
+            <g transform={`translate(${c.x} ${c.y}) scale(${scale})`}>
               <g className="animate-spin-slower" style={{ transformBox: "fill-box", transformOrigin: "center" }}>
                 <circle r="27.5" stroke={AQUA} strokeOpacity="0.22" strokeDasharray="0.6 1.6" {...hairline} />
                 <circle r="25" stroke={GOLD} strokeOpacity="0.34" {...hairline} />
@@ -416,8 +480,8 @@ function CelestialChart({
         );
       })}
 
-      {/* 週の銘 */}
-      {WEEK_CENTERS.map((c, w) => {
+      {/* 星座の銘 */}
+      {layout.weeks.map((c, w) => {
         const p = polar(81, c.angle);
         return (
           <text
@@ -439,7 +503,7 @@ function CelestialChart({
 
       {/* 週の中を日付順に一本道で結ぶ 1px の魔力の軌跡。前夜の星から円弧を描いて伸びる */}
       {segments.map(({ from: a, to: b }) => {
-        const d = tracePath(a, b);
+        const d = tracePath(layout, a, b);
         const maskId = `${gradientId}-trace-${b.date.getTime()}`;
         return (
           <g key={b.date.getTime()}>
@@ -466,7 +530,7 @@ function CelestialChart({
 
       {/* 詠唱の星 */}
       {nights.map((n) => {
-        const p = starPosition(n.week, n.weekday);
+        const p = starPosition(layout, n.week, n.nightIndex);
         const isSelected = n === selected;
         const select = () => onSelect(n);
         const label = `${dateLabel.format(n.date)} ${n.minutes > 0 ? formatMinutes(n.minutes) : n.future || n.today ? "未詠唱" : "休息"}`;
@@ -557,7 +621,7 @@ function NightDetail({ night }: { night: ObservedNight }) {
       <header className="flex flex-wrap items-baseline justify-between gap-x-2">
         <h2 className="text-base tracking-[0.2em] whitespace-nowrap">{dateLabel.format(night.date)}</h2>
         <span className="font-display text-[10px] tracking-[0.25em] whitespace-nowrap text-starlight/70">
-          WEEK {ROMAN[night.week]} · NIGHT {night.weekday + 1}
+          WEEK {ROMAN[night.week]} · NIGHT {night.nightIndex + 1}
         </span>
       </header>
 
@@ -648,7 +712,17 @@ function NightDetail({ night }: { night: ObservedNight }) {
   );
 }
 
-function ConstellationList({ nights, completed }: { nights: ObservedNight[]; completed: boolean[] }) {
+function ConstellationList({
+  month,
+  sizes,
+  nights,
+  completed,
+}: {
+  month: Date;
+  sizes: number[];
+  nights: ObservedNight[];
+  completed: boolean[];
+}) {
   return (
     <section className="glass rounded-2xl p-4">
       <div className="mb-2 flex items-end justify-between gap-2">
@@ -656,14 +730,13 @@ function ConstellationList({ nights, completed }: { nights: ObservedNight[]; com
           描かれた星座
           <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60">CONSTELLATIONS</span>
         </h2>
-        <p className="text-[10px] tracking-wider whitespace-nowrap text-muted-foreground">今週までの{MEMORY_WEEKS}週間・1週で1つの星座</p>
+        <p className="text-[10px] tracking-wider whitespace-nowrap text-muted-foreground">7夜で1つの星座・月末は数夜の星座</p>
       </div>
       <ul className="flex flex-col text-xs">
-        {Array.from({ length: MEMORY_WEEKS }, (_, w) => {
-          // 名前は暦の週で決める（並びの位置で決めると、週が進むたびに同じ星座の名前が入れ替わる）
-          const name = constellationName(nights.find((n) => n.week === w)?.date);
+        {sizes.map((size, w) => {
+          const name = constellationName(month, w);
           const lit = nights.filter((n) => n.week === w && n.minutes > 0).length;
-          // 今週は、今日がまだ終わっていなければ（未来の日か今日が残っていれば）途切れたとは言わない
+          // まだ来ていない夜か今日が残っていれば、途切れたとは言わない
           const inProgress = nights.some((n) => n.week === w && (n.future || n.today));
           return (
             <li key={name} className="flex items-center gap-2 border-b border-white/[0.06] py-1.5 last:border-0">
@@ -676,7 +749,9 @@ function ConstellationList({ nights, completed }: { nights: ObservedNight[]; com
               <span className={cn("min-w-0 tracking-wider", completed[w] ? "text-starlight" : "text-muted-foreground")}>
                 {completed[w] ? name : inProgress ? "紡がれている星座" : "途切れた星座"}
               </span>
-              <span className="ml-auto font-display whitespace-nowrap text-muted-foreground">{lit} / 7</span>
+              <span className="ml-auto font-display whitespace-nowrap text-muted-foreground">
+                {lit} / {size}
+              </span>
             </li>
           );
         })}

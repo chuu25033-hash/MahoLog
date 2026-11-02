@@ -312,7 +312,7 @@ export type ZenithClimb = { beforeFloor: number; afterFloor: number; rewards: { 
 
 const SAMPLE_RELICS = ["r-observer", "r-starstone", "r-compass", "r-armillary"];
 
-/** 動作確認用: 直近4週間の詠唱を重ねたサンプルデータ */
+/** 動作確認用: 先月から今日までの詠唱を重ねたサンプルデータ */
 export function sampleUserData(now = new Date()): UserData {
   const history: ChantRecord[] = [];
   const inventory: Record<string, number> = {};
