@@ -10,6 +10,34 @@ export const MIN_RADAR_SUBJECTS = 3;
 /** 伸びていない科目を描く位置（外周を 1 とした比率）。形が1本の線につぶれて消えないための最小限の幅 */
 const MIN_RATIO = 0.015;
 
+/** 1行で置く科目名の長さの上限（全角1字を1、半角を0.55として数える）。超えたら2段に分ける */
+const LABEL_LINE_WIDTH = 6;
+
+const labelWidth = (text: string) => [...text].reduce((w, ch) => w + (/[\u0020-\u00ff\uff61-\uff9f]/.test(ch) ? 0.55 : 1), 0);
+
+/**
+ * 頂点に置く科目名を、長ければ2段に分ける（SVG の文字は折り返さないので、ここで分けておく）。
+ * 文節（単語）の切れ目のうち、2段の長さがいちばんそろう所で分け、切れ目が無ければ真ん中で分ける。字は削らない
+ */
+function splitLabel(text: string): string[] {
+  if (labelWidth(text) <= LABEL_LINE_WIDTH) return [text];
+  const chars = [...text];
+  let cuts: number[] = [];
+  if (typeof Intl !== "undefined" && "Segmenter" in Intl) {
+    let at = 0;
+    for (const { segment } of new Intl.Segmenter("ja", { granularity: "word" }).segment(text)) {
+      at += [...segment].length;
+      if (at < chars.length) cuts.push(at);
+    }
+  }
+  if (cuts.length === 0) cuts = chars.map((_, i) => i).slice(1);
+  const total = labelWidth(text);
+  const cut = cuts.reduce((best, c) =>
+    Math.abs(labelWidth(chars.slice(0, c).join("")) * 2 - total) < Math.abs(labelWidth(chars.slice(0, best).join("")) * 2 - total) ? c : best,
+  );
+  return [chars.slice(0, cut).join("").trimEnd(), chars.slice(cut).join("").trimStart()];
+}
+
 /** 頂点に添える小さな星の輝き */
 function SparkleDot({
   cx,
@@ -223,6 +251,7 @@ export function MagicRadar({
             tick={({ x, y, payload, textAnchor }) => {
               const item = chartData.find((d) => d.name === payload.value);
               const active = highlightKey !== undefined && item?.key === highlightKey;
+              const lines = splitLabel(String(payload.value));
               return (
                 <text
                   x={x}
@@ -234,7 +263,14 @@ export function MagicRadar({
                   fontWeight={active ? 700 : 400}
                   fill={active ? "#e2c974" : "#c9d3e6"}
                 >
-                  {payload.value}
+                  {lines.length === 1
+                    ? lines[0]
+                    : lines.map((line, i) => (
+                        // 2段のまん中が頂点の位置に来るように、上の段を半行ぶん上げる
+                        <tspan key={i} x={x} dy={i === 0 ? "-0.6em" : "1.2em"}>
+                          {line}
+                        </tspan>
+                      ))}
                 </text>
               );
             }}
