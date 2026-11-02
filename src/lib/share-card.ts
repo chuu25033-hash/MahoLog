@@ -262,8 +262,10 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob> {
   const sample = `${input.username}${input.title ?? ""}${input.rankTitle}${input.radar.map((t) => t.name).join("")}秘術探究者七夜の魔法陣今週学んだ時間累積魔力探求度日々の学びは、夜空を彩る星となる。`;
   const serif = await fontFamily("--font-mincho", "serif", sample);
   const display = await fontFamily("--font-cinzel", "serif", "MAHOLOG RANK PHASE MP 0123456789 IVX");
-  // 数字の帯で使う太さも先に読み込む（読み込まれていないと代わりの字や疑似の太字になる）
+  // 名前と数字の帯で使う太さも先に読み込む（読み込まれていないと代わりの字や疑似の太字になる。
+  // 描いたあとで読み込みが始まるので、その画面で最初に作った1枚だけ名前がゴシックになっていた）
   await Promise.all([
+    document.fonts.load(`600 46px ${serif}`, input.username).catch(() => {}),
     document.fonts.load(`600 30px ${display}`, "0123456789,MPPHASE").catch(() => {}),
     document.fonts.load(`500 20px ${serif}`, "時間分").catch(() => {}),
   ]);
