@@ -196,12 +196,14 @@ function diamond(x: number, y: number, r: number) {
 
 export function StarMemoryView() {
   const stored = useStoredUserData();
-  const [month, setMonth] = useState(() => startOfJstMonth());
+  // 表示する月（null は今月）。今の日時はプリレンダーでは読めないので、保存データを読み込んでから決める
+  const [picked, setMonth] = useState<Date | null>(null);
   const history = stored?.chantHistory;
-  const nights = useMemo(() => (history ? observedNightsFrom(history, month) : []), [history, month]);
+  const nights = useMemo(() => (history ? observedNightsFrom(history, picked ?? startOfJstMonth()) : []), [history, picked]);
   if (!stored || !history) return <PageLoading />;
 
   const thisMonth = startOfJstMonth();
+  const month = picked ?? thisMonth;
   const first = firstChantMonth(history);
   return (
     <StarMemory
