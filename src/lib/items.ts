@@ -283,12 +283,12 @@ const skin = (
 ): SkinItem => ({ id, rarity: "A", kind: "skin", type: "装置", stageId, name, svgIcon: GLYPHS[icon], color, effect, flavorText, skin: look });
 
 export const SKINS: SkinItem[] = [
-  skin("a-lantern", 1, "琥珀のランタン", "lantern", "#f2c27a", "魔法陣が琥珀色に灯る", "黄金期、夜通し学ぶ者の書斎を照らしたランタン。火を灯せば、魔法陣の線までもが星脈の盛んだった頃の夕暮れ色に染まる。", { lineColor: "#f2c27a", particleColor: "#fbf3d4", aura: "rgba(242,194,122,0.10)" }),
-  skin("a-leaf", 2, "翠玉の葉脈", "leaf", "#8fdcc4", "魔法陣が翠玉色の葉脈に変わる", "言葉が溶ける前の、最も古い樹の一葉。葉脈は星脈の写しで、なぞるように魔力が緑の光となって巡る。", { lineColor: "#8fdcc4", particleColor: "#d7f5a8", aura: "rgba(143,220,196,0.10)" }),
-  skin("a-aurora", 3, "極光の水晶瓶", "vial", "#9ef0c9", "魔法陣と背景がオーロラ色に揺らめく", "刻が止まる直前、観測塔の頂で星読みが封じた最後の極光。この瓶の中でだけ、空はまだ移ろい続けている。", { lineColor: "#9ef0c9", particleColor: "#c9b6ff", aura: "rgba(168,130,251,0.14)" }),
-  skin("a-frost", 4, "氷華の結晶", "crystal", "#cfe9ff", "魔法陣が氷の白光をまとう", "大沈黙の中心で生まれた結晶。世界を眠らせた静寂そのもので、触れた魔法陣は張り詰めた白い光をまとう。", { lineColor: "#e6f4ff", particleColor: "#8db7f2", aura: "rgba(207,233,255,0.10)" }),
-  skin("a-flame", 5, "紅蓮の火種", "flame", "#f2a38d", "魔法陣が紅蓮の炎色に燃える", "詠唱の儀式のため、魔導炉の最初の熾火から分けた種火。魔法陣に灯せば、線は観測者の刻を受けて紅く脈打つ。", { lineColor: "#f2a38d", particleColor: "#f2c27a", aura: "rgba(241,154,154,0.10)" }),
-  skin("a-crown", 6, "天冠の円環", "ring", "#fbf3d4", "魔法陣が天上の白金に輝く", "星冠の祭壇で、継ぐ者を待っていた白金の環。アルマはこれを戴かず、後から来る観測者のために置いていった。", { lineColor: "#fbf3d4", particleColor: "#e2c974", aura: "rgba(251,243,212,0.12)" }),
+  skin("a-lantern", 1, "琥珀のランタン", "lantern", "#f2c27a", "魔法陣が琥珀色に灯る", "黄金期、夜通し学ぶ者の書斎を照らしたランタン。火を灯せば、魔法陣の線までもが星脈の盛んだった頃の夕暮れ色に染まる。", { lineColor: "#f2c27a", particleColor: "#fbf3d4", aura: "rgba(242,194,122,0.25)" }),
+  skin("a-leaf", 2, "翠玉の葉脈", "leaf", "#8fdcc4", "魔法陣が翠玉色の葉脈に変わる", "言葉が溶ける前の、最も古い樹の一葉。葉脈は星脈の写しで、なぞるように魔力が緑の光となって巡る。", { lineColor: "#8fdcc4", particleColor: "#d7f5a8", aura: "rgba(143,220,196,0.25)" }),
+  skin("a-aurora", 3, "極光の水晶瓶", "vial", "#9ef0c9", "魔法陣と背景がオーロラ色に揺らめく", "刻が止まる直前、観測塔の頂で星読みが封じた最後の極光。この瓶の中でだけ、空はまだ移ろい続けている。", { lineColor: "#9ef0c9", particleColor: "#c9b6ff", aura: "rgba(168,130,251,0.30)" }),
+  skin("a-frost", 4, "氷華の結晶", "crystal", "#cfe9ff", "魔法陣が氷の白光をまとう", "大沈黙の中心で生まれた結晶。世界を眠らせた静寂そのもので、触れた魔法陣は張り詰めた白い光をまとう。", { lineColor: "#e6f4ff", particleColor: "#8db7f2", aura: "rgba(207,233,255,0.25)" }),
+  skin("a-flame", 5, "紅蓮の火種", "flame", "#f2a38d", "魔法陣が紅蓮の炎色に燃える", "詠唱の儀式のため、魔導炉の最初の熾火から分けた種火。魔法陣に灯せば、線は観測者の刻を受けて紅く脈打つ。", { lineColor: "#f2a38d", particleColor: "#f2c27a", aura: "rgba(241,154,154,0.25)" }),
+  skin("a-crown", 6, "天冠の円環", "ring", "#fbf3d4", "魔法陣が天上の白金に輝く", "星冠の祭壇で、継ぐ者を待っていた白金の環。アルマはこれを戴かず、後から来る観測者のために置いていった。", { lineColor: "#fbf3d4", particleColor: "#e2c974", aura: "rgba(251,243,212,0.28)" }),
 ];
 
 /** 周天の章で授かる魔法陣スキン（宝箱からは出ない） */
@@ -298,7 +298,7 @@ export const CYCLE_SKINS: SkinItem[] = [
     cycle: 2,
   },
   {
-    ...skin("a-azureflame", 6, "蒼炎の聖火", "flame", "#6fb6ff", "魔法陣が青白い蒼炎に燃え上がる", "三度目の周天で、先人の熱にあなたの刻が重なって灯った聖火。燃やすものを持たず、ひとりで詠唱を続ける意志だけを糧に、蒼く澄んで燃え続ける。", { lineColor: "#6fb6ff", particleColor: "#bfe6ff", aura: "rgba(70,140,255,0.14)" }),
+    ...skin("a-azureflame", 6, "蒼炎の聖火", "flame", "#6fb6ff", "魔法陣が青白い蒼炎に燃え上がる", "三度目の周天で、先人の熱にあなたの刻が重なって灯った聖火。燃やすものを持たず、ひとりで詠唱を続ける意志だけを糧に、蒼く澄んで燃え続ける。", { lineColor: "#6fb6ff", particleColor: "#bfe6ff", aura: "rgba(70,140,255,0.30)" }),
     cycle: 3,
   },
 ];

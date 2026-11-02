@@ -1,9 +1,10 @@
 "use client";
 
-import { useId } from "react";
+import { useId, type CSSProperties } from "react";
 import { PolarAngleAxis, PolarGrid, PolarRadiusAxis, Radar, RadarChart, ResponsiveContainer } from "recharts";
 import { TriangleAlert } from "lucide-react";
 import type { SubjectTotal } from "@/lib/types";
+import { activeSkin, useUserData } from "@/lib/user-store";
 
 export const MIN_RADAR_SUBJECTS = 3;
 
@@ -111,7 +112,7 @@ function starPaths(n: number) {
  * チャート背後の陣: 外周のルーンの帯と刻みの輪（逆向きにゆっくり巡る）、科目の頂点を結ぶ星形と頂点の輪、
  * 中心の印、傾いた天体軌道と星座線、中心からにじむ光
  */
-function CelestialBackdrop({ count }: { count: number }) {
+function CelestialBackdrop({ count, line, gold }: { count: number; line: string; gold: string }) {
   const id = useId().replace(/:/g, "");
   const ticks = Array.from({ length: 72 }, (_, i) => i * 5);
   const runeR = 91;
@@ -120,8 +121,8 @@ function CelestialBackdrop({ count }: { count: number }) {
       <defs>
         <radialGradient id={`aura-${id}`}>
           <stop offset="0%" stopColor="#a882fb" stopOpacity="0.16" />
-          <stop offset="45%" stopColor="#71e2ef" stopOpacity="0.06" />
-          <stop offset="100%" stopColor="#71e2ef" stopOpacity="0" />
+          <stop offset="45%" stopColor={line} stopOpacity="0.06" />
+          <stop offset="100%" stopColor={line} stopOpacity="0" />
         </radialGradient>
         <path id={`runes-${id}`} d={`M0,${-runeR} A${runeR},${runeR} 0 1,1 -0.01,${-runeR}`} />
       </defs>
@@ -130,9 +131,9 @@ function CelestialBackdrop({ count }: { count: number }) {
 
       {/* 外周: ルーンの帯（SVG 要素の transform-origin は viewBox 基準なので、中心 (0,0) を明示する） */}
       <g className="animate-spin-slower" style={{ transformBox: "view-box", transformOrigin: "0 0" }}>
-        <circle r="98" stroke="#e2c974" strokeOpacity="0.32" strokeWidth="0.5" {...hairline} />
-        <circle r="87.5" stroke="#e2c974" strokeOpacity="0.22" strokeWidth="0.4" {...hairline} />
-        <text className="glimmer-slow" fill="#e2c974" fillOpacity="0.5" fontSize="5.2">
+        <circle r="98" stroke={gold} strokeOpacity="0.32" strokeWidth="0.5" {...hairline} />
+        <circle r="87.5" stroke={gold} strokeOpacity="0.22" strokeWidth="0.4" {...hairline} />
+        <text className="glimmer-slow" fill={gold} fillOpacity="0.5" fontSize="5.2">
           <textPath href={`#runes-${id}`} textLength={2 * Math.PI * runeR - 4} lengthAdjust="spacing">
             {RUNES + RUNES}
           </textPath>
@@ -140,13 +141,13 @@ function CelestialBackdrop({ count }: { count: number }) {
       </g>
       {/* 刻みの輪: ルーンと逆向きに巡る */}
       <g className="animate-spin-slow" style={{ transformBox: "view-box", transformOrigin: "0 0", animationDirection: "reverse" }}>
-        <circle r="95" stroke="#e2c974" strokeOpacity="0.14" strokeWidth="0.4" strokeDasharray="0.6 2.4" {...hairline} />
+        <circle r="95" stroke={gold} strokeOpacity="0.14" strokeWidth="0.4" strokeDasharray="0.6 2.4" {...hairline} />
         {ticks.map((deg) => (
           <line
             key={deg}
             y1={deg % 30 === 0 ? -87.5 : -86}
             y2="-84"
-            stroke="#e2c974"
+            stroke={gold}
             strokeOpacity={deg % 30 === 0 ? 0.5 : 0.22}
             strokeWidth="0.4"
             transform={`rotate(${deg})`}
@@ -156,7 +157,7 @@ function CelestialBackdrop({ count }: { count: number }) {
 
       <g className="glimmer-slow">
         {/* 傾いた天体軌道 */}
-        <ellipse rx="86" ry="34" stroke="#71e2ef" strokeOpacity="0.14" strokeWidth="0.4" transform="rotate(-24)" {...hairline} />
+        <ellipse rx="86" ry="34" stroke={line} strokeOpacity="0.14" strokeWidth="0.4" transform="rotate(-24)" {...hairline} />
         <ellipse rx="86" ry="30" stroke="#a882fb" strokeOpacity="0.14" strokeWidth="0.4" transform="rotate(38)" {...hairline} />
         {/* 星座線 */}
         <polyline points="-78,-30 -60,-52 -38,-60 -30,-80" stroke="#cfe9ff" strokeOpacity="0.22" strokeWidth="0.4" {...hairline} />
@@ -170,24 +171,24 @@ function CelestialBackdrop({ count }: { count: number }) {
 
       {/* 科目の頂点を結ぶ星形と、頂点の小さな輪 */}
       {starPaths(count).map((d) => (
-        <path key={d} d={d} stroke="#e2c974" strokeOpacity="0.16" strokeWidth="0.5" {...hairline} />
+        <path key={d} d={d} stroke={gold} strokeOpacity="0.16" strokeWidth="0.5" {...hairline} />
       ))}
-      <circle r={CHART_R} stroke="#e2c974" strokeOpacity="0.12" strokeWidth="0.4" strokeDasharray="1 2" {...hairline} />
+      <circle r={CHART_R} stroke={gold} strokeOpacity="0.12" strokeWidth="0.4" strokeDasharray="1 2" {...hairline} />
       {Array.from({ length: count }, (_, i) => {
         const [x, y] = vertex(i, count);
         return (
           <g key={i}>
-            <circle cx={x} cy={y} r="3.2" stroke="#e2c974" strokeOpacity="0.35" strokeWidth="0.5" {...hairline} />
-            <circle cx={x} cy={y} r="1.8" stroke="#e2c974" strokeOpacity="0.2" strokeWidth="0.4" strokeDasharray="0.6 1" {...hairline} />
+            <circle cx={x} cy={y} r="3.2" stroke={gold} strokeOpacity="0.35" strokeWidth="0.5" {...hairline} />
+            <circle cx={x} cy={y} r="1.8" stroke={gold} strokeOpacity="0.2" strokeWidth="0.4" strokeDasharray="0.6 1" {...hairline} />
           </g>
         );
       })}
 
       {/* 中心の印 */}
       <g className="animate-spin-slow" style={{ transformBox: "view-box", transformOrigin: "0 0" }}>
-        <circle r="13" stroke="#e2c974" strokeOpacity="0.28" strokeWidth="0.4" strokeDasharray="1 2" {...hairline} />
+        <circle r="13" stroke={gold} strokeOpacity="0.28" strokeWidth="0.4" strokeDasharray="1 2" {...hairline} />
       </g>
-      <circle r="7" stroke="#e2c974" strokeOpacity="0.3" strokeWidth="0.5" {...hairline} />
+      <circle r="7" stroke={gold} strokeOpacity="0.3" strokeWidth="0.5" {...hairline} />
       <path d="M0,-5 L1,-1 L5,0 L1,1 L0,5 L-1,1 L-5,0 L-1,-1 Z" fill="#f6f1dc" fillOpacity="0.35" />
     </svg>
   );
@@ -208,6 +209,8 @@ export function MagicRadar({
   animationDuration?: number;
 }) {
   const gradientId = useId().replace(/:/g, "");
+  // 装備中の魔法陣スキンで線と陣の色を変える（スキンなしなら水色の線と金の陣）
+  const skin = activeSkin(useUserData());
 
   if (data.length < MIN_RADAR_SUBJECTS) {
     return (
@@ -228,9 +231,12 @@ export function MagicRadar({
   const chartData = data.map((d) => ({ ...d, ratio: Math.max(d.minutes / maxMinutes, MIN_RATIO) }));
 
   return (
-    <div className="relative h-full w-full [&_.recharts-radar-polygon]:[filter:drop-shadow(0_0_6px_rgba(113,226,239,0.45))]">
+    <div
+      className="relative h-full w-full [&_.recharts-radar-polygon]:[filter:drop-shadow(0_0_6px_var(--radar-glow))]"
+      style={{ "--radar-glow": `${skin.lineColor}73` } as CSSProperties}
+    >
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center [container-type:size]">
-        <CelestialBackdrop count={data.length} />
+        <CelestialBackdrop count={data.length} line={skin.lineColor} gold={skin.particleColor} />
       </div>
       <ResponsiveContainer width="100%" height="100%">
         {/* 眺めるだけの図なので、キーボード操作の層（フォーカスと枠）を持たせない */}
@@ -238,10 +244,10 @@ export function MagicRadar({
           <defs>
             <radialGradient id={`fill-${gradientId}`} cx="50%" cy="50%" r="60%">
               <stop offset="0%" stopColor="#a882fb" stopOpacity={0.5} />
-              <stop offset="100%" stopColor="#71e2ef" stopOpacity={0.35} />
+              <stop offset="100%" stopColor={skin.lineColor} stopOpacity={0.35} />
             </radialGradient>
             <linearGradient id={`stroke-${gradientId}`} x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#71e2ef" />
+              <stop offset="0%" stopColor={skin.lineColor} />
               <stop offset="100%" stopColor="#a882fb" />
             </linearGradient>
           </defs>
