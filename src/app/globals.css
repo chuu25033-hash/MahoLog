@@ -254,6 +254,12 @@ html[data-chapter="azure"] {
   animation-delay: var(--delay);
 }
 
+/* 回転を独立した層で合成する。中身は回っていない向きで描かれ、明滅で描き直しても線が震えない */
+.spin-layer {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
 .paused-anim,
 .paused-anim * {
   animation-play-state: paused !important;

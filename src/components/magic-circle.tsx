@@ -88,10 +88,11 @@ export function MagicCircle({
         style={{ background: `radial-gradient(circle, ${color}, ${lineColor} 45%, transparent 70%)`, opacity: glow }}
       />
 
-      {/* 外周: 目盛り・ルーン文字 */}
+      {/* 外周: 目盛り・ルーン文字。回すのは外側の層だけにし、SVG は回っていない向きで描く（明滅で描き直すたびに細い線が画素へ吸い付いて震えないように） */}
+      <div className="spin-layer absolute inset-0 animate-spin-slow">
       <svg
         viewBox="-100 -100 200 200"
-        className="absolute inset-0 h-full w-full animate-spin-slow"
+        className="h-full w-full"
         style={{ filter: `drop-shadow(0 0 2px ${lineColor}99)` }}
       >
         <defs>
@@ -154,9 +155,11 @@ export function MagicCircle({
           </>
         )}
       </svg>
+      </div>
 
       {/* 内周: 天体軌道（逆回転・明滅） */}
-      <svg viewBox="-100 -100 200 200" className="absolute inset-[16%] h-[68%] w-[68%] animate-spin-slower">
+      <div className="spin-layer absolute inset-[16%] animate-spin-slower">
+      <svg viewBox="-100 -100 200 200" className="h-full w-full">
         <g className="glimmer-slow">
           <circle r="72" stroke={lineColor} strokeOpacity="0.45" strokeWidth="0.6" strokeDasharray="2 5" {...hairline} />
           <ellipse rx="90" ry="34" stroke="#a882fb" strokeOpacity="0.4" strokeWidth="0.6" transform="rotate(-20)" {...hairline} />
@@ -168,6 +171,7 @@ export function MagicCircle({
         <rect x="-50" y="-50" width="100" height="100" stroke={lineColor} strokeOpacity="0.3" strokeWidth="0.6" {...hairline} />
         <rect x="-50" y="-50" width="100" height="100" stroke={lineColor} strokeOpacity="0.3" strokeWidth="0.6" transform="rotate(45)" {...hairline} />
       </svg>
+      </div>
 
       {/* 中央: 科目色の細線で描く天球儀（3D に傾いたリングがゆっくり回る） */}
       <div className="armillary inset-[30%]!" style={{ "--ring-color": color } as CSSProperties}>
