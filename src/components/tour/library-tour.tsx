@@ -143,6 +143,8 @@ function Tour({ replay }: { replay: boolean }) {
 
   const next = () => (last ? finish() : setIndex((i) => i + 1));
   const back = () => setIndex((i) => Math.max(0, i - 1));
+  // 飛ばすときも、締めくくりの頁（設定から見返せる旨）だけは見せる
+  const skip = () => setIndex(STEPS.length - 1);
 
   // 照らす要素を画面に収め、動いたり大きさが変わったりしても枠が追いかけるよう毎フレーム測る
   useEffect(() => {
@@ -172,7 +174,10 @@ function Tour({ replay }: { replay: boolean }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") finish();
+      if (e.key === "Escape") {
+        if (last) finish();
+        else skip();
+      }
       else if (e.key === "ArrowRight") next();
       else if (e.key === "ArrowLeft") back();
     };
@@ -199,7 +204,7 @@ function Tour({ replay }: { replay: boolean }) {
         nextRef={nextRef}
         onNext={next}
         onBack={back}
-        onSkip={finish}
+        onSkip={skip}
       />
     </div>,
     document.body,
