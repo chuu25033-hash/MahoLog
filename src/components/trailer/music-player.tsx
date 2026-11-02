@@ -5,7 +5,7 @@ import { soundManager } from "@/lib/sound/sound-manager";
 import { ambienceParts, playAmbiencePart, startAmbience, type AmbienceVoice } from "@/lib/sound/ambience";
 import { loadPiano, SONGS, songLayout, startSong, type SongKey, type SongVoice } from "@/lib/sound/music";
 
-const TRACKS: { key: SongKey; name: string; en: string }[] = [
+export const TRACKS: { key: SongKey; name: string; en: string }[] = [
   { key: "title", name: "タイトル", en: "Title" },
   { key: "prelude", name: "旅立ちの前", en: "Prelude" },
   { key: "rest", name: "静息", en: "Rest" },

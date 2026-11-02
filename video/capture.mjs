@@ -66,7 +66,8 @@ async function openTrailer(scale) {
   // 540×960 の画面を2倍の密度で描き、1080×1920 で撮る
   const page = await browser.newPage({ viewport: { width: 540, height: 960 }, deviceScaleFactor: scale });
   await page.goto(`${values.url}${values.url.includes("?") ? "&" : "?"}capture`, { waitUntil: "networkidle" });
-  await page.waitForFunction(() => window.__trailer !== undefined);
+  // 曲を描き出してから撮影の準備が整うページ（/trailer/score）もあるので、長めに待つ
+  await page.waitForFunction(() => window.__trailer !== undefined, null, { timeout: 180_000 });
   await page.evaluate(() => document.fonts.ready);
   // 開発サーバーの表示（左下の Next.js のバッジなど）を映さない
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });

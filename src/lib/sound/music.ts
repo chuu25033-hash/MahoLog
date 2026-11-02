@@ -770,6 +770,27 @@ type Options = {
   from?: "intro" | "chorus" | number;
   /** 書き出し用: この秒数ぶんを最初にまとめて刻み、タイマーを使わない（OfflineAudioContext で描き出すため） */
   duration?: number;
+  /** 鳴らした音を1つずつ知らせる（楽譜を流す動画用。揺らぎを含めた、実際に鳴らす時刻と強さ） */
+  onNote?: (e: NoteEvent) => void;
+  /** 小節を刻み始めるたびに知らせる（いまどの段か） */
+  onBar?: (e: { at: number; bar: number; section: SongSection; inSection: number }) => void;
+};
+
+export type SongSection = SectionName;
+
+/** melody: 右手の旋律 / double: 旋律に重ねる1オクターブ下 / chord: 右手の和音 / left: 左手 / bass: 低い支え / star: 星の瞬き / drum: 打楽器 */
+export type NotePart = "melody" | "double" | "chord" | "left" | "bass" | "star" | "drum";
+
+export type NoteEvent = {
+  part: NotePart;
+  /** MIDI の音の高さ（打楽器は 0） */
+  note: number;
+  /** AudioContext の時刻（秒） */
+  at: number;
+  velocity: number;
+  /** 鍵盤を押さえている長さ（秒）。0 はペダルを踏んだまま自然に消えるまで */
+  length: number;
+  drum?: DrumSound;
 };
 
 export type SongVoice = {
@@ -869,10 +890,17 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
   let prevNote = song.center;
   mix.tone.frequency.setValueAtTime(bar === 0 ? CLOSED : OPEN, next);
 
+  /** ピアノの1音を鳴らし、聞いている側（楽譜の動画）へ知らせる */
+  const strike = (part: NotePart, note: number, at: number, velocity: number, hold?: number, out?: AudioNode) => {
+    piano(mix, note, at, velocity, hold, out);
+    options.onNote?.({ part, note, at, velocity, length: hold ?? 0 });
+  };
+
   const playBar = () => {
     const t = next;
     if (!anchor) anchor = { time: t, bar };
     const { section, inSection, cycle } = place(bar);
+    options.onBar?.({ at: t, bar, section, inSection });
     const chorusLike = section === "chorus" || section === "chorus2";
     const chords = chordsAt(bar);
     const swing = (s: number) => (s % 2 === 1 ? song.swing * sixteenth : 0);
@@ -899,10 +927,10 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
       const length = ((chords.find((x) => x.from > from)?.from ?? 16) - from) * sixteenth;
       const root = lowRoot(c);
       const lv = section === "intro" || section === "interlude" ? 0.42 : chorusLike ? 0.55 : 0.48;
-      piano(mix, root, at16(from), lv * wobble(), length + 0.4);
+      strike("left", root, at16(from), lv * wobble(), length + 0.4);
       const third = c.pcs.includes((c.root + 4) % 12) ? 4 : c.pcs.includes((c.root + 3) % 12) ? 3 : null;
       const second = third !== null && Math.random() < 0.5 ? root + 12 + third : root + 7;
-      piano(mix, second, at16(from + 2), lv * 0.6 * wobble(), length);
+      strike("left", second, at16(from + 2), lv * 0.6 * wobble(), length);
     }
 
     // ---- 右手の和音: 根音を抜いた配置を、そっと崩して置く
@@ -919,18 +947,26 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
       rightHand = voiceChord(c.color, rightHand, 60);
       const v = (s % 8 === 0 ? 0.36 : 0.3) * (chorusLike ? 0.85 : 1);
       // 下から上へ、わずかにずらして（ばらして）鳴らす
-      rightHand.forEach((note, i) => piano(mix, note, at16(s) + i * 0.022, v * wobble(), len * sixteenth + 0.3));
+      rightHand.forEach((note, i) => strike("chord", note, at16(s) + i * 0.022, v * wobble(), len * sixteenth + 0.3));
     }
 
     // ---- 低い支え（サビだけ）
-    if (chorusLike) for (const { chord: c, from } of chords) bass(mix, lowRoot(c) - 12, at16(from), ((chords.find((x) => x.from > from)?.from ?? 16) - from) * sixteenth * 0.95, 0.8);
+    if (chorusLike)
+      for (const { chord: c, from } of chords) {
+        const [note, at, length] = [lowRoot(c) - 12, at16(from), ((chords.find((x) => x.from > from)?.from ?? 16) - from) * sixteenth * 0.95];
+        bass(mix, note, at, length, 0.8);
+        options.onNote?.({ part: "bass", note, at, velocity: 0.8, length });
+      }
 
     // ---- 打楽器（B メロの後半とサビだけ。遠くで、柔らかく）
     const d = song.drums * (chorusLike ? 1 : section === "pre" && inSection >= 4 ? 0.6 : 0);
     if (song.kit && d > 0) {
       const stopAfter = section === "chorus2" && inSection === 7 ? 1 : 16;
       const hit = (sound: DrumSound, s: number, v: number) => {
-        if (s < stopAfter) playDrum(mix, sound, at16(s), v * d * wobble());
+        if (s >= stopAfter) return;
+        const [at, velocity] = [at16(s), v * d * wobble()];
+        playDrum(mix, sound, at, velocity);
+        options.onNote?.({ part: "drum", note: 0, at, velocity, length: 0, drum: sound });
       };
       if (song.kit === "brush") {
         // 擦る音は鳴らさず（裏で鳴り続けると耳につく）、柔らかいキックと、サビの2・4拍のブラシだけ
@@ -972,9 +1008,9 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
       const c = chordIn(chords, s);
       const sky = melodyNotes(penta, c, 86, 98).filter((n) => c.pcs.includes(n % 12) || penta.includes(n % 12));
       const note = sky[Math.floor(Math.random() * sky.length)];
-      piano(mix, note, at16(s), 0.12 + Math.random() * 0.12, undefined, mix.far);
+      strike("star", note, at16(s), 0.12 + Math.random() * 0.12, undefined, mix.far);
       // ときどき、少し遅れてもう一つ
-      if (Math.random() < 0.3) piano(mix, sky[Math.floor(Math.random() * sky.length)], at16(s) + sixteenth * 3, 0.1, undefined, mix.far);
+      if (Math.random() < 0.3) strike("star", sky[Math.floor(Math.random() * sky.length)], at16(s) + sixteenth * 3, 0.1, undefined, mix.far);
     }
 
     // ---- 旋律（右手の一本）
@@ -1020,9 +1056,9 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
       prevNote = note;
       const when = at16(n.at);
       const v = level * (n.at % 4 === 0 ? 1 : 0.88) * wobble();
-      piano(mix, note, when, v, n.len * sixteenth + 0.6);
+      strike("melody", note, when, v, n.len * sixteenth + 0.6);
       // 2回目のサビの後半は、1オクターブ下を重ねて厚くする
-      if (section === "chorus2" && inSection >= 4) piano(mix, note - 12, when + 0.006, v * 0.5, n.len * sixteenth + 0.6);
+      if (section === "chorus2" && inSection >= 4) strike("double", note - 12, when + 0.006, v * 0.5, n.len * sixteenth + 0.6);
     });
   };
 
