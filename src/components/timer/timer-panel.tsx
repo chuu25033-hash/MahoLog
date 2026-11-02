@@ -662,7 +662,8 @@ export function TimerPanel({
 
   // 魔法陣の中央に重ねる、状態・時刻・属性・操作
   const clockFace = (
-    <div className="relative z-10 flex flex-col items-center gap-2 text-center">
+    // 幅は魔法陣の枠いっぱいに取り、長い科目札が画面の外へ出ずに2段へ折れるようにする
+    <div className="relative z-10 flex w-full flex-col items-center gap-2 px-4 text-center">
       <p className="text-xs tracking-[0.35em] text-aqua/70">{statusLabel}</p>
       <p
         className="font-display text-5xl font-normal text-[#e8fbfd] text-glow-aqua short:text-4xl lg:text-7xl"
