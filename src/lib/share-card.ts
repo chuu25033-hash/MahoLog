@@ -3,7 +3,7 @@
 // SNS に載せる「探求の記録」の画像（1200×675）: 紋章・名前・階級と、七夜の魔法陣・学んだ時間
 import { GOLD, createCanvas, drawFrame, drawNightSky, drawStar, fontFamily, spacedText, toPng } from "./canvas-card";
 import { formatMinutes } from "./game";
-import type { ItemRarity } from "./items";
+import type { ItemRarity, Skin } from "./items";
 import type { SubjectTotal } from "./types";
 
 const W = 1200;
@@ -24,6 +24,8 @@ export type ShareCardInput = {
   weekMinutes: number;
   /** 七夜（今週）の科目ごとの時間 */
   radar: SubjectTotal[];
+  /** まとっている魔法陣の意匠。あれば七夜の魔法陣をその線の色で描く（無ければ金） */
+  skin?: Skin | null;
 };
 
 /**
@@ -158,14 +160,24 @@ async function drawAvatar(ctx: CanvasRenderingContext2D, input: ShareCardInput, 
   }
 }
 
-/** 七夜の魔法陣: 科目ごとの時間を、いちばん長い科目を外周として多角形で描く */
-function drawRadar(ctx: CanvasRenderingContext2D, totals: SubjectTotal[], serif: string, cx: number, cy: number, r: number) {
+/** "#rrggbb" を、白へ amount（0〜1）だけ寄せて "rgba(...)" にする */
+function tone(hex: string, alpha: number, amount = 0) {
+  const v = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).map((c) => Math.round(c + (255 - c) * amount));
+  return `rgba(${v.join(", ")}, ${alpha})`;
+}
+
+/** 七夜の魔法陣: 科目ごとの時間を、いちばん長い科目を外周として多角形で描く。意匠をまとっていればその線の色で描く */
+function drawRadar(ctx: CanvasRenderingContext2D, totals: SubjectTotal[], serif: string, cx: number, cy: number, r: number, skin?: Skin | null) {
   const n = totals.length;
   if (n < 3) return;
+  const line = skin?.lineColor;
+  const palette = line
+    ? { grid: line, fill: tone(line, 0.22), glow: tone(line, 0.8), stroke: tone(line, 1, 0.3) }
+    : { grid: GOLD, fill: "rgba(226, 201, 116, 0.22)", glow: "rgba(226, 201, 116, 0.8)", stroke: "#f0dc9a" };
   const max = Math.max(1, ...totals.map((t) => t.minutes));
   const angle = (i: number) => (360 / n) * i;
 
-  ctx.strokeStyle = GOLD;
+  ctx.strokeStyle = palette.grid;
   ctx.lineWidth = 1;
   for (const k of [1, 0.66, 0.33]) {
     ctx.globalAlpha = k === 1 ? 0.45 : 0.2;
@@ -192,12 +204,12 @@ function drawRadar(ctx: CanvasRenderingContext2D, totals: SubjectTotal[], serif:
   ctx.beginPath();
   points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
   ctx.closePath();
-  ctx.fillStyle = "rgba(226, 201, 116, 0.22)";
+  ctx.fillStyle = palette.fill;
   ctx.fill();
   ctx.save();
-  ctx.shadowColor = "rgba(226, 201, 116, 0.8)";
+  ctx.shadowColor = palette.glow;
   ctx.shadowBlur = 12;
-  ctx.strokeStyle = "#f0dc9a";
+  ctx.strokeStyle = palette.stroke;
   ctx.lineWidth = 2;
   ctx.stroke();
   ctx.restore();
@@ -292,7 +304,7 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob> {
   ctx.font = `22px ${serif}`;
   spacedText(ctx, "七夜の魔法陣", rx, 96, 8);
   if (input.radar.length >= 3 && input.weekMinutes > 0) {
-    drawRadar(ctx, input.radar, serif, rx, 300, 135);
+    drawRadar(ctx, input.radar, serif, rx, 300, 135, input.skin);
   } else {
     ctx.fillStyle = "rgba(233, 228, 212, 0.5)";
     ctx.font = `22px ${serif}`;

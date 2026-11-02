@@ -492,9 +492,14 @@ export function hasItem(data: UserData, id: string) {
   return (data.inventory[id] ?? 0) > 0;
 }
 
-export function activeSkin(data: UserData): Skin {
+/** まとっている魔法陣の意匠。まとっていなければ null */
+export function equippedSkin(data: UserData): Skin | null {
   const item = findItem(data.equipment.skinId);
-  return item?.kind === "skin" ? item.skin : DEFAULT_SKIN;
+  return item?.kind === "skin" ? item.skin : null;
+}
+
+export function activeSkin(data: UserData): Skin {
+  return equippedSkin(data) ?? DEFAULT_SKIN;
 }
 
 export function armedCatalyst(data: UserData): CatalystItem | null {

@@ -10,8 +10,9 @@ import { WIZARD_AVATARS } from "@/components/wizard-avatar";
 import { canShareImage, downloadBlob } from "@/lib/canvas-card";
 import { formatMinutes } from "@/lib/game";
 import { renderShareCard, type ShareCardInput } from "@/lib/share-card";
+import { equippedSkin, useUserData } from "@/lib/user-store";
 
-export type ShareRecord = Omit<ShareCardInput, "glyph" | "tint"> & { avatar: string };
+export type ShareRecord = Omit<ShareCardInput, "glyph" | "tint" | "skin"> & { avatar: string };
 
 function shareText(record: ShareRecord) {
   const week = record.weekMinutes > 0 ? `今週は${formatMinutes(record.weekMinutes)}の詠唱を重ねました。` : "";
@@ -38,12 +39,14 @@ function ShareRecordDialog({ record, onClose }: { record: ShareRecord; onClose: 
   const [image, setImage] = useState<{ blob: Blob; url: string } | null>(null);
   const [failed, setFailed] = useState(false);
   const preset = WIZARD_AVATARS[record.avatar] ?? WIZARD_AVATARS["wizard-1"];
+  // 魔法陣は、まとっている意匠の色で描く
+  const skin = equippedSkin(useUserData());
 
   // 開いたときに一度だけ描く（記録は開いている間に変わらない）
   useEffect(() => {
     let url: string | null = null;
     let cancelled = false;
-    renderShareCard({ ...record, glyph: glyphRef.current, tint: preset.tint })
+    renderShareCard({ ...record, glyph: glyphRef.current, tint: preset.tint, skin })
       .then((blob) => {
         if (cancelled) return;
         url = URL.createObjectURL(blob);
