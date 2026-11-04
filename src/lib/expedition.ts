@@ -202,7 +202,7 @@ export const EXPEDITION_SCENES = {
     celestial: [{ kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 9, density: 0.8 }, { kind: "aurora", x: 0, y: 0, size: 0.96, color: "#7af0d0" }, { kind: "meteor", x: 0, y: 0, size: 0.4, color: "#ffffff" }],
     layers: [
       { source: { art: "clocktower" }, height: 0.74, bottom: EXPEDITION_FLOOR, speed: 0.14, color: "#0e2034", accent: "#bfe3ff", opacity: 0.95, rim: 0.16 },
-      haze("#3a6488", EXPEDITION_FLOOR, 0.46, 0.42),
+      haze("#24405e", EXPEDITION_FLOOR, 0.3, 0.35),
       { source: { art: "icepillars" }, height: 0.72, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.42, color: "#0a1828", accent: "#9be8f5", rim: 0.2 },
       { source: { art: "crystals" }, height: 0.3, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.7, color: "#07131f", accent: "#71e2ef", rim: 0.2 },
       haze("#173049", EXPEDITION_FLOOR - 0.02, 0.08, 0.5),
