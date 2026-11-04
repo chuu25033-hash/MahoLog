@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { ChevronDown, FastForward, Hourglass, MapPin, Moon, Pause, Play, Square, Timer as TimerIcon } from "lucide-react";
+import { ChevronDown, FastForward, Hourglass, MapPin, Moon, Pause, Pencil, Play, Square, Timer as TimerIcon } from "lucide-react";
 import { saveStudyLog } from "@/app/actions/study";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { BackToLibrary } from "@/components/back-to-library";
+import { CustomMinutesEditor } from "@/components/custom-minutes-editor";
 import { DropTierList } from "@/components/drop-tier-list";
 import { ItemArt } from "@/components/item-art";
 import { MagicCircle } from "@/components/magic-circle";
@@ -529,11 +530,26 @@ export function TimerPanel({
     </div>
   );
 
+  // 自分で決めた詠唱時間を覚えておく。いつもの詠唱時間に前の自分の時間を選んでいたなら、それも新しい時間に合わせる
+  const saveCustomFocus = (minutes: number) => {
+    const { defaultFocusMinutes, customFocusMinutes } = data.settings;
+    const followDefault = customFocusMinutes != null && defaultFocusMinutes === customFocusMinutes;
+    userActions.updateSettings({ customFocusMinutes: minutes, ...(followDefault && { defaultFocusMinutes: minutes }) });
+  };
+
   const durationRows = (
     <>
       <div className="space-y-1.5">
         {mode === "pomodoro" && (
-          <OptionRow label="詠唱時間" unit="分" options={FOCUS_MINUTE_OPTIONS} value={focusMin} onChange={setFocusMin} disabled={phase !== "idle"} />
+          <OptionRow
+            label="詠唱時間"
+            unit="分"
+            options={FOCUS_MINUTE_OPTIONS}
+            value={focusMin}
+            onChange={setFocusMin}
+            disabled={phase !== "idle"}
+            custom={{ value: data.settings.customFocusMinutes, onSave: saveCustomFocus }}
+          />
         )}
         <OptionRow label="静息時間" unit="分" options={BREAK_OPTIONS} value={breakMin} onChange={setBreakMin} disabled={phase !== "idle"} />
       </div>
@@ -841,6 +857,18 @@ export function TimerPanel({
   );
 }
 
+const optionClass = (selected: boolean) =>
+  cn(
+    "rounded-lg border py-1 font-display text-sm whitespace-nowrap transition-all duration-300 disabled:opacity-50 short:py-0.5 short:text-xs",
+    selected
+      ? "border-starlight/55 bg-starlight/[0.08] text-starlight shadow-[0_0_12px_-3px_rgba(226,201,116,0.45)]"
+      : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
+  );
+
+/**
+ * 長さを選ぶ列。custom を渡すと、決まった長さの後ろに自分で決めた長さの札を置く。
+ * まだ決めていなければ「自由」の札から決め、選んでいる札をもう一度押すと決め直せる
+ */
 function OptionRow({
   label,
   unit,
@@ -848,6 +876,7 @@ function OptionRow({
   value,
   onChange,
   disabled,
+  custom,
 }: {
   label: string;
   unit: string;
@@ -855,28 +884,54 @@ function OptionRow({
   value: number;
   onChange: (v: number) => void;
   disabled: boolean;
+  custom?: { value: number | null; onSave: (v: number) => void };
 }) {
+  const [editing, setEditing] = useState(false);
+  const columns = options.length + (custom ? 1 : 0);
+  const customSelected = custom?.value != null && custom.value === value && !options.includes(value);
+  const openEditor = () => setEditing(true);
+
   return (
     <div className="flex items-center gap-2">
       <p className="w-14 shrink-0 text-xs tracking-[0.2em] whitespace-nowrap text-muted-foreground short:w-auto short:tracking-normal">{label}</p>
-      <div className="grid flex-1 gap-1.5 short:gap-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
-        {options.map((o) => (
-          <button
-            key={o}
-            disabled={disabled}
-            onClick={() => onChange(o)}
-            className={cn(
-              "rounded-lg border py-1 font-display text-sm whitespace-nowrap transition-all duration-300 disabled:opacity-50 short:py-0.5 short:text-xs",
-              o === value
-                ? "border-starlight/55 bg-starlight/[0.08] text-starlight shadow-[0_0_12px_-3px_rgba(226,201,116,0.45)]"
-                : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
-            )}
-          >
-            {o}
-            <span className="ml-0.5 font-serif text-[10px]">{unit}</span>
-          </button>
-        ))}
-      </div>
+      {editing && custom ? (
+        <CustomMinutesEditor
+          initial={custom.value ?? value}
+          label={label}
+          onSave={(minutes) => {
+            custom.onSave(minutes);
+            onChange(minutes);
+            setEditing(false);
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      ) : (
+        <div className="grid flex-1 gap-1.5 short:gap-1" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}>
+          {options.map((o) => (
+            <button key={o} disabled={disabled} onClick={() => onChange(o)} className={optionClass(o === value)}>
+              {o}
+              <span className="ml-0.5 font-serif text-[10px]">{unit}</span>
+            </button>
+          ))}
+          {custom &&
+            (custom.value == null ? (
+              <button disabled={disabled} onClick={openEditor} className={cn(optionClass(false), "font-serif text-xs")} aria-label="自分で時間を決める">
+                自由
+              </button>
+            ) : (
+              <button
+                disabled={disabled}
+                onClick={() => (custom.value === value ? openEditor() : onChange(custom.value!))}
+                className={cn(optionClass(customSelected), "relative")}
+                aria-label={customSelected ? `自分で決めた時間 ${custom.value}${unit}（押すと決め直せる）` : `自分で決めた時間 ${custom.value}${unit}`}
+              >
+                {custom.value}
+                <span className="ml-0.5 font-serif text-[10px]">{unit}</span>
+                {customSelected && <Pencil className="absolute top-0.5 right-0.5 size-2.5 opacity-70" strokeWidth={1.5} aria-hidden />}
+              </button>
+            ))}
+        </div>
+      )}
     </div>
   );
 }

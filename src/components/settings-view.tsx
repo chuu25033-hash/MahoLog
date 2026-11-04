@@ -4,10 +4,11 @@ import { WhisperText, whisperHost } from "@/components/whisper";
 import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, BookOpen, Check, Compass, FlaskConical, Download, Feather, Hexagon, LogOut, Music, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
+import { Bell, BookOpen, Check, Compass, FlaskConical, Download, Feather, Hexagon, LogOut, Music, Pencil, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { ObserverIdField } from "@/components/observer/observer-id";
 import { BackToLibrary } from "@/components/back-to-library";
+import { CustomMinutesEditor } from "@/components/custom-minutes-editor";
 import { PageLoading } from "@/components/page-loading";
 import { Prologue } from "@/components/prologue/prologue";
 import { SubjectPicker } from "@/components/subject-picker";
@@ -44,7 +45,7 @@ import {
   withCustomNames,
 } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
-import { FOCUS_MINUTE_OPTIONS, hasDevBackup, initialUserData, userActions, useStoredUserData } from "@/lib/user-store";
+import { CUSTOM_FOCUS_MAX, CUSTOM_FOCUS_MIN, FOCUS_MINUTE_OPTIONS, hasDevBackup, initialUserData, userActions, useStoredUserData, type UserSettings } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
 
 const USERNAME_MAX = 16;
@@ -132,26 +133,7 @@ export function SettingsView({
 
           <ObserverIdField />
 
-          <Field label="デフォルト詠唱時間" hint="律動の詠唱の初期集中時間">
-            <div className="grid grid-cols-4 gap-1.5">
-              {FOCUS_MINUTE_OPTIONS.map((m) => (
-                <button
-                  key={m}
-                  onClick={() => userActions.updateSettings({ defaultFocusMinutes: m })}
-                  aria-pressed={m === settings.defaultFocusMinutes}
-                  className={cn(
-                    "rounded-xl border py-1.5 font-display text-base transition-all duration-300",
-                    m === settings.defaultFocusMinutes
-                      ? "border-starlight/55 bg-starlight/[0.08] text-starlight shadow-[0_0_12px_-3px_rgba(226,201,116,0.45)]"
-                      : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
-                  )}
-                >
-                  {m}
-                  <span className="ml-0.5 font-serif text-[10px]">分</span>
-                </button>
-              ))}
-            </div>
-          </Field>
+          <DefaultFocusField settings={settings} />
 
           {data.cycle.count > 1 && (
             <Field label="光の線の色調" hint="周天の章で開かれる">
@@ -743,5 +725,71 @@ function DataControls() {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+/** 決まった詠唱時間（自分で決めた時間が含まれるかを調べられるよう number[] として持つ） */
+const focusPresets: readonly number[] = FOCUS_MINUTE_OPTIONS;
+
+/**
+ * 律動の詠唱で最初に選ばれている詠唱時間。決まった長さの後ろに自分の時間の札を置き、ここでも決め直せる
+ * （まだ決めていなければ「自由」の札から決める。選んでいる自分の時間をもう一度押すと決め直せる）
+ */
+function DefaultFocusField({ settings }: { settings: UserSettings }) {
+  const [editing, setEditing] = useState(false);
+  const { customFocusMinutes: custom, defaultFocusMinutes: current } = settings;
+  const customSelected = custom != null && custom === current;
+  const cellClass = (selected: boolean) =>
+    cn(
+      "relative rounded-xl border py-1.5 font-display text-base transition-all duration-300",
+      selected
+        ? "border-starlight/55 bg-starlight/[0.08] text-starlight shadow-[0_0_12px_-3px_rgba(226,201,116,0.45)]"
+        : "border-white/10 text-muted-foreground hover:border-white/25 hover:text-foreground",
+    );
+
+  return (
+    <Field label="デフォルト詠唱時間" hint={`律動の詠唱の初期集中時間。「自由」から${CUSTOM_FOCUS_MIN}〜${CUSTOM_FOCUS_MAX}分で自分の時間を決められる`}>
+      {editing ? (
+        <CustomMinutesEditor
+          initial={custom ?? current}
+          label="デフォルト詠唱時間"
+          onSave={(minutes) => {
+            userActions.updateSettings({ customFocusMinutes: minutes, defaultFocusMinutes: minutes });
+            setEditing(false);
+          }}
+          onCancel={() => setEditing(false)}
+        />
+      ) : (
+        <div className="grid grid-cols-5 gap-1.5">
+          {focusPresets.map((m) => (
+            <button
+              key={m}
+              onClick={() => userActions.updateSettings({ defaultFocusMinutes: m })}
+              aria-pressed={m === current && !customSelected}
+              className={cellClass(m === current && !customSelected)}
+            >
+              {m}
+              <span className="ml-0.5 font-serif text-[10px]">分</span>
+            </button>
+          ))}
+          {custom == null ? (
+            <button onClick={() => setEditing(true)} className={cn(cellClass(false), "font-serif text-sm")} aria-label="自分で時間を決める">
+              自由
+            </button>
+          ) : (
+            <button
+              onClick={() => (customSelected ? setEditing(true) : userActions.updateSettings({ defaultFocusMinutes: custom }))}
+              aria-pressed={customSelected}
+              aria-label={customSelected ? `自分で決めた時間 ${custom}分（押すと決め直せる）` : `自分で決めた時間 ${custom}分`}
+              className={cellClass(customSelected)}
+            >
+              {custom}
+              <span className="ml-0.5 font-serif text-[10px]">分</span>
+              {customSelected && <Pencil className="absolute top-1 right-1 size-2.5 opacity-70" strokeWidth={1.5} aria-hidden />}
+            </button>
+          )}
+        </div>
+      )}
+    </Field>
   );
 }

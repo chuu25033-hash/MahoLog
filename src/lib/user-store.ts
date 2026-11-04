@@ -93,10 +93,26 @@ export type DailyReward = {
 };
 
 export const FOCUS_MINUTE_OPTIONS = [15, 25, 45, 60] as const;
+/** 自分で決める詠唱時間の幅（分） */
+export const CUSTOM_FOCUS_MIN = 5;
+export const CUSTOM_FOCUS_MAX = 180;
+
+/** 自分で決める詠唱時間の入力を確かめる。1分きざみの数で、決められる幅に収まっていればその分数、そうでなければ知らせる言葉 */
+export function parseCustomFocus(input: string): { minutes: number } | { error: string } {
+  const text = input.trim();
+  const value = Number(text);
+  if (text === "" || !Number.isInteger(value)) return { error: "刻む長さは、1分きざみの数で記してください" };
+  if (value < CUSTOM_FOCUS_MIN || value > CUSTOM_FOCUS_MAX) {
+    return { error: `星脈が応えるのは、${CUSTOM_FOCUS_MIN}〜${CUSTOM_FOCUS_MAX}分の詠唱までです` };
+  }
+  return { minutes: value };
+}
 
 export type UserSettings = {
   /** 律動の詠唱の初期集中時間（分） */
   defaultFocusMinutes: number;
+  /** 律動の詠唱で、決まった長さのほかに自分で決めた詠唱時間（分）。決めていなければ null */
+  customFocusMinutes: number | null;
   /** 背景の粒子・重いアニメーションを抑える */
   liteMode: boolean;
   /** 詠唱完了時のベル音・振動 */
@@ -157,7 +173,7 @@ export function initialUserData(): UserData {
     inventory: {},
     unlockedStages: unlockedAt(0),
     equipment: { catalystId: null, skinId: null, titleId: null },
-    settings: { defaultFocusMinutes: 25, liteMode: false, chime: true, sound: true, bgmVolume: 0.4, seVolume: 0.7, chapterTheme: "default" },
+    settings: { defaultFocusMinutes: 25, customFocusMinutes: null, liteMode: false, chime: true, sound: true, bgmVolume: 0.4, seVolume: 0.7, chapterTheme: "default" },
     tasks: { daily: { periodKey: "", items: {} }, weekly: { periodKey: "", items: {} } },
     worldlines: { code: generateWorldlineCode(), bonds: [] },
     cycle: { count: 1, startMp: 0 },
