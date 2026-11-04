@@ -6,7 +6,7 @@ import { Wanderer } from "./wanderer";
 import "./expedition.css";
 
 /** 少女の歩む速さ（舞台の高さ / 秒）。足元の床がこの速さで流れる。地面に着いた足の送り（expedition.css の歩みのキーフレーム）と同じ速さにし、足が床を滑らないようにする */
-const WALK_SPEED = 0.0335;
+const WALK_SPEED = 0.0387;
 /** 層を敷き詰めるときに見込む、舞台の横長さ（幅 ÷ 高さ）の上限 */
 const MAX_STAGE_ASPECT = 3;
 /** 少女の背丈（舞台の高さに対する割合） */

@@ -4,16 +4,17 @@ const SPARKS = Array.from({ length: 6 }, (_, i) => ({ delay: -i * 0.37, drift: 0
 
 /**
  * 腿・脛・足に分けた脚。腿は腰（cx, 66）、脛は膝（cx, 80）、足は足首（cx, 94.5）で曲がる。
- * 腿は付け根から膝へ、脛はふくらはぎを膨らませて足首へ細くなり、足は短いブーツを履く
+ * 脚はふくらみを付けずにまっすぐ細く落とし、膝下までのロングブーツ（履き口に折り返し）を履く
  */
 function Leg({ side, cx }: { side: "front" | "back"; cx: number }) {
   const at = (dx: number, y: number) => `${+(cx + dx).toFixed(2)},${y}`;
   return (
     <g className={`wander-thigh wander-${side}`} style={{ transformOrigin: `${cx}px 66px` }}>
-      <path d={`M${at(-2, 64)} C${at(-2.3, 70)} ${at(-1.9, 76)} ${at(-1.4, 80)} L${at(1.5, 80)} C${at(2, 75)} ${at(2.3, 70)} ${at(2, 64)} Z`} />
+      <path d={`M${at(-1.7, 64)} L${at(-1.3, 80)} L${at(1.3, 80)} L${at(1.7, 64)} Z`} />
       <g className={`wander-shin wander-${side}`} style={{ transformOrigin: `${cx}px 80px` }}>
-        <circle cx={cx} cy={80} r={1.45} />
-        <path d={`M${at(-1.4, 80)} C${at(-2.2, 83)} ${at(-2, 86.5)} ${at(-1.2, 90)} L${at(-0.85, 94.6)} L${at(0.85, 94.6)} L${at(1.1, 90)} C${at(1.5, 86)} ${at(1.6, 83)} ${at(1.45, 80)} Z`} />
+        <circle cx={cx} cy={80} r={1.3} />
+        {/* 膝下はブーツの筒。履き口を少し広げて折り返す */}
+        <path d={`M${at(-1.3, 80)} L${at(-1.3, 82.6)} L${at(-1.8, 82.8)} L${at(-1.6, 84.4)} L${at(-1.25, 94.6)} L${at(1.25, 94.6)} L${at(1.5, 84.4)} L${at(1.75, 82.8)} L${at(1.3, 82.6)} L${at(1.3, 80)} Z`} />
         <g className={`wander-foot wander-${side}`} style={{ transformOrigin: `${cx}px 94.5px` }}>
           <path d={`M${at(-1.35, 90.8)} L${at(1.35, 90.8)} L${at(1.5, 92.8)} C${at(3.3, 93.2)} ${at(5.6, 94)} ${at(6, 95.6)} L${at(6, 96.6)} L${at(-1.9, 96.6)} C${at(-2.1, 95.2)} ${at(-1.9, 93.6)} ${at(-1.6, 92.6)} Z`} />
         </g>
@@ -47,7 +48,7 @@ export function Wanderer({ glow, className, style }: { glow: string; className?:
             {/* 外套（後ろへたなびく） */}
             <path className="wander-cape" style={{ transformOrigin: "27px 40px" }} d="M27,40 C21,48 15.5,58 12.5,69 C16,67.5 19,68.6 21.5,67.4 L27.5,45 Z" />
             {/* 衣 */}
-            <path d="M27,39 C30,37.8 33,38 35,39.6 L41.5,68 C34,71.2 26,71.4 19.5,68.2 Z" />
+            <path d="M27,39 C30,37.8 33,38 35,39.6 L42.6,72.4 C34,75.6 25.4,75.8 18.4,72.6 Z" />
             {/* 後ろへ流れる髪と頭 */}
             <path className="wander-hair" style={{ transformOrigin: "28px 34px" }} d="M26,32 C21.5,36 20.5,42 21.5,48 C23.4,46 24.6,45 26,45.6 C26.8,41 28,37 30.5,35 Z" />
             <circle cx={31} cy={35} r={5} />
