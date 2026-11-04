@@ -839,7 +839,8 @@ export function TimerPanel({
       {/* 左: 設定パネル */}
       {/* 枠線（glass の ::before）が中身と一緒に流れないよう、スクロールは内側の領域だけで行う */}
       <section className="glass col-span-4 flex min-h-0 flex-col overflow-hidden rounded-2xl">
-        <div className="flex min-h-0 flex-1 flex-col gap-3 scroll-area scrollbar-none p-3 short:gap-2 lg:p-4">
+        {/* 札に触れて浮かぶひとこと（WhisperText）が枠の外へはみ出しても、横には流れないようにする */}
+        <div className="flex min-h-0 flex-1 flex-col gap-3 scroll-area scrollbar-none overflow-x-hidden p-3 short:gap-2 lg:p-4">
           {modeToggle}
           {subjectSection}
           {durationRows}
