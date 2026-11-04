@@ -237,26 +237,24 @@ const CONSTELLATIONS: [number, number][][] = [
   [[70, 150], [104, 132], [130, 160]],
 ];
 function constellations(accent: string) {
+  // 背景の星は星空（star-sky.tsx）に任せ、ここでは星座の星と、それを結ぶ細い線だけを描く
   return (
     <>
-      {STARS.map((s, i) => (
-        <circle key={i} cx={(s.x * 500) / 400} cy={s.y} r={s.r * 0.7} fill={STAR_TINTS[i % 4]} opacity={0.2 + rand(i, 17) * 0.45} />
-      ))}
       {CONSTELLATIONS.map((line, i) => (
         <g key={i}>
           <path
             d={`M${line.map(([x, y]) => `${x},${y}`).join(" L")}`}
             fill="none"
             stroke={accent}
-            strokeWidth={0.4}
+            strokeWidth={0.35}
             strokeLinecap="round"
             strokeDasharray="0.1 2.2"
-            opacity={0.55}
+            opacity={0.5}
           />
           {line.map(([x, y], j) => (
             <g key={j}>
-              <circle cx={x} cy={y} r={5} fill={accent} opacity={0.07} />
-              {j === 0 ? <path d={sparklePath(x, y, 1.5)} fill="#fff8e6" opacity={0.95} /> : <circle cx={x} cy={y} r={1.1} fill="#fffbe8" opacity={0.9} />}
+              <circle cx={x} cy={y} r={j === 0 ? 4.5 : 3} fill={STAR_TINTS[(i + j) % 4]} opacity={0.12} />
+              <circle cx={x} cy={y} r={j === 0 ? 1.1 : 0.8} fill="#ffffff" opacity={0.95} />
             </g>
           ))}
         </g>

@@ -84,15 +84,20 @@ export type ExpeditionScene = {
 };
 
 /**
- * 空に掛かる物。月・天文盤（観測塔）・オーロラ（大回廊）・炉心（魔導炉）・星冠（大聖堂）・星雲と銀河と塔と流れ星（星天の塔）。
- * x・y は舞台に対する割合（塔は下端）、size は舞台の高さに対する割合（オーロラと銀河は帯の高さ）
+ * 空に掛かる物。写真のような星空・月・天文盤（観測塔）・オーロラ（大回廊）・炉心（魔導炉）・星冠（大聖堂）・星雲と瞬く星と塔と流れ星（星天の塔）。
+ * x・y は舞台に対する割合（塔は下端）、size は舞台の高さに対する割合（オーロラ・星雲・瞬く星・流れ星は空の帯の高さ）
  */
 export type ExpeditionCelestial = {
-  kind: "moon" | "astrolabe" | "aurora" | "core" | "crown" | "galaxy" | "spire" | "nebula" | "meteor";
+  kind: "starsky" | "moon" | "astrolabe" | "aurora" | "core" | "crown" | "twinkles" | "spire" | "nebula" | "meteor";
   x: number;
   y: number;
   size: number;
   color: string;
+  /** 星空（starsky）: 星の並びを決める種・星の多さ（1 が標準）・天の川の傾き（度。無ければ描かない）と明るさ */
+  seed?: number;
+  density?: number;
+  milkyWay?: number;
+  milkyGlow?: number;
 };
 
 export const isHaze = (layer: ExpeditionLayer | ExpeditionHaze): layer is ExpeditionHaze => "haze" in layer;
@@ -137,10 +142,9 @@ export const EXPEDITION_SCENES = {
     sky: ["#040a0c", "#0b1c1c", "#153229"],
     glow: "#8fdcc4",
     motes: { kind: "float", color: "#d7f5a8" },
-    celestial: [{ kind: "moon", x: 0.74, y: 0.2, size: 0.13, color: "#e6f6dc" }],
+    celestial: [{ kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 5, density: 0.55 }, { kind: "moon", x: 0.74, y: 0.2, size: 0.13, color: "#e6f6dc" }],
     rays: { color: "#d7f5e8", opacity: 0.1, from: "right" },
     layers: [
-      { source: { art: "stars" }, height: 0.6, bottom: 0.4, speed: 0.04, color: "#d7f5a8", opacity: 0.5 },
       { source: { art: "pines" }, height: 0.5, bottom: EXPEDITION_FLOOR + 0.06, speed: 0.12, color: "#1a3a33", opacity: 0.7 },
       haze("#2c5a4a", EXPEDITION_FLOOR + 0.04, 0.32, 0.45),
       { source: { art: "pines" }, height: 0.66, bottom: EXPEDITION_FLOOR + 0.01, speed: 0.25, color: "#0f241e", opacity: 0.95, accent: "#a8e6c8", rim: 0.14 },
@@ -157,7 +161,7 @@ export const EXPEDITION_SCENES = {
     sky: ["#02031a", "#0a1036", "#1b1e4e"],
     glow: "#8db7f2",
     motes: { kind: "float", color: "#e2c974" },
-    celestial: [{ kind: "astrolabe", x: 0.68, y: 0.34, size: 0.78, color: "#e2c974" }],
+    celestial: [{ kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 3, density: 1, milkyWay: 28, milkyGlow: 0.45 }, { kind: "astrolabe", x: 0.68, y: 0.34, size: 0.78, color: "#e2c974" }],
     layers: [
       { source: { art: "constellations" }, height: 0.78, bottom: 0.22, speed: 0.05, color: "#e6eeff", accent: "#e2c974" },
       haze("#2a3270", 0.1, 0.36, 0.55),
@@ -175,9 +179,8 @@ export const EXPEDITION_SCENES = {
     sky: ["#030914", "#0a1a2e", "#173049"],
     glow: "#cfe9ff",
     motes: { kind: "fall", color: "#e6f4ff" },
-    celestial: [{ kind: "aurora", x: 0, y: 0.0, size: 0.46, color: "#7af0d0" }],
+    celestial: [{ kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 9, density: 0.8 }, { kind: "aurora", x: 0, y: 0.0, size: 0.46, color: "#7af0d0" }],
     layers: [
-      { source: { art: "stars" }, height: 0.6, bottom: 0.4, speed: 0.03, color: "#e6f4ff", opacity: 0.55 },
       { source: { art: "clocktower" }, height: 0.7, bottom: EXPEDITION_FLOOR, speed: 0.14, color: "#10233a", accent: "#bfe3ff", opacity: 0.9, rim: 0.18 },
       haze("#3a6488", EXPEDITION_FLOOR, 0.34, 0.42),
       { source: { art: "icepillars" }, height: 0.64, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.42, color: "#0a1828", accent: "#9be8f5", rim: 0.2 },
@@ -235,12 +238,12 @@ export const EXPEDITION_SCENES = {
     motes: { kind: "float", color: "#cfe2ff" },
     celestial: [
       { kind: "nebula", x: 0, y: 0, size: 0.8, color: "#a882fb" },
-      { kind: "galaxy", x: 0, y: 0, size: 0.75, color: "#b9a2f7" },
+      { kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 7, density: 1.4, milkyWay: -22, milkyGlow: 1 },
+      { kind: "twinkles", x: 0, y: 0, size: 0.6, color: "#ffffff" },
       { kind: "meteor", x: 0, y: 0, size: 0.6, color: "#ffffff" },
       { kind: "spire", x: 0.8, y: 0.1, size: 1.05, color: "#9fd8ff" },
     ],
     layers: [
-      { source: { art: "stars" }, height: 1, bottom: 0, speed: 0.03, color: "#e6eeff", opacity: 0.7 },
       { source: { art: "farisles" }, height: 0.36, bottom: 0.36, speed: 0.07, color: "#241a4c", accent: "#b9a2f7", opacity: 0.75 },
       haze("#3a2a6a", 0.08, 0.36, 0.42),
       { source: { art: "clouds" }, height: 0.24, bottom: 0.06, speed: 0.12, color: "#4a3a80", opacity: 0.55 },

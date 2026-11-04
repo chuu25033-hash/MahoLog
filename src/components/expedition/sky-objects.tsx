@@ -1,8 +1,9 @@
 import type { CSSProperties } from "react";
 import type { ExpeditionCelestial } from "@/lib/expedition";
+import { StarSky } from "./star-sky";
 
 /**
- * 探索の景色の空に掛かる、流れない大きな物（月・天文盤・オーロラ・炉心・星冠・銀河・螺旋の塔）。
+ * 探索の景色の空に掛かる、流れない大きな物（星空・月・天文盤・オーロラ・炉心・星冠・星雲・瞬く星・流れ星・塔）。
  * どれも遠く、少女が歩いても動かない。回転や明滅は transform と opacity だけで行う
  */
 
@@ -168,73 +169,30 @@ function StarCrown({ color }: { color: string }) {
   );
 }
 
-/** 正規分布に近い乱数（帯の中ほどに星を集める） */
-const gauss = (i: number, salt: number) => (rand(i, salt) + rand(i, salt + 1) + rand(i, salt + 2) - 1.5) / 1.5;
-const GALAXY_TINTS = ["#fff6ec", "#dfe7ff", "#ffe3c4", "#eddcff", "#cdeeff"];
-/** 銀河の帯に集まる無数の星（帯の中心ほど密に） */
-const GALAXY_STARS = range(420).map((i) => {
-  const along = rand(i, 3);
-  const across = gauss(i, 10) * (0.9 - Math.abs(along - 0.5) * 0.6);
-  return {
-    x: along * 1000,
-    y: 200 + across * 120,
-    r: 0.25 + rand(i, 5) ** 3 * 1.4,
-    o: 0.35 + rand(i, 6) * 0.6,
-    tint: GALAXY_TINTS[i % GALAXY_TINTS.length],
-  };
-});
-/** 光の筋を持つ明るい星（ゆっくり瞬く） */
-const BRIGHT_STARS = [
-  { x: 0.14, y: 0.22, s: 1, d: 0 },
-  { x: 0.36, y: 0.1, s: 0.7, d: -2.3 },
-  { x: 0.58, y: 0.28, s: 0.85, d: -4.1 },
-  { x: 0.9, y: 0.12, s: 1.1, d: -1.2 },
-  { x: 0.27, y: 0.42, s: 0.6, d: -3.4 },
-  { x: 0.72, y: 0.06, s: 0.65, d: -5.2 },
-];
-
 /**
- * 斜めに渡る銀河。淡く広い光、明るい芯、芯を割る暗い塵の筋を重ね、無数の星を帯に集める。
- * 光の筋を持つ明るい星がいくつか、ゆっくり瞬く
+ * ゆっくり瞬く明るい星。写真の星のように、小さな芯と柔らかな暈、ごく細い光の筋だけにする
+ * （星空そのものは star-sky.tsx の canvas に描く）
  */
-function Galaxy({ color }: { color: string }) {
+const TWINKLES = [
+  { x: 0.14, y: 0.2, s: 1, d: 0, c: "#fff6ec" },
+  { x: 0.38, y: 0.09, s: 0.7, d: -2.3, c: "#dfe7ff" },
+  { x: 0.6, y: 0.3, s: 0.8, d: -4.1, c: "#ffe9cf" },
+  { x: 0.9, y: 0.14, s: 1.1, d: -1.2, c: "#e3ecff" },
+  { x: 0.26, y: 0.44, s: 0.55, d: -3.4, c: "#ffd9b4" },
+];
+function Twinkles() {
   return (
     <div className="relative size-full">
-      <div className="absolute inset-[-20%]" style={{ transform: "rotate(-20deg)" }}>
-        <div
-          className="absolute inset-x-0 top-[30%] h-[40%]"
-          style={{ background: `radial-gradient(ellipse 55% 50% at 55% 50%, ${color}38, ${color}12 55%, transparent 75%)`, filter: "blur(18px)" }}
-        />
-        <div
-          className="absolute inset-x-[12%] top-[43%] h-[14%]"
-          style={{ background: "radial-gradient(ellipse 50% 50% at 55% 50%, #fff4e6aa, #e8d8ff44 45%, transparent 75%)", filter: "blur(10px)" }}
-        />
-        {/* 芯を割る暗い塵の筋 */}
-        <div
-          className="absolute inset-x-[20%] top-[48.5%] h-[3.5%]"
-          style={{ background: "radial-gradient(ellipse 50% 50% at 50% 50%, #05031299, transparent 75%)", filter: "blur(5px)", transform: "rotate(1.5deg)" }}
-        />
-        <div
-          className="absolute inset-x-[34%] top-[46%] h-[2.5%]"
-          style={{ background: "radial-gradient(ellipse 50% 50% at 50% 50%, #05031277, transparent 75%)", filter: "blur(4px)", transform: "rotate(-2deg)" }}
-        />
-        <svg viewBox="0 0 1000 400" preserveAspectRatio="xMidYMid slice" className="absolute inset-x-0 top-[25%] h-[50%] w-full">
-          {GALAXY_STARS.map((s, i) => (
-            <circle key={i} cx={s.x} cy={s.y} r={s.r} fill={s.tint} opacity={s.o} />
-          ))}
-        </svg>
-      </div>
-      {BRIGHT_STARS.map((b, i) => (
+      {TWINKLES.map((t, i) => (
         <div
           key={i}
           className="sky-twinkle absolute"
-          style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.s * 3.2}cqh`, height: `${b.s * 3.2}cqh`, transform: "translate(-50%, -50%)", animationDelay: `${b.d}s` }}
+          style={{ left: `${t.x * 100}%`, top: `${t.y * 100}%`, width: `${t.s * 5}cqh`, height: `${t.s * 5}cqh`, transform: "translate(-50%, -50%)", animationDelay: `${t.d}s` }}
         >
-          <svg viewBox="-20 -20 40 40" className="size-full overflow-visible">
-            <circle r={6} fill={GALAXY_TINTS[i % GALAXY_TINTS.length]} opacity={0.12} />
-            <path d="M0,-20 L0.7,-0.7 L20,0 L0.7,0.7 L0,20 L-0.7,0.7 L-20,0 L-0.7,-0.7 Z" fill={GALAXY_TINTS[i % GALAXY_TINTS.length]} opacity={0.9} />
-            <circle r={1.6} fill="#ffffff" />
-          </svg>
+          <div className="absolute inset-[30%] rounded-full" style={{ background: `radial-gradient(circle, ${t.c}cc, ${t.c}22 35%, transparent 70%)` }} />
+          <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2" style={{ background: `linear-gradient(to right, transparent, ${t.c}66 50%, transparent)` }} />
+          <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2" style={{ background: `linear-gradient(to bottom, transparent, ${t.c}66 50%, transparent)` }} />
+          <div className="absolute top-1/2 left-1/2 size-[6%] min-h-[1.5px] min-w-[1.5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
         </div>
       ))}
     </div>
@@ -422,8 +380,15 @@ function Moon({ color }: { color: string }) {
 
 export function SkyObject({ object }: { object: ExpeditionCelestial }) {
   const { kind, x, y, size, color } = object;
+  if (kind === "starsky") {
+    return (
+      <div className="pointer-events-none absolute inset-0">
+        <StarSky seed={object.seed ?? 1} density={object.density ?? 1} milkyWay={object.milkyWay} milkyGlow={object.milkyGlow} />
+      </div>
+    );
+  }
   // 縦長の舞台（スマホ）で大きくなりすぎないよう、幅と高さの小さい方に合わせる。オーロラと銀河は空いっぱいに広げる
-  const wide = kind === "aurora" || kind === "galaxy" || kind === "nebula" || kind === "meteor";
+  const wide = kind === "aurora" || kind === "twinkles" || kind === "nebula" || kind === "meteor";
   const tall = kind === "spire";
   const style: CSSProperties = wide
     ? { left: 0, right: 0, top: `${y * 100}%`, height: `${size * 100}%` }
@@ -443,7 +408,7 @@ export function SkyObject({ object }: { object: ExpeditionCelestial }) {
       {kind === "aurora" && <Aurora />}
       {kind === "core" && <ForgeCore color={color} />}
       {kind === "crown" && <StarCrown color={color} />}
-      {kind === "galaxy" && <Galaxy color={color} />}
+      {kind === "twinkles" && <Twinkles />}
       {kind === "spire" && <SpiralTower color={color} />}
       {kind === "nebula" && <Nebula />}
       {kind === "meteor" && <Meteors />}
