@@ -20,35 +20,33 @@ const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 const gradId = (name: string, color: string) => `expedition-${name}-${color.replace(/[^0-9a-z]/gi, "")}`;
 
 /**
- * 聖堂の壁: 柱の間に、灯のともる尖頭窓。窓は透かし彫り（中央の縦桟・小さな尖頭アーチ・円窓）と鉛の桟で区切り、
- * 光は上ほど強い。柱には柱頭と台座を付ける
+ * 書庫の聖堂の壁: 柱の間の尖頭窓から、外の夜空（星空と月）が透けて見える。窓は透かし彫り（中央の縦桟・小さな尖頭アーチ・円窓）と
+ * 菱形の鉛格子で区切り、硝子は月明かりでほんのり青い。柱には柱頭と台座を付ける
  */
 const CATHEDRAL_BAYS = [90, 270];
 function cathedral(accent: string) {
   const id = gradId("window", accent);
+  const windowPath = (cx: number) => `M${cx - 34},214 V112 Q${cx - 34},62 ${cx},46 Q${cx + 34},62 ${cx + 34},112 V214 Z`;
   return (
     <>
       <defs>
+        {/* 月明かりを受ける古い硝子: 上ほど明るく、ほんのり青い */}
         <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={accent} stopOpacity="0.62" />
-          <stop offset="0.5" stopColor={accent} stopOpacity="0.26" />
-          <stop offset="1" stopColor={accent} stopOpacity="0.05" />
+          <stop offset="0" stopColor={accent} stopOpacity="0.2" />
+          <stop offset="0.6" stopColor={accent} stopOpacity="0.07" />
+          <stop offset="1" stopColor={accent} stopOpacity="0.02" />
         </linearGradient>
-        <radialGradient id={`${id}-halo`} cx="0.5" cy="0.3" r="0.6">
-          <stop offset="0" stopColor="#fff8e6" stopOpacity="0.28" />
-          <stop offset="1" stopColor="#fff8e6" stopOpacity="0" />
-        </radialGradient>
         {/* 古い硝子の菱形の鉛格子 */}
         <pattern id={`${id}-lattice`} width="9" height="13" patternUnits="userSpaceOnUse">
-          <path d="M0,6.5 L4.5,0 L9,6.5 L4.5,13 Z" fill="none" stroke="currentColor" strokeWidth="0.7" />
+          <path d="M0,6.5 L4.5,0 L9,6.5 L4.5,13 Z" fill="none" stroke="currentColor" strokeWidth="0.6" />
         </pattern>
       </defs>
-      <rect x={0} y={0} width={360} height={240} />
+      {/* 壁に窓を抜き、外の夜空（星空と月）を透かす */}
+      <path d={`M0,0 H360 V240 H0 Z ${CATHEDRAL_BAYS.map(windowPath).join(" ")}`} fillRule="evenodd" />
       {CATHEDRAL_BAYS.map((cx) => (
         <g key={cx}>
-          <path d={`M${cx - 34},214 V112 Q${cx - 34},62 ${cx},46 Q${cx + 34},62 ${cx + 34},112 V214 Z`} fill={`url(#${id})`} />
-          <path d={`M${cx - 34},214 V112 Q${cx - 34},62 ${cx},46 Q${cx + 34},62 ${cx + 34},112 V214 Z`} fill={`url(#${id}-halo)`} />
-          <path d={`M${cx - 34},214 V112 Q${cx - 34},62 ${cx},46 Q${cx + 34},62 ${cx + 34},112 V214 Z`} fill={`url(#${id}-lattice)`} opacity={0.55} />
+          <path d={windowPath(cx)} fill={`url(#${id})`} />
+          <path d={windowPath(cx)} fill={`url(#${id}-lattice)`} opacity={0.5} />
           {/* 透かし彫り */}
           <g fill="none" stroke="currentColor" strokeLinecap="round">
             <path d={`M${cx},74 V214 M${cx - 34},150 H${cx + 34}`} strokeWidth={3.2} />
@@ -57,8 +55,10 @@ function cathedral(accent: string) {
             <path d={`M${cx - 7},70 H${cx + 7} M${cx},63 V77`} strokeWidth={1.6} />
             <path d={`M${cx - 34},172 H${cx + 34} M${cx - 34},194 H${cx + 34} M${cx - 17},150 V214 M${cx + 17},150 V214`} strokeWidth={0.9} opacity={0.75} />
           </g>
-          {/* 窓台 */}
+          {/* 窓の縁に差す月明かりと、窓台 */}
+          <path d={`M${cx - 34},214 V112 Q${cx - 34},62 ${cx},46 Q${cx + 34},62 ${cx + 34},112 V214`} fill="none" stroke={accent} strokeWidth={0.8} opacity={0.3} />
           <rect x={cx - 40} y={212} width={80} height={6} />
+          <rect x={cx - 40} y={212} width={80} height={0.8} fill={accent} opacity={0.3} />
         </g>
       ))}
       {/* 柱（柱頭・台座）と、上の蛇腹 */}
@@ -67,10 +67,10 @@ function cathedral(accent: string) {
           <rect x={x - 12} y={24} width={24} height={216} />
           <rect x={x - 16} y={30} width={32} height={6} />
           <rect x={x - 16} y={226} width={32} height={14} />
-          <rect x={x - 3} y={36} width={6} height={190} fill={accent} opacity={0.06} />
+          <rect x={x + 9} y={36} width={2} height={190} fill={accent} opacity={0.08} />
         </g>
       ))}
-      <rect x={0} y={16} width={360} height={4} fill={accent} opacity={0.12} />
+      <rect x={0} y={16} width={360} height={4} fill={accent} opacity={0.1} />
     </>
   );
 }
@@ -105,8 +105,8 @@ function starfield() {
 }
 
 
-/** 書架: 棚板の間に背の不ぞろいな本を詰める */
-function shelfBooks(x0: number, x1: number, shelfY: number, seed: number) {
+/** 書架: 棚板の間に背の不ぞろいな本を詰める。背表紙の色は濃淡があり、ところどころ金の帯が入る。まれに傾いた本 */
+function shelfBooks(x0: number, x1: number, shelfY: number, seed: number, accent: string) {
   const books: ReactNode[] = [];
   let x = x0 + 2;
   let i = 0;
@@ -114,14 +114,22 @@ function shelfBooks(x0: number, x1: number, shelfY: number, seed: number) {
     const w = 4 + Math.floor(rand(seed + i, 4) * 6);
     const h = 24 + Math.floor(rand(seed + i, 5) * 14);
     if (x + w > x1 - 2) break;
-    // ところどころ隙間を空け、まれに傾いた本を置く
+    const tone = 0.7 + rand(seed + i, 8) * 0.3;
+    const banded = rand(seed + i, 9) > 0.55;
     if (rand(seed + i, 6) > 0.9) {
       x += 6;
     } else if (rand(seed + i, 7) > 0.93) {
-      books.push(<rect key={`${seed}-${i}`} x={x} y={shelfY - h + 2} width={w} height={h} transform={`rotate(-14 ${x + w} ${shelfY})`} />);
+      books.push(<rect key={`${seed}-${i}`} x={x} y={shelfY - h + 2} width={w} height={h} opacity={tone} transform={`rotate(-14 ${x + w} ${shelfY})`} />);
       x += w + 6;
     } else {
-      books.push(<rect key={`${seed}-${i}`} x={x} y={shelfY - h} width={w} height={h} />);
+      books.push(
+        <g key={`${seed}-${i}`}>
+          <rect x={x} y={shelfY - h} width={w} height={h} opacity={tone} />
+          {banded && (
+            <path d={`M${x + 0.6},${shelfY - h * 0.82} h${w - 1.2} M${x + 0.6},${shelfY - h * 0.2} h${w - 1.2}`} stroke={accent} strokeWidth={0.6} opacity={0.32} />
+          )}
+        </g>,
+      );
       x += w + 0.8;
     }
     i++;
@@ -129,26 +137,99 @@ function shelfBooks(x0: number, x1: number, shelfY: number, seed: number) {
   return books;
 }
 
+/** 燭台: 三本の蝋燭と、炎のまわりの柔らかな灯 */
+function candelabra(cx: number, base: number, accent: string, key: string) {
+  const id = gradId("candle", accent);
+  return (
+    <g key={key}>
+      <circle cx={cx} cy={base - 16} r={22} fill={`url(#${id})`} className="expedition-flame" />
+      <path d={`M${cx - 1},${base} V${base - 6} M${cx - 9},${base - 6} Q${cx},${base - 2} ${cx + 9},${base - 6} M${cx - 6},${base} H${cx + 6}`} stroke="currentColor" strokeWidth={1.4} fill="none" />
+      {[-9, 0, 9].map((dx, k) => (
+        <g key={k}>
+          <rect x={cx + dx - 1.4} y={base - 6 - (k === 1 ? 10 : 7)} width={2.8} height={k === 1 ? 10 : 7} />
+          <ellipse cx={cx + dx} cy={base - 6 - (k === 1 ? 10 : 7) - 2.6} rx={1.3} ry={2.6} fill="#fff2cc" className="expedition-flame" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
 function bookcase(x: number, key: number, accent: string) {
   const width = 160;
   const shelves = [64, 110, 156, 200];
+  const id = gradId("candle", accent);
   return (
     <g key={key}>
-      {/* 背板は淡く、奥の空がわずかに透ける */}
+      <defs>
+        <radialGradient id={id}>
+          <stop offset="0" stopColor={accent} stopOpacity="0.45" />
+          <stop offset="0.4" stopColor={accent} stopOpacity="0.12" />
+          <stop offset="1" stopColor={accent} stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {/* 背板は淡く、奥がわずかに透ける */}
       <rect x={x} y={22} width={width} height={178} opacity={0.4} />
       <rect x={x - 4} y={14} width={width + 8} height={9} />
       <rect x={x} y={20} width={6} height={180} />
       <rect x={x + width - 6} y={20} width={6} height={180} />
       {shelves.map((y, i) => (
         <g key={y}>
+          {shelfBooks(x + 6, x + width - 6, y, key * 40 + i * 9, accent)}
           <rect x={x} y={y} width={width} height={5} />
-          {shelfBooks(x + 6, x + width - 6, y, key * 40 + i * 9)}
+          <rect x={x} y={y} width={width} height={0.7} fill={accent} opacity={0.22} />
         </g>
       ))}
-      {/* 書架の上に灯る、一本の蝋燭 */}
-      <rect x={x + 120} y={6} width={3} height={8} />
-      <ellipse cx={x + 121.5} cy={3.5} rx={1.6} ry={2.8} fill={accent} className="expedition-flame" />
+      {/* 書架の上の燭台 */}
+      {candelabra(x + 112, 14, accent, `c${key}`)}
     </g>
+  );
+}
+
+/**
+ * 灯火の机: 蝋燭に照らされて開いた本、インク壺と羽根ペン、積んだ本と巻物。
+ * 景色の中をときおり通り過ぎる（はじまりの小屋の机の名残）
+ */
+function readingDesk(accent: string) {
+  const id = gradId("desk", accent);
+  return (
+    <>
+      <defs>
+        <radialGradient id={`${id}-glow`}>
+          <stop offset="0" stopColor={accent} stopOpacity="0.5" />
+          <stop offset="0.35" stopColor={accent} stopOpacity="0.14" />
+          <stop offset="1" stopColor={accent} stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id={`${id}-page`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#f6e7c4" stopOpacity="0.32" />
+          <stop offset="1" stopColor="#f6e7c4" stopOpacity="0.6" />
+        </linearGradient>
+      </defs>
+      {/* 蝋燭の灯が机のまわりを照らす */}
+      <ellipse cx={332} cy={56} rx={110} ry={80} fill={`url(#${id}-glow)`} className="expedition-flame" />
+      {/* 机: 天板・彫りのある脚・引き出し */}
+      <rect x={200} y={70} width={160} height={7} />
+      <rect x={200} y={70} width={160} height={0.8} fill={accent} opacity={0.4} />
+      <path d="M208,77 H352 V90 H208 Z" />
+      <path d="M268,82 h24" stroke={accent} strokeWidth={0.8} opacity={0.35} />
+      <path d="M212,90 C210,100 216,108 212,120 H220 C216,108 222,100 220,90 Z M340,90 C338,100 344,108 340,120 H348 C344,108 350,100 348,90 Z" />
+      {/* 開いた本: 灯を受けた頁と、かすれた行 */}
+      <path d="M248,70 C254,64 266,63 278,66 L278,70 Z" fill={`url(#${id}-page)`} />
+      <path d="M278,70 L278,66 C290,63 302,64 308,70 Z" fill={`url(#${id}-page)`} />
+      <path d="M254,67.5 h18 M282,67 h18 M256,68.8 h16 M284,68.6 h14" stroke="currentColor" strokeWidth={0.4} opacity={0.5} />
+      {/* 燭台と炎 */}
+      <path d="M326,70 h12 l-2,-2 h-8 Z M330,68 V54 h4 V68 Z" />
+      <ellipse cx={332} cy={50} rx={1.8} ry={3.6} fill="#fff2cc" className="expedition-flame" />
+      {/* インク壺と羽根ペン */}
+      <path d="M222,70 C220,66 220,62 224,61 H230 C234,62 234,66 232,70 Z" />
+      <path d="M228,61 C232,52 240,42 250,36 C246,44 240,52 230,62 Z" />
+      <path d="M229,61 L249,37" stroke={accent} strokeWidth={0.4} opacity={0.35} />
+      {/* 床に積んだ本と、立て掛けた巻物 */}
+      <path d="M372,120 V112 H404 V120 Z M376,112 V105 H400 V112 Z M370,105 V98 H398 V105 Z" />
+      <path d="M372,112 H404 M376,105 H400" stroke={accent} strokeWidth={0.4} opacity={0.3} />
+      <path d="M176,120 L188,84 L193,85 L182,120 Z M184,120 L192,90 L196,91 L189,120 Z" />
+      <circle cx={190} cy={84} r={2.4} />
+      <circle cx={194} cy={90} r={2} />
+    </>
   );
 }
 
@@ -849,6 +930,7 @@ export const ART: Record<ExpeditionArt, Art> = {
   pines: { width: 400, height: 200, render: () => <path d={PINE_D} /> },
   trunks: { width: 400, height: 200, render: () => TRUNK_PARTS.map((d, i) => <path key={i} d={d} />) },
   cathedral: { width: 360, height: 240, render: cathedral },
+  desk: { width: 900, height: 120, render: readingDesk },
   stars: {
     width: 400,
     height: 200,
@@ -859,10 +941,11 @@ export const ART: Record<ExpeditionArt, Art> = {
     height: 200,
     render: () => <path d={archesPath} fillRule="evenodd" />,
   },
+  // 書架の上に燭台を立てる分だけ、上に余白を取る
   shelves: {
     width: 360,
-    height: 200,
-    render: (accent) => [bookcase(10, 0, accent), bookcase(190, 1, accent)],
+    height: 224,
+    render: (accent) => <g transform="translate(0 24)">{[bookcase(10, 0, accent), bookcase(190, 1, accent)]}</g>,
   },
   trees: {
     width: 400,
@@ -1016,7 +1099,8 @@ export function BackdropTile({ source, accent, rim = 0 }: { source: ExpeditionSo
     <svg viewBox={`0 0 ${art.width} ${art.height}`} className="h-full w-auto shrink-0" style={{ aspectRatio }} fill="currentColor" aria-hidden>
       {/* 影絵の上の縁に差す光: 同じ絵を少し上へずらして灯の色で敷き、その上に影絵を重ねる */}
       {rim > 0 && (
-        <g transform="translate(0 -1.2)" fill={accent} stroke={accent} opacity={rim} style={{ color: accent }}>
+        // 塗りだけをずらして敷く（stroke を付けると、塗った形すべてに輪郭線が付いてしまう）
+        <g transform="translate(0 -1.2)" fill={accent} opacity={rim} style={{ color: accent }}>
           {art.render(accent)}
         </g>
       )}

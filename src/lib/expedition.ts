@@ -9,6 +9,7 @@ export type ExpeditionArt =
   | "stars"
   | "arches"
   | "cathedral"
+  | "desk"
   | "shelves"
   | "trees"
   | "pines"
@@ -120,18 +121,25 @@ const ON_FLOOR = EXPEDITION_FLOOR * (1 - 6 / 64);
 const haze = (color: string, bottom: number, height: number, opacity: number): ExpeditionHaze => ({ haze: color, bottom, height, opacity });
 
 export const EXPEDITION_SCENES = {
+  // STAGE 1 始まりの書斎: 外からの冷たい月明かりと、内の温かな蝋燭の灯。尖頭窓の向こうに星空と月が透け、
+  // 燭台の灯る書架の前を、ときおり灯火の机が通り過ぎる
   library: {
     id: "library",
     name: "古い書庫",
-    sky: ["#09080f", "#17111c", "#2a1c1c"],
+    sky: ["#04060f", "#0b0d1e", "#1c1626"],
     glow: "#e8b86a",
     motes: { kind: "float", color: "#f4d9a0" },
-    rays: { color: "#f4d9a0", opacity: 0.16, from: "right" },
+    celestial: [
+      { kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 11, density: 0.9, milkyWay: 34, milkyGlow: 0.5 },
+      { kind: "moon", x: 0.78, y: 0.24, size: 0.12, color: "#eef1ff" },
+    ],
+    rays: { color: "#cfdcff", opacity: 0.12, from: "right" },
     layers: [
-      { source: { art: "cathedral" }, height: 0.95, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.18, color: "#1a1219", accent: "#e8b86a", opacity: 0.95, rim: 0.18 },
-      haze("#3a2618", EXPEDITION_FLOOR, 0.45, 0.55),
-      { source: { art: "shelves" }, height: 0.62, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.55, color: "#0e0a10", accent: "#e8b86a", rim: 0.2 },
-      haze("#2a1c1c", EXPEDITION_FLOOR - 0.02, 0.1, 0.5),
+      { source: { art: "cathedral" }, height: 0.95, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.18, color: "#140e15", accent: "#bcd0ff", rim: 0.14 },
+      haze("#3a2618", EXPEDITION_FLOOR, 0.42, 0.5),
+      { source: { art: "shelves" }, height: 0.62, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.55, color: "#0d090f", accent: "#e8b86a", rim: 0.18 },
+      haze("#2a1c1c", EXPEDITION_FLOOR - 0.02, 0.1, 0.45),
+      { source: { art: "desk" }, height: 0.2, bottom: ON_FLOOR, speed: 0.85, color: "#08060a", accent: "#f2c27a", rim: 0.15 },
       floor("#07060a", "#e8b86a"),
     ],
   },
