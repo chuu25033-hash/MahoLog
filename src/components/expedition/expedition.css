@@ -118,6 +118,10 @@
 .wander-hair,
 .wander-tome,
 .wander-cape,
+.wander-skirt,
+.wander-skirt-hem,
+.wander-strand,
+.wander-strand-tip,
 .wander-staff {
   transform-box: view-box;
 }
@@ -169,6 +173,21 @@
 .wander-tome { animation: wander-hair-idle 4.6s ease-in-out -1.5s infinite; }
 .wander-cape { animation: wander-mantle-idle 7s ease-in-out infinite; }
 .wander-staff { animation: wander-staff-idle 8s ease-in-out infinite; }
+
+/* 立ち姿の腰布と髪の房: 風にごくゆっくりそよぐ（房の遅れは wanderer.tsx で房ごとに付ける） */
+@keyframes wander-skirt-idle {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(0.8deg); }
+}
+@keyframes wander-strand-idle {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(2.4deg); }
+}
+.wander-skirt { animation: wander-skirt-idle 6s ease-in-out infinite; }
+/* 裾は上の布より少し遅れてそよぐ */
+.wander-skirt-hem { animation: wander-skirt-idle 6s ease-in-out -5.2s infinite; }
+.wander-strand,
+.wander-strand-tip { animation: wander-strand-idle 6s ease-in-out infinite; }
 
 /*
  * 歩み（1.8秒で2歩）: 踵から着いて膝で受け、腿を後ろへ送って蹴り出し、膝を畳んで脚を前へ振り出す。
@@ -412,6 +431,44 @@
   50% { transform: rotate(3deg); }
 }
 
+/*
+ * 腰布: 三枚はまとまって動き、腰から上はほとんど揺らさない。一歩ごとに体が沈んで浮くのに合わせて、
+ * 腿から下の裾が少し遅れて後ろへ翻り、戻る（上の布の揺れに裾の揺れが重なって、布がしなる）。
+ * 前の短い布は手前の腿の振り（wander-thigh。前へ振り出すのは周期の終わり近く）に少し遅れてついていく
+ */
+@keyframes wander-skirt {
+  0%, 100% { transform: rotate(0.6deg); }
+  50% { transform: rotate(2.4deg); }
+}
+@keyframes wander-skirt-hem {
+  0%, 100% { transform: rotate(-1deg); }
+  50% { transform: rotate(4.5deg); }
+}
+@keyframes wander-skirt-front {
+  0%, 100% { transform: rotate(-4deg); }
+  25% { transform: rotate(-0.5deg); }
+  48% { transform: rotate(2.6deg); }
+  72% { transform: rotate(-1.5deg); }
+  92% { transform: rotate(-5.5deg); }
+}
+@keyframes wander-skirt-front-hem {
+  0%, 100% { transform: rotate(-5deg); }
+  25% { transform: rotate(-0.5deg); }
+  48% { transform: rotate(4deg); }
+  72% { transform: rotate(-1.5deg); }
+  92% { transform: rotate(-7deg); }
+}
+
+/* 髪の房: 付け根の揺れに毛先が遅れてついてきて、房がしなる */
+@keyframes wander-strand {
+  0%, 100% { transform: rotate(0.5deg); }
+  50% { transform: rotate(5deg); }
+}
+@keyframes wander-strand-tip {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(6deg); }
+}
+
 @keyframes wander-orb {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 1; }
@@ -440,6 +497,13 @@
 .expedition[data-walking] .wander-hat { animation: wander-hat 0.9s ease-in-out -0.25s infinite; }
 .expedition[data-walking] .wander-hair { animation: wander-hair 0.9s ease-in-out -0.35s infinite; }
 .expedition[data-walking] .wander-tome { animation: wander-cape 0.9s ease-in-out -0.5s infinite; }
+.expedition[data-walking] .wander-skirt { animation: wander-skirt 0.9s ease-in-out -0.5s infinite; }
+.expedition[data-walking] .wander-skirt-hem { animation: wander-skirt-hem 0.9s ease-in-out -0.35s infinite; }
+/* 前の布は手前の腿より 0.1 秒、裾はさらに 0.12 秒遅れる（遅れは周期 1.8 秒から引いた負の値で付ける） */
+.expedition[data-walking] .wander-skirt-front { animation: wander-skirt-front 1.8s linear -1.7s infinite; }
+.expedition[data-walking] .wander-skirt-front-hem { animation: wander-skirt-front-hem 1.8s linear -1.58s infinite; }
+.expedition[data-walking] .wander-strand { animation-name: wander-strand; animation-duration: 0.9s; }
+.expedition[data-walking] .wander-strand-tip { animation-name: wander-strand-tip; animation-duration: 0.9s; }
 .expedition[data-walking] .wander-cape { animation: wander-mantle 1.8s ease-in-out -0.5s infinite; }
 /* 杖を持つ腕は、手前の脚と逆に振る（手前の脚が後ろへ行くとき腕が前へ） */
 .expedition[data-walking] .wander-staff { animation: wander-staff 1.8s ease-in-out -0.9s infinite; }
@@ -465,6 +529,10 @@
   .expedition .wander-hair,
   .expedition .wander-tome,
   .expedition .wander-cape,
+  .expedition .wander-skirt,
+  .expedition .wander-skirt-hem,
+  .expedition .wander-strand,
+  .expedition .wander-strand-tip,
   .expedition .wander-staff,
   .expedition .wander-spark { animation: none; }
   .expedition-mote { opacity: 0.5; }

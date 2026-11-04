@@ -83,9 +83,15 @@ const WALK_ANIMATIONS = new Set([
   "wander-mantle",
   "wander-cape",
   "wander-staff",
+  "wander-skirt",
+  "wander-skirt-front",
+  "wander-skirt-hem",
+  "wander-skirt-front-hem",
+  "wander-strand",
+  "wander-strand-tip",
 ]);
 /** 姿勢を持つ部位（立ち姿と歩く姿勢の間をなめらかにつなぐ） */
-const POSE_PARTS = ".wander-body, .wander-torso, .wander-thigh, .wander-shin, .wander-foot, .wander-hat, .wander-hair, .wander-cape, .wander-staff, .wander-tome";
+const POSE_PARTS = ".wander-body, .wander-torso, .wander-thigh, .wander-shin, .wander-foot, .wander-hat, .wander-hair, .wander-cape, .wander-staff, .wander-tome, .wander-skirt, .wander-skirt-hem, .wander-strand, .wander-strand-tip";
 /** 歩みの1周期（ミリ秒。expedition.css の歩みのキーフレームと同じ） */
 const GAIT_MS = 1800;
 /**
