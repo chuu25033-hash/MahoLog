@@ -91,7 +91,10 @@ export function StageCard({ totalMp, className, ...rest }: { totalMp: number; cl
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="flex h-[calc(100dvh-1rem)] max-h-[44rem] max-w-[min(48rem,calc(100%-2rem))]! flex-col gap-3 rounded-2xl p-4 ring-starlight/25 backdrop-blur-xl">
+        <DialogContent
+          // 既定では最初のノード（原点 1-1）にフォーカスが移り、地図が一番下まで流れてしまう。滞在中のノードへ移す
+          initialFocus={() => document.querySelector<HTMLElement>("[data-current-area]")}
+          className="flex h-[calc(100dvh-1rem)] max-h-[44rem] max-w-[min(48rem,calc(100%-2rem))]! flex-col gap-3 rounded-2xl p-4 ring-starlight/25 backdrop-blur-xl">
           <DialogHeader>
             <DialogTitle className="tracking-[0.3em]">エリア選択</DialogTitle>
             <DialogDescription>ノードをタップすると詳細が開きます。歩みは原点から上へと続いていきます。</DialogDescription>

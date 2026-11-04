@@ -300,6 +300,7 @@ function AreaNode({
     <button
       onClick={onSelect}
       aria-pressed={inspected}
+      data-current-area={current || undefined}
       aria-label={unlocked ? `${area.id} ${area.name}` : `${area.id} 未解放`}
       className="group absolute flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none focus-visible:ring-1 focus-visible:ring-aqua/60"
       style={{ left: `${point.x}%`, top: point.y }}
