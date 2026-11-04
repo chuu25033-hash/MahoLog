@@ -8,15 +8,28 @@ import type { AmbienceKind, Area } from "./areas";
 export type ExpeditionArt =
   | "stars"
   | "arches"
+  | "cathedral"
   | "shelves"
   | "trees"
+  | "pines"
+  | "trunks"
   | "spires"
   | "crystals"
   | "icicles"
   | "forge"
   | "clouds"
   | "floor"
-  | "grass";
+  | "grass"
+  | "magma"
+  | "constellations"
+  | "domes"
+  | "balustrade"
+  | "clocktower"
+  | "icepillars"
+  | "alchemy"
+  | "skyisles"
+  | "belfry"
+  | "fragments";
 
 /** 層の絵の出どころ。描く絵か、public に置いた画像（横に継ぎ目なく繋がるもの） */
 export type ExpeditionSource = { art: ExpeditionArt } | { image: string; /** 幅 ÷ 高さ */ aspect: number };
@@ -34,6 +47,17 @@ export type ExpeditionLayer = {
   /** 窓の灯・熾火など、影絵に添える光の色 */
   accent?: string;
   opacity?: number;
+  /** 影絵の上の縁に差す光（accent の色）の強さ。0〜1 */
+  rim?: number;
+};
+
+/** 層と層の間に漂う霞。遠い層ほど霞んで見え、奥行きが出る */
+export type ExpeditionHaze = {
+  haze: string;
+  /** 霞の帯の下端と高さ（舞台の高さに対する割合） */
+  bottom: number;
+  height: number;
+  opacity: number;
 };
 
 /** 舞台に漂う粒子の動き */
@@ -48,8 +72,26 @@ export type ExpeditionScene = {
   glow: string;
   motes: { kind: ExpeditionMote; color: string };
   /** 奥から手前の順に重ねる */
-  layers: ExpeditionLayer[];
+  layers: (ExpeditionLayer | ExpeditionHaze)[];
+  /** 空に掛かる、流れない大きな物（components/expedition/sky-objects.tsx） */
+  celestial?: ExpeditionCelestial[];
+  /** 窓や月から差し込む光の筋 */
+  rays?: { color: string; opacity: number; from: "left" | "right" };
 };
+
+/**
+ * 空に掛かる物。月・天文盤（観測塔）・オーロラ（大回廊）・炉心（魔導炉）・星冠（大聖堂）・銀河と螺旋の塔（星天の塔）。
+ * x・y は舞台に対する割合（塔は下端）、size は舞台の高さに対する割合（オーロラと銀河は帯の高さ）
+ */
+export type ExpeditionCelestial = {
+  kind: "moon" | "astrolabe" | "aurora" | "core" | "crown" | "galaxy" | "spire";
+  x: number;
+  y: number;
+  size: number;
+  color: string;
+};
+
+export const isHaze = (layer: ExpeditionLayer | ExpeditionHaze): layer is ExpeditionHaze => "haze" in layer;
 
 /** 少女の足元の床。どの舞台でもこの高さを歩く */
 export const EXPEDITION_FLOOR = 0.16;
@@ -63,93 +105,130 @@ const floor = (color: string, accent: string, art: ExpeditionArt = "floor"): Exp
   accent,
 });
 
+const haze = (color: string, bottom: number, height: number, opacity: number): ExpeditionHaze => ({ haze: color, bottom, height, opacity });
+
 export const EXPEDITION_SCENES = {
   library: {
     id: "library",
     name: "古い書庫",
-    sky: ["#0b0a14", "#1a1424", "#2b1f22"],
+    sky: ["#09080f", "#17111c", "#2a1c1c"],
     glow: "#e8b86a",
     motes: { kind: "float", color: "#f4d9a0" },
+    rays: { color: "#f4d9a0", opacity: 0.16, from: "right" },
     layers: [
-      { source: { art: "arches" }, height: 0.92, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.22, color: "#261d2c", opacity: 0.85 },
-      { source: { art: "shelves" }, height: 0.62, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.55, color: "#120d16", accent: "#e8b86a" },
+      { source: { art: "cathedral" }, height: 0.95, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.18, color: "#1a1219", accent: "#e8b86a", opacity: 0.95, rim: 0.18 },
+      haze("#3a2618", EXPEDITION_FLOOR, 0.45, 0.55),
+      { source: { art: "shelves" }, height: 0.62, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.55, color: "#0e0a10", accent: "#e8b86a", rim: 0.2 },
+      haze("#2a1c1c", EXPEDITION_FLOOR - 0.02, 0.1, 0.5),
       floor("#07060a", "#e8b86a"),
     ],
   },
   forest: {
     id: "forest",
     name: "月明かりの森",
-    sky: ["#050d0d", "#0c201d", "#16362c"],
+    sky: ["#040a0c", "#0b1c1c", "#153229"],
     glow: "#8fdcc4",
     motes: { kind: "float", color: "#d7f5a8" },
+    celestial: [{ kind: "moon", x: 0.74, y: 0.2, size: 0.13, color: "#e6f6dc" }],
+    rays: { color: "#d7f5e8", opacity: 0.1, from: "right" },
     layers: [
       { source: { art: "stars" }, height: 0.6, bottom: 0.4, speed: 0.04, color: "#d7f5a8", opacity: 0.5 },
-      { source: { art: "trees" }, height: 0.55, bottom: EXPEDITION_FLOOR + 0.04, speed: 0.2, color: "#13302a", opacity: 0.9 },
-      { source: { art: "trees" }, height: 0.78, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.55, color: "#07130f" },
-      floor("#040907", "#d7f5a8", "grass"),
+      { source: { art: "pines" }, height: 0.5, bottom: EXPEDITION_FLOOR + 0.06, speed: 0.12, color: "#1a3a33", opacity: 0.7 },
+      haze("#2c5a4a", EXPEDITION_FLOOR + 0.04, 0.32, 0.45),
+      { source: { art: "pines" }, height: 0.66, bottom: EXPEDITION_FLOOR + 0.01, speed: 0.25, color: "#0f241e", opacity: 0.95, accent: "#a8e6c8", rim: 0.14 },
+      haze("#1d4034", EXPEDITION_FLOOR, 0.22, 0.55),
+      { source: { art: "trunks" }, height: 1.02, bottom: EXPEDITION_FLOOR - 0.03, speed: 0.6, color: "#040a08", accent: "#d7f5a8", rim: 0.16 },
+      floor("#030806", "#d7f5a8", "grass"),
     ],
   },
+  // STAGE 3 星空の観測塔（刻の崩壊）: 歯の欠けた天文盤が空に掛かり、星座の線が星（誰かの一夜）を結ぶ
   observatory: {
     id: "observatory",
-    name: "星空の塔",
-    sky: ["#04051a", "#0d1336", "#1c204c"],
+    name: "星空の観測塔",
+    sky: ["#02031a", "#0a1036", "#1b1e4e"],
     glow: "#8db7f2",
     motes: { kind: "float", color: "#e2c974" },
+    celestial: [{ kind: "astrolabe", x: 0.68, y: 0.34, size: 0.78, color: "#e2c974" }],
     layers: [
-      { source: { art: "stars" }, height: 0.75, bottom: 0.25, speed: 0.04, color: "#e6eeff", opacity: 0.8 },
-      { source: { art: "spires" }, height: 0.7, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.22, color: "#141a3a", accent: "#e2c974" },
-      { source: { art: "arches" }, height: 0.5, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.55, color: "#080b1e", opacity: 0.95 },
+      { source: { art: "constellations" }, height: 0.78, bottom: 0.22, speed: 0.05, color: "#e6eeff", accent: "#e2c974" },
+      haze("#2a3270", 0.1, 0.36, 0.55),
+      { source: { art: "domes" }, height: 0.56, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.24, color: "#0f1434", accent: "#e2c974", rim: 0.2 },
+      haze("#1b1e4e", EXPEDITION_FLOOR - 0.02, 0.16, 0.55),
+      { source: { art: "balustrade" }, height: 0.12, bottom: EXPEDITION_FLOOR - 0.005, speed: 0.92, color: "#060818", accent: "#8db7f2", rim: 0.2 },
       floor("#05061a", "#8db7f2"),
     ],
   },
+  // STAGE 4 蒼氷の大回廊（大沈黙）: 凍った星脈のオーロラ、針の止まった時計塔、誰かの一時間が凍った氷の柱
   frost: {
     id: "frost",
-    name: "蒼氷の回廊",
-    sky: ["#060c18", "#0f2034", "#1b3550"],
+    name: "蒼氷の大回廊",
+    sky: ["#030914", "#0a1a2e", "#173049"],
     glow: "#cfe9ff",
     motes: { kind: "fall", color: "#e6f4ff" },
+    celestial: [{ kind: "aurora", x: 0, y: 0.0, size: 0.46, color: "#7af0d0" }],
     layers: [
-      { source: { art: "arches" }, height: 0.9, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.2, color: "#17304a", opacity: 0.8 },
-      { source: { art: "crystals" }, height: 0.42, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.55, color: "#0b1a2c", accent: "#71e2ef" },
-      { source: { art: "icicles" }, height: 0.2, bottom: 0.8, speed: 0.55, color: "#0a1624", accent: "#cfe9ff" },
-      floor("#050c16", "#cfe9ff"),
+      { source: { art: "stars" }, height: 0.6, bottom: 0.4, speed: 0.03, color: "#e6f4ff", opacity: 0.55 },
+      { source: { art: "clocktower" }, height: 0.7, bottom: EXPEDITION_FLOOR, speed: 0.14, color: "#10233a", accent: "#bfe3ff", opacity: 0.9, rim: 0.18 },
+      haze("#3a6488", EXPEDITION_FLOOR, 0.34, 0.42),
+      { source: { art: "icepillars" }, height: 0.64, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.42, color: "#0a1828", accent: "#9be8f5", rim: 0.2 },
+      { source: { art: "crystals" }, height: 0.3, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.7, color: "#07131f", accent: "#71e2ef", rim: 0.2 },
+      haze("#173049", EXPEDITION_FLOOR - 0.02, 0.08, 0.5),
+      floor("#040b14", "#cfe9ff"),
     ],
   },
+  // STAGE 5 紅蓮の魔導炉（詠唱の儀式）: 落ちた星が炉心で燃え、ルーンの陣が巡る。錬金術の器具と熾火の床
   forge: {
     id: "forge",
-    name: "紅蓮の工房",
-    sky: ["#110505", "#270d09", "#3d190f"],
+    name: "紅蓮の魔導炉",
+    sky: ["#0c0303", "#200907", "#3a150c"],
     glow: "#f2a38d",
     motes: { kind: "rise", color: "#f2c27a" },
+    celestial: [{ kind: "core", x: 0.62, y: 0.38, size: 0.62, color: "#f2a35d" }],
+    rays: { color: "#f2a38d", opacity: 0.07, from: "left" },
     layers: [
-      { source: { art: "spires" }, height: 0.6, bottom: EXPEDITION_FLOOR, speed: 0.15, color: "#2a110d", accent: "#f2a38d", opacity: 0.8 },
-      { source: { art: "forge" }, height: 0.6, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.5, color: "#120706", accent: "#f2c27a" },
-      floor("#0b0404", "#f2a38d"),
+      haze("#5a2412", EXPEDITION_FLOOR + 0.06, 0.4, 0.45),
+      { source: { art: "spires" }, height: 0.46, bottom: EXPEDITION_FLOOR + 0.01, speed: 0.12, color: "#240e0b", accent: "#f2a38d", opacity: 0.8, rim: 0.14 },
+      haze("#4a1c0e", EXPEDITION_FLOOR - 0.01, 0.24, 0.5),
+      { source: { art: "alchemy" }, height: 0.56, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.5, color: "#0e0505", accent: "#f2c27a", rim: 0.18 },
+      floor("#0a0303", "#f2a35d", "magma"),
     ],
   },
+  // STAGE 6 天空の大聖堂（継承）: 星冠の光輪と光の柱、雲に浮かぶ聖堂の島、鈴の下がる白い列柱
   sanctum: {
     id: "sanctum",
-    name: "天空の聖堂",
-    sky: ["#0d0c1a", "#221f36", "#3a3348"],
+    name: "天空の大聖堂",
+    sky: ["#14112a", "#3a2f52", "#6a5868"],
     glow: "#fbf3d4",
     motes: { kind: "float", color: "#fbf3d4" },
+    celestial: [{ kind: "crown", x: 0.66, y: 0.2, size: 0.3, color: "#fbe8b0" }],
+    rays: { color: "#fff3c8", opacity: 0.14, from: "right" },
     layers: [
-      { source: { art: "clouds" }, height: 0.4, bottom: 0.3, speed: 0.08, color: "#4a4462", opacity: 0.55 },
-      { source: { art: "arches" }, height: 0.86, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.4, color: "#16141f", opacity: 0.95 },
-      { source: { art: "clouds" }, height: 0.18, bottom: 0.02, speed: 0.75, color: "#2c2840", opacity: 0.7 },
-      floor("#0b0a14", "#e2c974"),
+      { source: { art: "clouds" }, height: 0.36, bottom: 0.34, speed: 0.05, color: "#8a7a98", opacity: 0.35 },
+      { source: { art: "skyisles" }, height: 0.42, bottom: 0.3, speed: 0.1, color: "#3a3150", accent: "#fbe8b0", opacity: 0.85, rim: 0.2 },
+      haze("#8a7088", 0.18, 0.3, 0.4),
+      { source: { art: "clouds" }, height: 0.3, bottom: 0.1, speed: 0.2, color: "#5c4f70", opacity: 0.6 },
+      { source: { art: "belfry" }, height: 0.6, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.4, color: "#1c1828", accent: "#fbe8b0", rim: 0.22 },
+      haze("#6a5868", EXPEDITION_FLOOR - 0.02, 0.1, 0.45),
+      floor("#120f1c", "#fbe8b0"),
     ],
   },
+  // 星天の塔（再創生）: 銀河の帯の下、星々の間へ螺旋の塔が果てなく伸び、ルーンの足場が浮かぶ
   zenith: {
     id: "zenith",
     name: "星天の塔",
-    sky: ["#04030c", "#110a28", "#1e1340"],
+    sky: ["#020109", "#0c0722", "#1b1140"],
     glow: "#a882fb",
     motes: { kind: "float", color: "#71e2ef" },
+    celestial: [
+      { kind: "galaxy", x: 0, y: 0.02, size: 0.6, color: "#b9a2f7" },
+      { kind: "spire", x: 0.8, y: EXPEDITION_FLOOR, size: 0.95, color: "#71e2ef" },
+    ],
     layers: [
-      { source: { art: "stars" }, height: 1, bottom: 0, speed: 0.04, color: "#e6eeff", opacity: 0.9 },
-      { source: { art: "clouds" }, height: 0.3, bottom: 0.05, speed: 0.15, color: "#2a2050", opacity: 0.6 },
-      { source: { art: "spires" }, height: 0.55, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.3, color: "#0c0820", accent: "#71e2ef" },
+      { source: { art: "stars" }, height: 1, bottom: 0, speed: 0.03, color: "#e6eeff", opacity: 0.9 },
+      haze("#3a2a6a", 0.08, 0.34, 0.4),
+      { source: { art: "fragments" }, height: 0.5, bottom: EXPEDITION_FLOOR + 0.12, speed: 0.18, color: "#140c30", accent: "#71e2ef", opacity: 0.9, rim: 0.2 },
+      { source: { art: "fragments" }, height: 0.4, bottom: EXPEDITION_FLOOR - 0.04, speed: 0.45, color: "#090520", accent: "#a882fb", rim: 0.2 },
+      haze("#1b1140", EXPEDITION_FLOOR - 0.02, 0.1, 0.5),
       floor("#06041a", "#a882fb"),
     ],
   },

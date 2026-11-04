@@ -47,6 +47,17 @@
   animation: expedition-flame 2.6s ease-in-out infinite;
 }
 
+/* 差し込む光の筋は、ぼかしてゆっくり明滅させる */
+@keyframes expedition-ray {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.expedition-ray {
+  filter: blur(10px);
+  animation: expedition-ray 9s ease-in-out infinite;
+}
+
 /* 少女: 影絵が夜に沈まないよう、杖の灯の色で輪郭を淡く縁取る */
 .wanderer {
   filter: drop-shadow(0 0 3px color-mix(in srgb, var(--wander-glow) 45%, transparent));
@@ -58,6 +69,7 @@
 .wander-torso,
 .wander-hat,
 .wander-hair,
+.wander-tome,
 .wander-cape,
 .wander-staff {
   transform-box: view-box;
@@ -87,9 +99,15 @@
   50% { transform: rotate(3deg); }
 }
 
-@keyframes wander-cape-idle {
-  0%, 100% { transform: rotate(1deg); }
-  50% { transform: rotate(5deg); }
+/* 重いマントは小さくゆっくり揺れる */
+@keyframes wander-mantle-idle {
+  0%, 100% { transform: rotate(0.4deg); }
+  50% { transform: rotate(1.8deg); }
+}
+
+@keyframes wander-mantle {
+  0%, 100% { transform: rotate(1.6deg); }
+  50% { transform: rotate(3.6deg); }
 }
 
 @keyframes wander-staff-idle {
@@ -100,7 +118,8 @@
 .wander-torso { animation: wander-breathe 5s ease-in-out infinite; }
 .wander-hat { animation: wander-hat-idle 7s ease-in-out infinite; }
 .wander-hair { animation: wander-hair-idle 6s ease-in-out infinite; }
-.wander-cape { animation: wander-cape-idle 5.5s ease-in-out infinite; }
+.wander-tome { animation: wander-hair-idle 4.6s ease-in-out -1.5s infinite; }
+.wander-cape { animation: wander-mantle-idle 7s ease-in-out infinite; }
 .wander-staff { animation: wander-staff-idle 8s ease-in-out infinite; }
 
 /*
@@ -372,14 +391,17 @@
 .expedition[data-walking] .wander-torso { animation: wander-lean 0.9s ease-in-out infinite; }
 .expedition[data-walking] .wander-hat { animation: wander-hat 0.9s ease-in-out -0.25s infinite; }
 .expedition[data-walking] .wander-hair { animation: wander-hair 0.9s ease-in-out -0.35s infinite; }
-.expedition[data-walking] .wander-cape { animation: wander-cape 0.9s ease-in-out -0.3s infinite; }
-.expedition[data-walking] .wander-staff { animation: wander-staff 1.8s ease-in-out infinite; }
+.expedition[data-walking] .wander-tome { animation: wander-cape 0.9s ease-in-out -0.5s infinite; }
+.expedition[data-walking] .wander-cape { animation: wander-mantle 1.8s ease-in-out -0.5s infinite; }
+/* 杖を持つ腕は、手前の脚と逆に振る（手前の脚が後ろへ行くとき腕が前へ） */
+.expedition[data-walking] .wander-staff { animation: wander-staff 1.8s ease-in-out -0.9s infinite; }
 .expedition[data-walking] .wander-spark { animation: wander-spark 2.6s ease-out infinite; }
 
 /* 動きを抑える設定では、景色を止めて少女を立ち止まらせる */
 @media (prefers-reduced-motion: reduce) {
   .expedition .expedition-strip { animation-play-state: paused; }
   .expedition .expedition-mote,
+  .expedition .expedition-ray,
   .expedition .expedition-flame,
   .expedition .wander-orb,
   .expedition .wander-body,
@@ -389,6 +411,7 @@
   .expedition .wander-torso,
   .expedition .wander-hat,
   .expedition .wander-hair,
+  .expedition .wander-tome,
   .expedition .wander-cape,
   .expedition .wander-staff,
   .expedition .wander-spark { animation: none; }
@@ -401,6 +424,68 @@
 }
 
 [data-lite] .expedition-flame,
+[data-lite] .expedition-ray,
 [data-lite] .wander-orb {
+  animation: none;
+}
+
+/* ---------- 空に掛かる物（sky-objects.tsx） ---------- */
+@keyframes sky-turn {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes sky-turn-back {
+  to { transform: rotate(-360deg); }
+}
+
+.sky-astrolabe-turn { animation: sky-turn 240s linear infinite; transform-box: view-box; transform-origin: center; }
+.sky-astrolabe-turn-back { animation: sky-turn-back 160s linear infinite; transform-box: view-box; transform-origin: center; }
+.sky-core-ring { animation: sky-turn 120s linear infinite; }
+.sky-crown-turn { animation: sky-turn 300s linear infinite; }
+
+/* オーロラの幕はゆっくり横へ揺れ、明るさを変える */
+@keyframes sky-aurora {
+  0%, 100% { transform: translateX(0) scaleY(1); opacity: 0.55; }
+  50% { transform: translateX(-4%) scaleY(1.08); opacity: 0.95; }
+}
+
+.sky-aurora {
+  animation: sky-aurora 18s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: top;
+}
+
+/* 炉心は脈打つように明るさを変える */
+@keyframes sky-core-pulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+.sky-core-pulse { animation: sky-core-pulse 4s ease-in-out infinite; }
+
+@keyframes sky-crown-pillar {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.sky-crown-pillar { animation: sky-crown-pillar 8s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-astrolabe-turn,
+  .sky-astrolabe-turn-back,
+  .sky-core-ring,
+  .sky-crown-turn,
+  .sky-aurora,
+  .sky-core-pulse,
+  .sky-crown-pillar { animation: none; }
+}
+
+[data-lite] .sky-astrolabe-turn,
+[data-lite] .sky-astrolabe-turn-back,
+[data-lite] .sky-core-ring,
+[data-lite] .sky-crown-turn,
+[data-lite] .sky-aurora,
+[data-lite] .sky-core-pulse,
+[data-lite] .sky-crown-pillar {
   animation: none;
 }
