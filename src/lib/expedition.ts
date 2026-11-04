@@ -25,6 +25,7 @@ export type ExpeditionArt =
   | "floor"
   | "grass"
   | "magma"
+  | "marble"
   | "constellations"
   | "domes"
   | "balustrade"
@@ -33,6 +34,8 @@ export type ExpeditionArt =
   | "alchemy"
   | "skyisles"
   | "belfry"
+  | "cloudsea"
+  | "sanctumfore"
   | "fragments"
   | "farisles"
   | "starglass";
@@ -224,24 +227,29 @@ export const EXPEDITION_SCENES = {
       floor("#0a0303", "#f2a35d", "magma"),
     ],
   },
-  // STAGE 6 天空の大聖堂（継承）: 星冠の光輪と光の柱、雲に浮かぶ聖堂の島、鈴の下がる白い列柱
+  // STAGE 6 天空の大聖堂（継承）: 夕暮れの雲海の上、金の星冠が光輪をまとって天に掛かり、白い星から光の柱が降りる。
+  // 雲に浮かぶ島には大聖堂・礼拝堂・糸杉が立ち、手前は鈴の下がる大理石の尖頭アーチの回廊。足元に燭台と白い羽根、磨いた大理石の床
   sanctum: {
     id: "sanctum",
-    dim: 0.42,
+    dim: 0.32,
     name: "天空の大聖堂",
-    sky: ["#14112a", "#3a2f52", "#6a5868"],
+    sky: ["#100d26", "#38294f", "#7a5a6a"],
     glow: "#fbf3d4",
     motes: { kind: "float", color: "#fbf3d4" },
-    celestial: [{ kind: "crown", x: 0.66, y: 0.2, size: 0.3, color: "#fbe8b0" }],
-    rays: { color: "#fff3c8", opacity: 0.14, from: "right" },
+    celestial: [
+      { kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 13, density: 0.4 },
+      { kind: "crown", x: 0.66, y: 0.2, size: 0.3, color: "#fbe8b0" },
+    ],
+    rays: { color: "#fff3c8", opacity: 0.12, from: "right" },
     layers: [
-      { source: { art: "clouds" }, height: 0.36, bottom: 0.34, speed: 0.05, color: "#8a7a98", opacity: 0.35 },
-      { source: { art: "skyisles" }, height: 0.42, bottom: 0.3, speed: 0.1, color: "#3a3150", accent: "#fbe8b0", opacity: 0.85, rim: 0.2 },
-      haze("#8a7088", 0.18, 0.3, 0.4),
-      { source: { art: "clouds" }, height: 0.3, bottom: 0.1, speed: 0.2, color: "#5c4f70", opacity: 0.6 },
-      { source: { art: "belfry" }, height: 0.6, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.4, color: "#1c1828", accent: "#fbe8b0", rim: 0.22 },
-      haze("#6a5868", EXPEDITION_FLOOR - 0.02, 0.1, 0.45),
-      floor("#120f1c", "#fbe8b0"),
+      { source: { art: "cloudsea" }, height: 0.2, bottom: 0.3, speed: 0.04, color: "#6c5a80", accent: "#fde6c4", opacity: 0.55, rim: 0.3 },
+      { source: { art: "skyisles" }, height: 0.46, bottom: 0.22, speed: 0.08, color: "#2e2644", accent: "#fbe8b0", opacity: 0.92, rim: 0.22 },
+      haze("#8a7088", 0.14, 0.28, 0.42),
+      { source: { art: "cloudsea" }, height: 0.26, bottom: 0.06, speed: 0.16, color: "#55476e", accent: "#fde6c4", opacity: 0.9, rim: 0.35 },
+      { source: { art: "belfry" }, height: 0.56, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.4, color: "#1e1a2c", accent: "#fbe8b0", rim: 0.22 },
+      haze("#6a5868", EXPEDITION_FLOOR - 0.02, 0.08, 0.4),
+      { source: { art: "sanctumfore" }, height: 0.2, bottom: ON_FLOOR - 0.004, speed: 0.88, color: "#0f0c18", accent: "#fbe8b0", rim: 0.2 },
+      floor("#120f1c", "#fbe8b0", "marble"),
     ],
   },
   // 星天の塔（再創生）: 星雲の漂う空に銀河が渡り、ときおり流れ星が横切る。雲海から星々の間へ巨きな塔が立ち上がり、

@@ -14,10 +14,6 @@ const rand = (i: number, salt = 0) => {
   return x - Math.floor(x);
 };
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
-const polar = (r: number, deg: number) => {
-  const a = ((deg - 90) * Math.PI) / 180;
-  return [+(Math.cos(a) * r).toFixed(2), +(Math.sin(a) * r).toFixed(2)] as const;
-};
 
 /** 正確な角度の点（真上から時計回り） */
 const pol = (r: number, deg: number, cx = 0, cy = 0) => {
@@ -334,30 +330,108 @@ function ForgeCore({ color }: { color: string }) {
   );
 }
 
-/** 星冠: 天に掛かる光輪と星の冠、そこから降りる光の柱 */
-const CROWN_POINTS = range(12).map((i) => {
-  const [x0, y0] = polar(70, i * 30 - 4), [x1, y1] = polar(i % 3 === 0 ? 98 : 86, i * 30), [x2, y2] = polar(70, i * 30 + 4);
-  return `M${x0},${y0} L${x1},${y1} L${x2},${y2}`;
-}).join(" ");
+/** 星冠の尖り: 冠の帯から、両側がわずかに反った槍の穂のように伸びる。長い尖りと短い尖りが交互に並ぶ */
+const CROWN_SPIKES = range(12)
+  .map((i) => {
+    const deg = i * 30;
+    const tall = i % 2 === 0;
+    const tip = tall ? 100 : 88;
+    const w = tall ? 5 : 3.6;
+    const [lx, ly] = pol(73, deg - w), [rx, ry] = pol(73, deg + w), [tx, ty] = pol(tip, deg);
+    const [c1x, c1y] = pol(80, deg - w * 0.25), [c2x, c2y] = pol(80, deg + w * 0.25);
+    return `M${lx},${ly} Q${c1x},${c1y} ${tx},${ty} Q${c2x},${c2y} ${rx},${ry} Z`;
+  })
+  .join(" ");
+/** 尖りの間の、帯から外へ膨らむ小さな弧の飾り */
+const CROWN_SCALLOPS = range(12)
+  .map((i) => {
+    const deg = i * 30 + 15;
+    const [ax, ay] = pol(73, deg - 9), [bx, by] = pol(73, deg + 9), [cx, cy] = pol(80, deg);
+    return `M${ax},${ay} Q${cx},${cy} ${bx},${by}`;
+  })
+  .join(" ");
+/** 帯の目盛り */
+const CROWN_BAND_TICKS = range(72)
+  .map((i) => {
+    const [x1, y1] = pol(67.5, i * 5), [x2, y2] = pol(i % 3 === 0 ? 71.5 : 70, i * 5);
+    return `M${x1},${y1} L${x2},${y2}`;
+  })
+  .join(" ");
+/** 中心から放たれる淡い光芒 */
+const CROWN_GLORY = range(48)
+  .map((i) => {
+    const deg = i * 7.5 + rand(i, 50) * 3;
+    const [x1, y1] = pol(14, deg), [x2, y2] = pol(36 + rand(i, 51) * 26, deg);
+    return `M${x1},${y1} L${x2},${y2}`;
+  })
+  .join(" ");
 
+/**
+ * 星冠: 天に掛かる金の冠。柔らかな光輪の中に、目盛りを刻んだ帯と、長短交互の槍の穂の尖り（先に小さな星）、間の弧の飾り。
+ * 冠は少女が歩いている間だけゆっくり回る。中心には十字の光の筋を持つ白い星が灯り、淡い光芒が放たれ、下へ光の柱が降りる
+ */
 function StarCrown({ color }: { color: string }) {
   return (
     <div className="relative size-full">
-      {/* 天から降りる光の柱 */}
+      {/* 天から降りる光の柱: 中ほどが明るく、縁へ溶ける */}
       <div
-        className="sky-crown-pillar absolute top-1/2 left-1/2 h-[600%] w-[34%] -translate-x-1/2"
-        style={{ background: `linear-gradient(to bottom, ${color}55, ${color}18 40%, transparent 80%)`, filter: "blur(8px)" }}
+        className="sky-crown-pillar absolute top-1/2 left-1/2 h-[600%] w-[28%] -translate-x-1/2"
+        style={{ background: `linear-gradient(to bottom, ${color}50, ${color}14 40%, transparent 80%)`, filter: "blur(10px)", maskImage: "linear-gradient(to right, transparent, #000 35%, #000 65%, transparent)" }}
       />
-      <svg viewBox="-100 -100 200 200" className="sky-crown-turn absolute inset-0 size-full overflow-visible" fill="none" stroke={color}>
-        <circle r={70} strokeWidth={2.2} opacity={0.75} />
-        <circle r={62} strokeWidth={0.6} opacity={0.5} />
-        <path d={CROWN_POINTS} strokeWidth={1} opacity={0.65} strokeLinejoin="round" />
+      <div className="absolute inset-[-40%] rounded-full" style={{ background: `radial-gradient(circle, ${color}30, ${color}10 30%, transparent 60%)` }} />
+      {/* 光輪: 冠のまわりの淡い光の環 */}
+      <svg viewBox="-112 -112 224 224" className="absolute inset-0 size-full overflow-visible" fill="none">
+        <circle r={86} stroke={color} strokeWidth={22} opacity={0.06} />
+        <circle r={86} stroke={color} strokeWidth={6} opacity={0.08} />
+        <path d={CROWN_GLORY} stroke={color} strokeWidth={0.35} opacity={0.22} />
+      </svg>
+      {/* 回る冠 */}
+      <svg viewBox="-112 -112 224 224" className="sky-crown-turn absolute inset-0 size-full overflow-visible" fill="none" stroke={color}>
+        <path d={CROWN_SPIKES} fill={color} fillOpacity={0.16} strokeWidth={0.6} opacity={0.85} strokeLinejoin="round" />
+        <path d={CROWN_SCALLOPS} strokeWidth={0.5} opacity={0.55} />
+        <circle r={73} strokeWidth={1.4} opacity={0.85} />
+        <circle r={67} strokeWidth={0.6} opacity={0.6} />
+        <path d={CROWN_BAND_TICKS} strokeWidth={0.35} opacity={0.5} />
+        <circle r={60} strokeWidth={0.3} opacity={0.35} strokeDasharray="0.8 2.2" />
         {range(12).map((i) => {
-          const [x, y] = polar(i % 3 === 0 ? 98 : 86, i * 30);
-          return <circle key={i} cx={x} cy={y} r={i % 3 === 0 ? 2.6 : 1.6} fill={color} stroke="none" />;
+          const tall = i % 2 === 0;
+          const [x, y] = pol(tall ? 100 : 88, i * 30);
+          const [gx, gy] = pol(76, i * 30 + 15);
+          return (
+            <g key={i} stroke="none">
+              <circle cx={x} cy={y} r={tall ? 4.5 : 3} fill={color} opacity={0.18} />
+              <circle cx={x} cy={y} r={tall ? 1.6 : 1.1} fill="#fffaf0" />
+              <circle cx={gx} cy={gy} r={1} fill={color} opacity={0.8} />
+            </g>
+          );
         })}
       </svg>
-      <div className="absolute inset-[18%] rounded-full" style={{ boxShadow: `0 0 10cqh 2cqh ${color}40, inset 0 0 6cqh 1cqh ${color}30` }} />
+      {/* 中心の白い星: 小さな芯と柔らかな暈、十字の細い光の筋 */}
+      <svg viewBox="-112 -112 224 224" className="sky-crown-pillar absolute inset-0 size-full overflow-visible">
+        <defs>
+          <radialGradient id="expedition-crown-star">
+            <stop offset="0" stopColor="#ffffff" />
+            <stop offset="0.18" stopColor="#fff8e4" stopOpacity="0.9" />
+            <stop offset="0.5" stopColor={color} stopOpacity="0.25" />
+            <stop offset="1" stopColor={color} stopOpacity="0" />
+          </radialGradient>
+          <linearGradient id="expedition-crown-flare-h" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stopColor="#fff8e4" stopOpacity="0" />
+            <stop offset="0.5" stopColor="#fff8e4" stopOpacity="0.9" />
+            <stop offset="1" stopColor="#fff8e4" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="expedition-crown-flare-v" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fff8e4" stopOpacity="0" />
+            <stop offset="0.5" stopColor="#fff8e4" stopOpacity="0.9" />
+            <stop offset="1" stopColor="#fff8e4" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <circle r={26} fill="url(#expedition-crown-star)" />
+        <path d="M-52,0 L0,-1 L52,0 L0,1 Z" fill="url(#expedition-crown-flare-h)" />
+        <path d="M0,-52 L1,0 L0,52 L-1,0 Z" fill="url(#expedition-crown-flare-v)" />
+        <path d="M-16,-16 L16,16 M16,-16 L-16,16" stroke="#fff8e4" strokeWidth={0.3} opacity={0.4} />
+        <circle r={3.2} fill="#ffffff" />
+      </svg>
     </div>
   );
 }

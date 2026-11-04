@@ -1726,75 +1726,390 @@ function cloudBank() {
   );
 }
 
-/** 雲に浮かぶ聖堂の島: 岩の島の上に尖塔の聖堂が立ち、下には岩が垂れる */
-const ISLES = [
-  { cx: 80, y: 120, w: 90 },
-  { cx: 270, y: 80, w: 130 },
-  { cx: 430, y: 140, w: 70 },
-];
-function skyisles(accent: string) {
+/**
+ * 雲海: 積雲の塊がいくつも盛り上がり、上の面は星冠の光（右上から）を受けて明るく、下は影になって霞へ溶ける。
+ * 端で切れる塊は反対の端にも描き、横に並べたとき継ぎ目なく続くようにする
+ */
+/** 積雲の塊（中心・底・幅・高さ）。奥の列は高く大きく、手前の列は低い */
+const SEA_MOUNDS = range(11).map((i) => {
+  const back = i < 5;
+  return {
+    x: back ? 20 + i * 100 + rand(i, 90) * 40 : 60 + (i - 5) * 84 + rand(i, 90) * 30,
+    base: back ? 84 : 104,
+    w: back ? 90 + rand(i, 91) * 60 : 60 + rand(i, 91) * 50,
+    h: back ? 34 + rand(i, 92) * 24 : 20 + rand(i, 92) * 18,
+  };
+});
+/** 塊を、縁が盛り上がる小さな丸の重なりにする（もくもくした積雲の頭）。端で切れる塊は反対の端にも描く */
+const SEA_PUFFS = SEA_MOUNDS.flatMap((m, i) => {
+  const n = Math.max(5, Math.round(m.w / 10));
+  return range(n).map((k) => {
+    const t = (k + 0.5) / n;
+    const top = m.base - m.h * Math.sin(t * Math.PI) ** 0.6;
+    const r = m.h * (0.28 + rand(i * 30 + k, 93) * 0.22) * (0.7 + 0.3 * Math.sin(t * Math.PI));
+    return { x: +(m.x - m.w / 2 + t * m.w).toFixed(1), y: +(top + r * 0.85).toFixed(1), r: +r.toFixed(1) };
+  });
+});
+const SEA_WRAPPED = SEA_PUFFS.flatMap((p) => [p, { ...p, x: p.x - 500 }, { ...p, x: p.x + 500 }]).filter((p) => p.x + p.r > 0 && p.x - p.r < 500);
+function cloudSea(accent: string) {
+  const lit = gradId("cloudsea-lit", accent);
+  const shade = gradId("cloudsea-shade", accent);
+  const soft = gradId("cloudsea-soft", accent);
   return (
     <>
-      {ISLES.map(({ cx, y, w }, i) => {
-        const l = cx - w / 2, r = cx + w / 2;
-        return (
-          <g key={i}>
-            {/* 岩の島と、垂れる岩 */}
-            <path d={`M${l},${y} L${r},${y} L${r - w * 0.12},${y + 10} L${cx + w * 0.2},${y + 40} L${cx + 4},${y + 64} L${cx - w * 0.18},${y + 34} L${l + w * 0.1},${y + 12} Z`} />
-            {/* 聖堂: 身廊と尖塔 */}
-            <rect x={cx - w * 0.3} y={y - w * 0.3} width={w * 0.6} height={w * 0.3} />
-            <path d={`M${cx - w * 0.32},${y - w * 0.3} L${cx},${y - w * 0.46} L${cx + w * 0.32},${y - w * 0.3} Z`} />
-            <path d={`M${cx + w * 0.16},${y} V${y - w * 0.62} L${cx + w * 0.22},${y - w * 0.9} L${cx + w * 0.28},${y - w * 0.62} V${y} Z`} />
-            <path d={`M${cx - w * 0.28},${y} V${y - w * 0.48} L${cx - w * 0.23},${y - w * 0.68} L${cx - w * 0.18},${y - w * 0.48} V${y} Z`} />
-            <circle cx={cx} cy={y - w * 0.18} r={w * 0.05} fill={accent} opacity={0.6} />
-          </g>
-        );
-      })}
+      <defs>
+        <radialGradient id={lit} cx="0.68" cy="0.2" r="0.7">
+          <stop offset="0" stopColor={accent} stopOpacity="0.55" />
+          <stop offset="0.4" stopColor={accent} stopOpacity="0.18" />
+          <stop offset="1" stopColor={accent} stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id={shade} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#000000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000000" stopOpacity="0.35" />
+        </linearGradient>
+        {/* 雲の縁をわずかにぼかす */}
+        <filter id={soft} x="-5%" y="-20%" width="110%" height="140%">
+          <feGaussianBlur stdDeviation="0.9" />
+        </filter>
+      </defs>
+      <g filter={`url(#${soft})`}>
+        <rect x={0} y={96} width={500} height={24} />
+        {SEA_WRAPPED.map((p, k) => (
+          <circle key={k} cx={p.x} cy={p.y} r={p.r} />
+        ))}
+        {SEA_WRAPPED.map((p, k) => (
+          <circle key={`l${k}`} cx={p.x} cy={p.y} r={p.r} fill={`url(#${lit})`} />
+        ))}
+        <rect x={0} y={70} width={500} height={50} fill={`url(#${shade})`} />
+      </g>
     </>
   );
 }
 
-/** 鈴の形 */
-const bellPath = (cx: number, top: number, s: number) =>
-  `M${cx - 9 * s},${top + 26 * s} C${cx - 9 * s},${top + 14 * s} ${cx - 6 * s},${top + 8 * s} ${cx},${top + 8 * s} C${cx + 6 * s},${top + 8 * s} ${cx + 9 * s},${top + 14 * s} ${cx + 9 * s},${top + 26 * s} L${cx + 11 * s},${top + 29 * s} L${cx - 11 * s},${top + 29 * s} Z`;
+/** 浮島の岩の下側: 岩の層が段になって垂れ、先は尖る。層の筋が灯を受ける */
+function isleRock(w: number, depth: number, seed: number) {
+  const n = 9;
+  const pts: string[] = [];
+  for (let k = 0; k <= n; k++) {
+    const t = k / n;
+    const x = -w / 2 + t * w;
+    const sag = Math.sin(t * Math.PI) ** 1.4;
+    const y = 4 + depth * sag * (0.55 + rand(seed + k, 95) * 0.45);
+    pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    if (k < n) pts.push(`${(x + w / n / 2).toFixed(1)},${(y + 2 + rand(seed + k, 96) * depth * 0.18).toFixed(1)}`);
+  }
+  return `M${-w / 2 - 3},0 H${w / 2 + 3} L${pts.reverse().join(" L")} Z`;
+}
+function isleStrata(w: number, depth: number, accent: string) {
+  return (
+    <path
+      d={range(4)
+        .map((k) => {
+          const y = 6 + k * depth * 0.16;
+          const half = (w / 2) * (1 - k * 0.2);
+          return `M${(-half).toFixed(1)},${y.toFixed(1)} Q0,${(y + 3).toFixed(1)} ${half.toFixed(1)},${y.toFixed(1)}`;
+        })
+        .join(" ")}
+      fill="none"
+      stroke={accent}
+      strokeWidth={0.4}
+      opacity={0.18}
+    />
+  );
+}
+/** 灯る細い尖頭窓 */
+const lancet = (x: number, y: number, w: number, h: number, o: number, key: string) => (
+  <path key={key} d={`M${x},${y + h} V${y + w} Q${x},${y} ${x + w / 2},${y - w * 0.4} Q${x + w},${y} ${x + w},${y + w} V${y + h} Z`} fill="#ffeec8" opacity={o} />
+);
 /**
- * 鈴の列柱: 雲の上に並ぶ聖堂の列柱。アーチには二重の刳形と要石、柱には柱頭と台座、上端は少し崩れている。
- * アーチから下がる鈴は縁に灯を受け、舌が淡く光る
+ * 雲の上の大聖堂（横から見た姿）: 西の塔には薔薇窓と鐘楼、四隅の小尖塔と高い尖塔。身廊の高窓と側廊の窓が灯り、
+ * 控え壁の小尖塔から飛び梁が渡る。交差部には細い尖塔、東の端は丸い後陣。地面の高さを 0 とした座標で描く
  */
-const BELFRY_BAYS = [90, 270];
-function belfry(accent: string) {
+function skyCathedral(accent: string) {
+  return (
+    <g>
+      {/* 側廊と身廊、屋根 */}
+      <rect x={-38} y={-22} width={88} height={22} />
+      <rect x={-38} y={-42} width={84} height={20} />
+      <path d="M-40,-42 L-34,-54 H42 L48,-42 Z" />
+      <path d="M-34,-54 H42 L48,-42" fill="none" stroke={accent} strokeWidth={0.6} opacity={0.45} />
+      {range(6).map((k) => lancet(-31 + k * 13, -39, 4, 13, 0.55, `c${k}`))}
+      {range(6).map((k) => lancet(-31 + k * 13, -17, 4, 11, 0.4, `a${k}`))}
+      {/* 控え壁と飛び梁、小尖塔 */}
+      {range(6).map((k) => {
+        const x = -25 + k * 13;
+        return (
+          <g key={k}>
+            <path d={`M${x - 2},0 V-28 L${x},-34 L${x + 2},-28 V0 Z`} />
+            <path d={`M${x + 1},-26 Q${x + 4},-36 ${x + 8},-38`} fill="none" stroke="currentColor" strokeWidth={1.4} />
+            <path d={`M${x + 2},-28 V0`} stroke={accent} strokeWidth={0.4} opacity={0.35} />
+          </g>
+        );
+      })}
+      {/* 後陣と円錐屋根 */}
+      <path d="M48,0 V-34 Q60,-34 64,-20 V0 Z" />
+      <path d="M47,-34 L54,-48 L64,-22 Z" />
+      <path d="M54,-48 L64,-22" stroke={accent} strokeWidth={0.5} opacity={0.4} />
+      {lancet(53, -28, 3.5, 12, 0.5, "ap")}
+      {/* 交差部の細い尖塔 */}
+      <path d="M12,-54 V-62 H20 V-54 Z M11,-62 L16,-104 L21,-62 Z" />
+      <path d="M16,-104 L21,-62" stroke={accent} strokeWidth={0.5} opacity={0.45} />
+      <circle cx={16} cy={-107} r={1.4} fill="#fff4d0" opacity={0.9} />
+      {/* 西の塔: 薔薇窓、鐘楼の開口、四隅の小尖塔と尖塔、頂の星 */}
+      <rect x={-60} y={-86} width={22} height={86} />
+      <path d={`M-60,0 V-86 M-38,-86 V0`} stroke={accent} strokeWidth={0.4} opacity={0.2} />
+      <circle cx={-49} cy={-54} r={6.4} />
+      <circle cx={-49} cy={-54} r={5} fill="#ffeec8" opacity={0.6} />
+      <path d={range(4).map((k) => { const a = (k * Math.PI) / 4; return `M${(-49 + Math.cos(a) * 5).toFixed(2)},${(-54 + Math.sin(a) * 5).toFixed(2)} L${(-49 - Math.cos(a) * 5).toFixed(2)},${(-54 - Math.sin(a) * 5).toFixed(2)}`; }).join(" ")} stroke="currentColor" strokeWidth={0.7} />
+      <circle cx={-49} cy={-54} r={1.6} />
+      {lancet(-55, -80, 4, 14, 0.5, "b1")}
+      {lancet(-47, -80, 4, 14, 0.5, "b2")}
+      {lancet(-51, -30, 4, 18, 0.45, "door")}
+      <rect x={-62} y={-88} width={26} height={3} />
+      <path d="M-62,-88 L-60,-98 L-58,-88 Z M-38,-88 L-36,-98 L-34,-88 Z" />
+      <path d="M-59,-88 L-49,-138 L-39,-88 Z" />
+      <path d="M-49,-138 L-39,-88" stroke={accent} strokeWidth={0.6} opacity={0.5} />
+      <path d={range(5).map((k) => { const y = -96 - k * 8; const dx = ((y + 138) / 50) * 10; return `M${(-49 + dx).toFixed(1)},${y} l1.6,-1.4`; }).join(" ")} stroke="currentColor" strokeWidth={0.8} />
+      <circle cx={-49} cy={-142} r={4} fill={accent} opacity={0.25} />
+      <circle cx={-49} cy={-142} r={1.6} fill="#fff8e0" />
+      <path d={`M-38,-86 V0 M50,-22 V0`} stroke={accent} strokeWidth={0.6} opacity={0.35} />
+    </g>
+  );
+}
+/** 小さな礼拝堂: 切妻の堂と、鈴の見える小さな鐘楼 */
+function skyChapel(accent: string) {
+  return (
+    <g>
+      <rect x={-18} y={-16} width={34} height={16} />
+      <path d="M-20,-16 L-4,-28 L18,-16 Z" />
+      <path d="M-4,-28 L18,-16" stroke={accent} strokeWidth={0.6} opacity={0.45} />
+      {lancet(-12, -12, 3, 9, 0.45, "w1")}
+      {lancet(2, -12, 3, 9, 0.45, "w2")}
+      <rect x={10} y={-40} width={10} height={40} />
+      <path d="M9,-40 L15,-54 L21,-40 Z" />
+      <path d="M12,-36 V-30 A3,3 0 0,1 18,-30 V-36" fill="#ffeec8" opacity={0.35} />
+      <path d="M13,-31 Q15,-36 17,-31 Z" />
+      <path d="M20,-40 V0" stroke={accent} strokeWidth={0.5} opacity={0.35} />
+    </g>
+  );
+}
+/** 糸杉 */
+const cypress = (x: number, h: number) => `M${x},0 C${x - h * 0.16},${-h * 0.35} ${x - h * 0.1},${-h * 0.8} ${x},${-h} C${x + h * 0.1},${-h * 0.8} ${x + h * 0.16},${-h * 0.35} ${x},0 Z`;
+
+/**
+ * 雲に浮かぶ島々: いちばん大きな島に大聖堂、小さな島に礼拝堂、もう一つの岩には糸杉。
+ * 島の下には岩の層が垂れ、根元を霞が巻く
+ */
+const SKY_ISLES = [
+  { cx: 300, y: 132, w: 150, depth: 52, s: 0.82, kind: "cathedral" },
+  { cx: 92, y: 150, w: 62, depth: 30, s: 0.9, kind: "chapel" },
+  { cx: 448, y: 108, w: 38, depth: 22, s: 1, kind: "cypress" },
+] as const;
+function skyisles(accent: string) {
+  const mist = gradId("isle-mist", accent);
   return (
     <>
-      <path
-        d={`M0,16 H360 V220 H0 Z ${BELFRY_BAYS.map((cx) => `M${cx - 60},220 V100 Q${cx - 60},50 ${cx},38 Q${cx + 60},50 ${cx + 60},100 V220 Z`).join(" ")}`}
-        fillRule="evenodd"
-      />
-      {/* 崩れかけの上端と、蛇腹 */}
-      <path d="M0,16 L24,20 L46,13 L80,18 L120,12 L150,19 L176,12 L212,18 L248,11 L284,18 L320,13 L344,19 L360,15 V30 H0 Z" />
-      <rect x={0} y={30} width={360} height={3} fill={accent} opacity={0.18} />
-      {BELFRY_BAYS.map((cx) => (
-        <g key={cx}>
-          {/* 二重の刳形と要石 */}
-          <path d={`M${cx - 60},100 Q${cx - 60},50 ${cx},38 Q${cx + 60},50 ${cx + 60},100`} fill="none" stroke={accent} strokeWidth={0.9} opacity={0.35} />
-          <path d={`M${cx - 54},102 Q${cx - 54},58 ${cx},47 Q${cx + 54},58 ${cx + 54},102`} fill="none" stroke={accent} strokeWidth={0.5} opacity={0.2} />
-          <path d={`M${cx - 5},34 L${cx + 5},34 L${cx + 4},44 L${cx - 4},44 Z`} />
-          {/* 鈴と吊り金具、灯を受ける縁と光る舌 */}
-          <path d={`M${cx},44 V${52}`} stroke="currentColor" strokeWidth={1.6} />
-          <path d={bellPath(cx, 44, 1.05)} />
-          <path d={bellPath(cx, 44, 1.05)} fill="none" stroke={accent} strokeWidth={0.7} opacity={0.5} />
-          <circle cx={cx} cy={76} r={2.6} fill={accent} opacity={0.8} />
-          <circle cx={cx} cy={76} r={7} fill={accent} opacity={0.1} />
+      <defs>
+        <radialGradient id={mist}>
+          <stop offset="0" stopColor="#d8c8e0" stopOpacity="0.35" />
+          <stop offset="1" stopColor="#d8c8e0" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {SKY_ISLES.map(({ cx, y, w, depth, s, kind }, i) => (
+        <g key={i} transform={`translate(${cx} ${y})`}>
+          <path d={isleRock(w, depth, i * 20)} />
+          {isleStrata(w, depth, accent)}
+          <path d={`M${w / 2 + 3},0 L${w / 2 - 6},${depth * 0.3}`} stroke={accent} strokeWidth={0.6} opacity={0.35} />
+          {/* 島の縁の草と、零れ落ちる細い霧の滝 */}
+          <rect x={-w / 2 - 3} y={-1.5} width={w + 6} height={1.5} fill={accent} opacity={0.3} />
+          {kind === "cathedral" && <path d={`M${w / 2 - 2},2 V${depth * 0.9}`} stroke="#e8dcf0" strokeWidth={1.6} opacity={0.18} />}
+          <ellipse cx={0} cy={depth * 0.35} rx={w * 0.75} ry={depth * 0.3} fill={`url(#${mist})`} />
+          <g transform={`scale(${s})`}>
+            {kind === "cathedral" && skyCathedral(accent)}
+            {kind === "chapel" && skyChapel(accent)}
+            {kind === "cypress" && (
+              <>
+                <path d={`${cypress(-6, 30)} ${cypress(4, 22)} ${cypress(12, 16)}`} />
+                <path d={`M-6,-30 C-1,-24 0,-12 0,0`} fill="none" stroke={accent} strokeWidth={0.4} opacity={0.3} />
+              </>
+            )}
+          </g>
         </g>
       ))}
-      {/* 柱頭・台座と、柱の溝 */}
-      {[0, 180, 360].map((x) => (
+    </>
+  );
+}
+
+/** 鈴: 肩が丸く、腰がくびれ、口が開く。縁と帯を持つ */
+const bellPath = (cx: number, top: number, s: number) =>
+  `M${cx - 4 * s},${top} C${cx - 9 * s},${top} ${cx - 10 * s},${top + 6 * s} ${cx - 10 * s},${top + 12 * s} C${cx - 10 * s},${top + 19 * s} ${cx - 12 * s},${top + 22 * s} ${cx - 15 * s},${top + 25 * s} H${cx + 15 * s} C${cx + 12 * s},${top + 22 * s} ${cx + 10 * s},${top + 19 * s} ${cx + 10 * s},${top + 12 * s} C${cx + 10 * s},${top + 6 * s} ${cx + 9 * s},${top} ${cx + 4 * s},${top} Z`;
+/** 四つ葉の飾り窓 */
+const quatrefoil = (cx: number, cy: number, r: number) =>
+  range(4)
+    .map((k) => {
+      const a = (k * Math.PI) / 2;
+      return `M${(cx + Math.cos(a) * r * 0.5 + r * 0.45).toFixed(2)},${(cy + Math.sin(a) * r * 0.5).toFixed(2)} A${(r * 0.45).toFixed(2)},${(r * 0.45).toFixed(2)} 0 1,0 ${(cx + Math.cos(a) * r * 0.5 - r * 0.45).toFixed(2)},${(cy + Math.sin(a) * r * 0.5).toFixed(2)} A${(r * 0.45).toFixed(2)},${(r * 0.45).toFixed(2)} 0 1,0 ${(cx + Math.cos(a) * r * 0.5 + r * 0.45).toFixed(2)},${(cy + Math.sin(a) * r * 0.5).toFixed(2)} Z`;
+    })
+    .join(" ");
+
+/**
+ * 鈴の列柱: 雲の上に開く、大理石の尖頭アーチの回廊。束ね柱には柱頭と台座、アーチには二重の刳形と小さな花弁の飾り（カスプ）、
+ * 三角の小間には四つ葉の飾り窓。上には透かしの胸壁と小尖塔、下には低い欄干。
+ * アーチの頂から下がる青銅の鈴は星冠の光を右の肩に受け、舌が淡く光る
+ */
+const BELFRY_COLUMNS = [0, 180, 360];
+function belfry(accent: string) {
+  const shade = gradId("cyl-belfry", accent);
+  const bronze = gradId("bell-bronze", accent);
+  const spring = 104, apex = 40, half = 14;
+  const bays = [[half, 180 - half], [180 + half, 360 - half]] as const;
+  const archD = (l: number, r: number, inset = 0) => {
+    const mid = (l + r) / 2, span = r - l;
+    return `M${l + inset},${spring} Q${l + inset},${apex + span * 0.16 + inset} ${mid},${apex + inset * 1.3} Q${r - inset},${apex + span * 0.16 + inset} ${r - inset},${spring}`;
+  };
+  return (
+    <>
+      <defs>
+        {cylinderShade(shade, accent)}
+        <linearGradient id={bronze} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#000000" stopOpacity="0.3" />
+          <stop offset="0.55" stopColor={accent} stopOpacity="0.06" />
+          <stop offset="0.85" stopColor={accent} stopOpacity="0.4" />
+          <stop offset="1" stopColor={accent} stopOpacity="0.12" />
+        </linearGradient>
+      </defs>
+      {/* 壁と、雲の見える開口 */}
+      <path d={`M0,22 H360 V220 H0 Z ${bays.map(([l, r]) => `${archD(l, r)} V220 H${l} Z`).join(" ")}`} fillRule="evenodd" />
+      {bays.map(([l, r], k) => {
+        const mid = (l + r) / 2;
+        return (
+          <g key={k}>
+            {/* 二重の刳形と、内の縁の花弁の飾り */}
+            <path d={archD(l, r)} fill="none" stroke={accent} strokeWidth={0.9} opacity={0.4} />
+            <path d={archD(l, r, -6)} fill="none" stroke={accent} strokeWidth={0.4} opacity={0.22} />
+            <path
+              d={[0.22, 0.4, 0.6, 0.78]
+                .map((t) => {
+                  const x = l + (r - l) * t;
+                  const u = Math.abs(t - 0.5) * 2;
+                  const y = apex + (spring - apex) * u ** 1.8 * 0.55 + 2;
+                  return `M${(x - 6).toFixed(1)},${(y - 1).toFixed(1)} Q${x.toFixed(1)},${(y + 8).toFixed(1)} ${(x + 6).toFixed(1)},${(y - 1).toFixed(1)}`;
+                })
+                .join(" ")}
+              stroke="currentColor"
+              strokeWidth={1.6}
+              fill="none"
+            />
+            {/* 低い欄干: 笠と小柱 */}
+            <rect x={l} y={190} width={r - l} height={4} />
+            <rect x={l} y={190} width={r - l} height={0.7} fill={accent} opacity={0.4} />
+            <path d={range(Math.floor((r - l) / 8)).map((j) => `M${l + 5 + j * 8},194 h3 v12 h-3 Z`).join(" ")} />
+            <rect x={l} y={206} width={r - l} height={14} />
+            {/* 鈴: 頂から下がる吊り金具と軛、青銅の胴に帯、光る舌 */}
+            <path d={`M${mid},${apex + 4} V${apex + 18}`} stroke="currentColor" strokeWidth={1.4} />
+            <rect x={mid - 9} y={apex + 17} width={18} height={3.4} rx={1} />
+            <path d={bellPath(mid, apex + 20, 1.05)} />
+            <path d={bellPath(mid, apex + 20, 1.05)} fill={`url(#${bronze})`} />
+            <path d={`M${mid - 10.4},${apex + 33} H${mid + 10.4} M${mid - 13},${apex + 42} H${mid + 13}`} stroke={accent} strokeWidth={0.5} opacity={0.4} />
+            <path d={`M${mid + 6},${apex + 22} C${mid + 10},${apex + 24} ${mid + 10.5},${apex + 32} ${mid + 11},${apex + 38}`} fill="none" stroke="#fff4d8" strokeWidth={0.8} opacity={0.55} strokeLinecap="round" />
+            <circle cx={mid} cy={apex + 48} r={2.4} fill={accent} opacity={0.85} />
+            <circle cx={mid} cy={apex + 48} r={8} fill={accent} opacity={0.12} />
+          </g>
+        );
+      })}
+      {/* 小間の四つ葉の飾り窓 */}
+      {BELFRY_COLUMNS.map((x) => (
+        <g key={`q${x}`}>
+          <path d={quatrefoil(x, 52, 11)} fill="#ffeec8" opacity={0.14} />
+          <path d={quatrefoil(x, 52, 11)} fill="none" stroke={accent} strokeWidth={0.5} opacity={0.35} />
+        </g>
+      ))}
+      {/* 束ね柱: 柱身の細い筋、柱頭（葉飾りの膨らみと冠板）、台座 */}
+      {BELFRY_COLUMNS.map((x) => (
         <g key={x}>
-          <rect x={x - 32} y={96} width={64} height={5} />
-          <rect x={x - 32} y={96} width={64} height={0.8} fill={accent} opacity={0.3} />
-          <rect x={x - 34} y={206} width={68} height={14} />
-          <path d={`M${x - 14},104 V206 M${x - 4},104 V206 M${x + 6},104 V206 M${x + 16},104 V206`} stroke={accent} strokeWidth={0.5} opacity={0.12} />
+          <rect x={x - half} y={spring} width={half * 2} height={116} />
+          <path d={range(5).map((k) => `M${x - 10 + k * 5},${spring + 8} V204`).join(" ")} stroke={accent} strokeWidth={0.4} opacity={0.16} />
+          <rect x={x - half} y={spring} width={half * 2} height={116} fill={`url(#${shade})`} />
+          <path d={`M${x - half - 2},${spring + 8} C${x - half - 2},${spring} ${x - half - 6},${spring - 2} ${x - half - 7},${spring - 4} H${x + half + 7} C${x + half + 6},${spring - 2} ${x + half + 2},${spring} ${x + half + 2},${spring + 8} Z`} />
+          <rect x={x - half - 9} y={spring - 8} width={half * 2 + 18} height={4.4} />
+          <rect x={x - half - 9} y={spring - 8} width={half * 2 + 18} height={0.8} fill={accent} opacity={0.5} />
+          <path d={`M${x - half - 6},220 V210 H${x - half - 3} V204 H${x + half + 3} V210 H${x + half + 6} V220 Z`} />
+          <rect x={x - half - 3} y={204} width={half * 2 + 6} height={0.7} fill={accent} opacity={0.35} />
+          <path d={`M${x + half},${spring} V204`} stroke={accent} strokeWidth={0.6} opacity={0.35} />
         </g>
       ))}
+      {/* 軒の蛇腹と、透かしの胸壁、小尖塔 */}
+      <rect x={0} y={20} width={360} height={4} />
+      <rect x={0} y={20} width={360} height={0.8} fill={accent} opacity={0.45} />
+      <rect x={0} y={8} width={360} height={12} />
+      <path d={range(18).map((k) => quatrefoil(10 + k * 20, 14, 7)).join(" ")} fill="#ffeec8" opacity={0.1} />
+      <rect x={0} y={7} width={360} height={0.7} fill={accent} opacity={0.4} />
+      {BELFRY_COLUMNS.map((x) => (
+        <g key={`p${x}`}>
+          <path d={`M${x - 5},20 V6 L${x},-6 L${x + 5},6 V20 Z`} />
+          <path d={`M${x},-6 L${x + 5},6 V20`} fill="none" stroke={accent} strokeWidth={0.5} opacity={0.45} />
+        </g>
+      ))}
+    </>
+  );
+}
+
+/**
+ * 参道の手前: 三本の蝋燭を立てた背の高い燭台（炎のまわりがほのかに明るい）、床に落ちた一枚の白い羽根（雲海の羽根）、
+ * 床を這う薄い雲
+ */
+function candleStand(x: number, h: number, accent: string, key: string) {
+  const top = 100 - h;
+  return (
+    <g key={key}>
+      <circle cx={x} cy={top - 8} r={16} fill={accent} opacity={0.08} />
+      <circle cx={x} cy={top - 8} r={7} fill={accent} opacity={0.12} />
+      {/* 三本脚と、節のある軸 */}
+      <path d={`M${x - 9},100 L${x - 1.4},${100 - 12} L${x + 1.4},${100 - 12} L${x + 9},100 L${x + 7},100 L${x},${100 - 8} L${x - 7},100 Z`} />
+      <rect x={x - 1} y={top} width={2} height={h - 10} />
+      {[0.3, 0.62].map((f) => (
+        <ellipse key={f} cx={x} cy={top + (h - 10) * f} rx={2.6} ry={1.4} />
+      ))}
+      {/* 受け皿と枝、蝋燭 */}
+      <path d={`M${x - 11},${top} Q${x},${top + 6} ${x + 11},${top} H${x + 12} Q${x},${top + 8} ${x - 12},${top} Z`} />
+      {[-9, 0, 9].map((dx, k) => {
+        const ch = k === 1 ? 9 : 6.5;
+        const cy = top - (k === 1 ? 4 : 0);
+        return (
+          <g key={dx}>
+            {k !== 1 && <path d={`M${x},${top - 1} Q${x + dx * 0.6},${top - 1} ${x + dx},${cy}`} fill="none" stroke="currentColor" strokeWidth={1} />}
+            <rect x={x + dx - 1.6} y={cy - ch} width={3.2} height={ch} fill="#efe6d6" opacity={0.75} />
+            <rect x={x + dx - 3} y={cy} width={6} height={1.2} />
+            <path d={`M${x + dx},${cy - ch - 6} C${x + dx + 1.6},${cy - ch - 3} ${x + dx + 1.4},${cy - ch - 0.6} ${x + dx},${cy - ch - 0.4} C${x + dx - 1.4},${cy - ch - 0.6} ${x + dx - 1.6},${cy - ch - 3} ${x + dx},${cy - ch - 6} Z`} fill="#ffe2a8" className="expedition-flame" />
+            <circle cx={x + dx} cy={cy - ch - 2.4} r={3.2} fill={accent} opacity={0.25} />
+          </g>
+        );
+      })}
+      <path d={`M${x + 1},${top} V${100 - 12}`} stroke={accent} strokeWidth={0.4} opacity={0.4} />
+    </g>
+  );
+}
+function sanctumFore(accent: string) {
+  const wisp = gradId("fore-wisp", accent);
+  return (
+    <>
+      <defs>
+        <radialGradient id={wisp}>
+          <stop offset="0" stopColor="#e6dcf0" stopOpacity="0.28" />
+          <stop offset="1" stopColor="#e6dcf0" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {[[60, 30], [250, 44], [420, 36], [560, 28]].map(([x, rx]) => (
+        <ellipse key={x} cx={x} cy={96} rx={rx} ry={6} fill={`url(#${wisp})`} />
+      ))}
+      {candleStand(130, 64, accent, "c1")}
+      {candleStand(470, 52, accent, "c2")}
+      {/* 白い羽根: 軸と、片側に流れる羽枝 */}
+      <g transform="translate(300 98) rotate(-8)">
+        <path d="M-14,0 C-8,-4 4,-5 14,-2 C6,1 -6,2 -14,0 Z" fill="#f2ece4" opacity={0.8} />
+        <path d="M-17,0.4 L14,-2" stroke="#f8f2ea" strokeWidth={0.5} opacity={0.9} />
+        <path d="M-6,-2.4 l2,-1.8 M0,-3.2 l2,-1.6 M6,-3.4 l1.6,-1.2" stroke="#f2ece4" strokeWidth={0.4} opacity={0.6} />
+      </g>
     </>
   );
 }
@@ -1976,6 +2291,8 @@ export const ART: Record<ExpeditionArt, Art> = {
   alchemy: { width: 420, height: 220, render: alchemy },
   skyisles: { width: 500, height: 200, render: skyisles },
   belfry: { width: 360, height: 220, render: belfry },
+  cloudsea: { width: 500, height: 120, render: cloudSea },
+  sanctumfore: { width: 600, height: 100, render: sanctumFore },
   fragments: { width: 420, height: 220, render: fragments },
   farisles: { width: 500, height: 200, render: farIsles },
   starglass: {
@@ -2078,6 +2395,38 @@ export const ART: Record<ExpeditionArt, Art> = {
           opacity={0.08}
           fill="none"
         />
+      </>
+    ),
+  },
+  // 大聖堂の床: 磨いた大理石の板に、星冠の光が映る。淡い石目と、金の象嵌の帯と菱形
+  marble: {
+    width: 400,
+    height: 64,
+    render: (accent) => (
+      <>
+        <defs>
+          <linearGradient id={gradId("marble", accent)} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor={accent} stopOpacity="0.2" />
+            <stop offset="0.5" stopColor={accent} stopOpacity="0.05" />
+            <stop offset="1" stopColor={accent} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <rect x={0} y={GROUND} width={400} height={64 - GROUND} />
+        <rect x={0} y={GROUND} width={400} height={64 - GROUND} fill={`url(#${gradId("marble", accent)})`} />
+        <rect x={0} y={GROUND} width={400} height={0.8} fill={accent} opacity={0.45} />
+        <path d="M0,30 H400 M0,50 H400 M100,6 V30 M300,6 V30 M0,30 V50 M200,30 V50 M400,30 V50 M100,50 V64 M300,50 V64" stroke={accent} strokeWidth={0.5} opacity={0.12} fill="none" />
+        <path
+          d="M8,22 C30,18 52,26 80,20 M130,14 C160,20 186,12 230,18 M246,26 C270,22 290,28 320,24 M330,12 C350,16 372,10 396,15 M20,42 C60,38 90,46 140,40 M220,44 C260,40 300,47 360,41 M60,58 C100,55 140,60 190,56"
+          stroke="#ffffff"
+          strokeWidth={0.4}
+          opacity={0.06}
+          fill="none"
+        />
+        <rect x={0} y={11} width={400} height={0.6} fill={accent} opacity={0.3} />
+        <rect x={0} y={13} width={400} height={0.3} fill={accent} opacity={0.18} />
+        {[0, 200, 400].map((x) => (
+          <path key={x} d={`M${x},34 L${x + 6},40 L${x},46 L${x - 6},40 Z`} fill="none" stroke={accent} strokeWidth={0.5} opacity={0.3} />
+        ))}
       </>
     ),
   },
