@@ -54,6 +54,8 @@ function ParallaxLayer({ layer }: { layer: ExpeditionLayer }) {
 /** 歩みに合わせて動く CSS アニメーション（歩き出し・立ち止まりで、まとめて速さを変える） */
 const WALK_ANIMATIONS = new Set([
   "expedition-scroll",
+  "sky-turn",
+  "sky-turn-back",
   "wander-thigh",
   "wander-shin",
   "wander-foot",

@@ -571,88 +571,262 @@ function constellations(accent: string) {
   );
 }
 
+/** 円筒の陰影: 左は陰、右は天文盤の灯を受ける */
+function cylinderShade(id: string, accent: string) {
+  return (
+    <linearGradient id={id} x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stopColor="#000000" stopOpacity="0.4" />
+      <stop offset="0.45" stopColor="#000000" stopOpacity="0" />
+      <stop offset="0.82" stopColor={accent} stopOpacity="0.08" />
+      <stop offset="1" stopColor={accent} stopOpacity="0.22" />
+    </linearGradient>
+  );
+}
+/** 石積み: 横の目地と、段ごとにずれる縦の目地 */
+function masonry(x0: number, x1: number, y0: number, y1: number, accent: string, course = 7, key = "") {
+  const rows = Math.floor((y1 - y0) / course);
+  const d = range(rows)
+    .map((k) => {
+      const y = y0 + (k + 1) * course;
+      const offset = (k % 2) * 6;
+      const joints = range(Math.floor((x1 - x0) / 12))
+        .map((j) => `M${(x0 + offset + j * 12).toFixed(1)},${y - course} v${course}`)
+        .join(" ");
+      return `M${x0},${y} H${x1} ${joints}`;
+    })
+    .join(" ");
+  return <path key={key} d={d} fill="none" stroke={accent} strokeWidth={0.3} opacity={0.08} />;
+}
+/** 灯る尖頭窓 */
+const litWindow = (x: number, y: number, w: number, h: number, opacity: number, key: string | number) => (
+  <path key={key} d={`M${x},${y + h} V${y + w / 2} A${w / 2},${w / 2} 0 0,1 ${x + w},${y + w / 2} V${y + h} Z`} fill="#ffd9a0" opacity={opacity} />
+);
+
+/** 円屋根の開口: 頂から、望遠鏡の抜ける角度の少し先まで、円屋根の縁に沿って走る細い溝 */
+function domeSlit(cx: number, base: number, r: number, exitAngle: number, width: number) {
+  const from = Math.PI / 2 + 0.08;
+  const to = exitAngle - 0.22;
+  const steps = 10;
+  const outer: string[] = [], inner: string[] = [];
+  for (let k = 0; k <= steps; k++) {
+    const t = from + ((to - from) * k) / steps;
+    outer.push(`${(cx + Math.cos(t) * (r + 1)).toFixed(1)},${(base - Math.sin(t) * (r + 1)).toFixed(1)}`);
+    inner.unshift(`${(cx + Math.cos(t) * (r - width)).toFixed(1)},${(base - Math.sin(t) * (r - width)).toFixed(1)}`);
+  }
+  return `M${outer.join(" L")} L${inner.join(" L")} Z`;
+}
+
 /**
- * 観測所の円屋根。屋根に細い開口が空いて内の灯が漏れ、架台に据えた望遠鏡がその開口から空へ突き出る。
- * angle は望遠鏡の仰角（度。右上が正）
+ * 観測所: 石積みの円筒の胴に蛇腹と灯る窓、台座。円屋根には肋が走り、向きに合わせて割れた開口から望遠鏡が空へ突き出る
  */
-function observatoryDome(cx: number, base: number, r: number, angle: number, accent: string, key: string) {
+function observatory(cx: number, base: number, r: number, angle: number, accent: string, key: string) {
   const a = (angle * Math.PI) / 180;
   const ux = Math.cos(a), uy = -Math.sin(a);
   const px = -uy, py = ux;
-  const pivot = [cx, base - r * 0.32] as const;
+  const pivot = [cx, base - r * 0.42] as const;
+  // 望遠鏡が円屋根の面を抜ける点までの長さ（円屋根の中心は (cx, base)）
+  const exit = (() => {
+    const ox = pivot[0] - cx, oy = pivot[1] - base;
+    const b = ox * ux + oy * uy, c = ox * ox + oy * oy - r * r;
+    return -b + Math.sqrt(b * b - c);
+  })();
+  const exitAngle = Math.atan2(-(pivot[1] + uy * exit - base), pivot[0] + ux * exit - cx);
   const at = (along: number, side: number) => `${(pivot[0] + ux * along + px * side).toFixed(1)},${(pivot[1] + uy * along + py * side).toFixed(1)}`;
   const slitW = r * 0.24;
   const clip = `expedition-dome-${key}`;
+  const shade = gradId(`cyl-${key}`, accent);
   const domePath = `M${cx - r},${base} A${r},${r} 0 0,1 ${cx + r},${base} Z`;
+  const drumL = cx - r - 4, drumR = cx + r + 4;
   return (
     <g key={key}>
       <defs>
         <clipPath id={clip}>
           <path d={domePath} />
         </clipPath>
+        {cylinderShade(shade, accent)}
       </defs>
-      {/* 円屋根を載せる胴と蛇腹 */}
-      <rect x={cx - r - 4} y={base} width={r * 2 + 8} height={200 - base} />
-      <rect x={cx - r - 7} y={base - 2} width={r * 2 + 14} height={4} />
-      <rect x={cx - r - 7} y={base - 2} width={r * 2 + 14} height={0.8} fill={accent} opacity={0.3} />
+      {/* 胴と台座 */}
+      <rect x={drumL} y={base} width={drumR - drumL} height={220 - base} />
+      <rect x={drumL - 5} y={206} width={drumR - drumL + 10} height={14} />
+      <rect x={drumL - 5} y={206} width={drumR - drumL + 10} height={0.8} fill={accent} opacity={0.22} />
+      {masonry(drumL, drumR, base + 6, 206, accent, 7, `${key}-m`)}
+      {range(3).map((k) => litWindow(cx - r * 0.55 + k * r * 0.5, base + 22, 6, 14, k === 1 ? 0.7 : 0.45, `${key}-w${k}`))}
+      <rect x={drumL} y={base} width={drumR - drumL} height={220 - base} fill={`url(#${shade})`} />
+      {/* 蛇腹 */}
+      <rect x={drumL - 4} y={base - 3} width={drumR - drumL + 8} height={5} />
+      <rect x={drumL - 4} y={base - 3} width={drumR - drumL + 8} height={0.8} fill={accent} opacity={0.35} />
+      {/* 円屋根と肋 */}
       <path d={domePath} />
-      {/* 円屋根の肋 */}
+      <path d={domePath} fill={`url(#${shade})`} />
       <path
-        d={`M${cx},${base - r} A${r * 0.45},${r} 0 0,0 ${cx - r * 0.45},${base} M${cx},${base - r} A${r * 0.45},${r} 0 0,1 ${cx + r * 0.45},${base} M${cx - r * 0.87},${base - r * 0.5} A${r},${r * 0.35} 0 0,1 ${cx + r * 0.87},${base - r * 0.5}`}
+        d={range(5)
+          .map((k) => {
+            const f = (k + 1) / 6;
+            const rx = r * Math.abs(1 - 2 * f);
+            return `M${cx},${base - r} A${rx.toFixed(1)},${r} 0 0,${f < 0.5 ? 0 : 1} ${(cx + (f < 0.5 ? -1 : 1) * rx).toFixed(1)},${base}`;
+          })
+          .join(" ")}
         fill="none"
         stroke={accent}
-        strokeWidth={0.5}
-        opacity={0.16}
+        strokeWidth={0.45}
+        opacity={0.14}
       />
-      {/* 開口: 望遠鏡の向きに沿って屋根が割れ、内の灯が漏れる */}
+      {/* 開口と、架台に据えた望遠鏡 */}
       <g clipPath={`url(#${clip})`}>
-        <path d={`M${at(-r * 0.2, slitW / 2)} L${at(r * 1.6, slitW / 2)} L${at(r * 1.6, -slitW / 2)} L${at(-r * 0.2, -slitW / 2)} Z`} fill={accent} opacity={0.22} />
+        <path d={domeSlit(cx, base, r, exitAngle, slitW)} fill="#ffd9a0" opacity={0.2} />
+        <path d={domeSlit(cx, base, r, exitAngle, slitW)} fill="none" stroke={accent} strokeWidth={0.4} opacity={0.3} />
       </g>
-      {/* 架台と、先へ行くほど太る筒。筒先には遮光の覆い、筒には締め輪 */}
       <path d={`M${cx - r * 0.12},${base} L${pivot[0] - r * 0.04},${pivot[1]} L${pivot[0] + r * 0.04},${pivot[1]} L${cx + r * 0.12},${base} Z`} />
-      <path d={`M${at(-r * 0.32, r * 0.07)} L${at(r * 1.3, r * 0.1)} L${at(r * 1.3, -r * 0.1)} L${at(-r * 0.32, -r * 0.07)} Z`} />
-      <path d={`M${at(r * 1.22, r * 0.13)} L${at(r * 1.45, r * 0.14)} L${at(r * 1.45, -r * 0.14)} L${at(r * 1.22, -r * 0.13)} Z`} />
-      <path d={`M${at(r * 0.4, r * 0.085)} L${at(r * 0.4, -r * 0.085)} M${at(r * 0.85, r * 0.095)} L${at(r * 0.85, -r * 0.095)}`} stroke={accent} strokeWidth={0.6} opacity={0.35} />
-      <circle cx={pivot[0]} cy={pivot[1]} r={r * 0.07} fill={accent} opacity={0.35} />
+      <path d={`M${at(-r * 0.2, r * 0.09)} L${at(exit + r * 0.14, r * 0.11)} L${at(exit + r * 0.14, -r * 0.11)} L${at(-r * 0.2, -r * 0.09)} Z`} />
+      <path d={`M${at(exit + r * 0.1, r * 0.135)} L${at(exit + r * 0.3, r * 0.14)} L${at(exit + r * 0.3, -r * 0.14)} L${at(exit + r * 0.1, -r * 0.135)} Z`} />
+      <path d={`M${at(exit * 0.55, r * 0.1)} L${at(exit * 0.55, -r * 0.1)} M${at(exit + r * 0.1, r * 0.135)} L${at(exit + r * 0.1, -r * 0.135)}`} stroke={accent} strokeWidth={0.6} opacity={0.35} />
+      <path d={`M${at(-r * 0.2, -r * 0.09)} L${at(exit + r * 0.3, -r * 0.14)}`} stroke={accent} strokeWidth={0.5} opacity={0.35} />
     </g>
   );
 }
+
+/**
+ * 螺旋階段の塔: わずかに膨らむ石の円筒。頂には持ち送りに載る胸壁、その上に石板葺きの円錐屋根と頂華。
+ * 灯る窓は、内の螺旋階段に沿って昇る
+ */
+function spiralStairTower(cx: number, accent: string) {
+  const shade = gradId("cyl-tower", accent);
+  const half = (y: number) => 17 + Math.sin(((y - 52) / 168) * Math.PI) * 1.6;
+  const body = (() => {
+    const l: string[] = [], r: string[] = [];
+    for (let y = 52; y <= 220; y += 8) {
+      l.push(`${(cx - half(y)).toFixed(1)},${y}`);
+      r.unshift(`${(cx + half(y)).toFixed(1)},${y}`);
+    }
+    return `M${l.join(" L")} L${r.join(" L")} Z`;
+  })();
+  return (
+    <g>
+      <defs>{cylinderShade(shade, accent)}</defs>
+      <path d={body} />
+      {masonry(cx - 18, cx + 18, 58, 220, accent, 6, "tower-m")}
+      {/* 螺旋に沿って昇る窓 */}
+      {range(8).map((k) => {
+        const y = 196 - k * 18;
+        const x = cx + Math.sin(k * 1.1) * 9 - 2;
+        return litWindow(x, y, 4, 8, 0.4 + (k % 3) * 0.2, `tw${k}`);
+      })}
+      <path d={body} fill={`url(#${shade})`} />
+      {/* 持ち送りと胸壁 */}
+      <path d={`M${cx - 22},52 H${cx + 22} V44 H${cx - 22} Z`} />
+      <path d={range(9).map((k) => `M${cx - 21 + k * 5},52 l1.2,4 h1.6 l1.2,-4 Z`).join(" ")} />
+      <path d={range(5).map((k) => `M${cx - 22 + k * 10},44 v-5 h5 v5 Z`).join(" ")} />
+      <rect x={cx - 22} y={44} width={44} height={0.8} fill={accent} opacity={0.3} />
+      {/* 石板葺きの円錐屋根と頂華 */}
+      <path d={`M${cx - 20},40 L${cx},2 L${cx + 20},40 Z`} />
+      <path
+        d={range(5)
+          .map((k) => {
+            const y = 10 + k * 6;
+            const w = ((y - 2) / 38) * 20;
+            return `M${(cx - w).toFixed(1)},${y} H${(cx + w).toFixed(1)}`;
+          })
+          .join(" ")}
+        stroke={accent}
+        strokeWidth={0.3}
+        opacity={0.1}
+      />
+      <path d={`M${cx},2 L${cx + 20},40`} stroke={accent} strokeWidth={0.5} opacity={0.3} />
+      <path d={`M${cx - 0.6},2 V-6 H${cx + 0.6} V2 Z`} />
+      <circle cx={cx} cy={-1} r={1.6} />
+      <circle cx={cx} cy={-7} r={1} fill={accent} opacity={0.8} />
+    </g>
+  );
+}
+
 function domes(accent: string) {
+  const shade = gradId("cyl-wing", accent);
   return (
     <>
-      <rect x={0} y={178} width={400} height={22} />
-      {observatoryDome(86, 122, 44, 40, accent, "a")}
-      {/* 細い塔と、灯のともる窓 */}
-      <rect x={180} y={70} width={26} height={130} />
-      <path d="M176,72 L193,30 L210,72 Z" />
-      <rect x={176} y={70} width={34} height={3} />
-      {[90, 112, 134, 156].map((y, i) => (
-        <path key={y} d={`M190,${y + 8} v-6 a3,3 0 0,1 6,0 v6 z`} fill={accent} opacity={i === 1 ? 0.3 : 0.65} />
-      ))}
-      {observatoryDome(300, 146, 30, 62, accent, "b")}
-      {/* 渡り廊下のアーチ */}
-      <path d="M134,152 H180 V200 H134 Z M142,200 V170 A7,7 0 0,1 156,170 V200 Z M160,200 V170 A7,7 0 0,1 174,170 V200 Z" fillRule="evenodd" />
-      <path d="M206,164 H266 V200 H206 Z" />
-      {range(3).map((i) => (
-        <path key={i} d={`M${214 + i * 18},186 v-8 a3,3 0 0,1 6,0 v8 z`} fill={accent} opacity={0.4} />
-      ))}
+      <defs>{cylinderShade(shade, accent)}</defs>
+      <rect x={0} y={212} width={480} height={8} />
+      {observatory(96, 126, 44, 40, accent, "a")}
+      {/* 渡りの回廊: 柱とアーチ、上に欄干 */}
+      <path d="M150,220 V166 H210 V220 Z M156,220 V188 A9,9 0 0,1 174,188 V220 Z M186,220 V188 A9,9 0 0,1 204,188 V220 Z" fillRule="evenodd" />
+      <path d="M148,166 H212 V161 H148 Z" />
+      <path d={range(11).map((k) => `M${151 + k * 5.6},161 v-7 h2 v7 Z`).join(" ")} />
+      <rect x={148} y={152} width={64} height={2.4} />
+      <rect x={148} y={152} width={64} height={0.7} fill={accent} opacity={0.3} />
+      {spiralStairTower(232, accent)}
+      {/* 小さな観測所 */}
+      {observatory(330, 156, 28, 62, accent, "b")}
+      {/* 切妻屋根の棟と煙突 */}
+      <path d="M372,220 V176 L402,154 L432,176 V220 Z" />
+      <path d="M418,166 V146 H426 V172 Z" />
+      <path d="M372,176 L402,154 L432,176" fill="none" stroke={accent} strokeWidth={0.6} opacity={0.3} />
+      {masonry(372, 432, 182, 214, accent, 7, "wing-m")}
+      {range(2).map((k) => litWindow(384 + k * 26, 188, 6, 12, 0.5, `ww${k}`))}
+      <rect x={372} y={176} width={60} height={44} fill={`url(#${shade})`} />
+      <path d="M432,220 V196 H480 V220 Z" />
     </>
   );
 }
 
-/** 石の欄干: 上下の手すりの間に、壺形の小柱を並べる */
-const BALUSTER = (x: number) =>
-  `M${x - 3},52 C${x - 3},46 ${x - 6},40 ${x - 6},32 C${x - 6},24 ${x - 2.5},20 ${x - 2.5},14 L${x + 2.5},14 C${x + 2.5},20 ${x + 6},24 ${x + 6},32 C${x + 6},40 ${x + 3},46 ${x + 3},52 Z`;
+/**
+ * 石の欄干: 刳形の付いた笠石と、台座の地覆の間に、ろくろで挽いた形（膨らみ・くびれ・輪）の小柱を並べる。
+ * 間に笠と羽目板の付いた親柱を立て、月明かりが右の面と上の縁に差す。ところどころ風化した染み
+ */
+const BALUSTER = (x: number) => {
+  const p = (dx: number, y: number) => `${(x + dx).toFixed(2)},${y}`;
+  // 下から: 台・膨らみ・くびれ・輪・頭
+  const right = [p(4.2, 54), p(4.2, 51), p(2.6, 50), p(5.4, 43), p(5.2, 36), p(2, 29), p(1.4, 25), p(3, 23.5), p(3, 21.5), p(1.8, 20.5), p(3.6, 18), p(3.6, 16)];
+  const left = right.map((pt) => {
+    const [px, py] = pt.split(",").map(Number);
+    return `${(2 * x - px).toFixed(2)},${py}`;
+  });
+  return `M${p(-4.2, 54)} L${left.slice(1).join(" L")} L${right.slice().reverse().join(" L")} Z`;
+};
 function balustrade(accent: string) {
+  const id = gradId("baluster", accent);
+  const posts = [0, 100];
   return (
     <>
-      <rect x={0} y={4} width={200} height={9} />
-      <rect x={0} y={4} width={200} height={1} fill={accent} opacity={0.3} />
-      <rect x={0} y={52} width={200} height={12} />
-      {range(10).map((i) => (
-        <path key={i} d={BALUSTER(10 + i * 20)} />
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#000000" stopOpacity="0.35" />
+          <stop offset="0.5" stopColor="#000000" stopOpacity="0" />
+          <stop offset="1" stopColor={accent} stopOpacity="0.25" />
+        </linearGradient>
+      </defs>
+      {/* 地覆 */}
+      <rect x={0} y={54} width={200} height={10} />
+      <rect x={0} y={54} width={200} height={0.7} fill={accent} opacity={0.18} />
+      {/* 小柱 */}
+      {range(8).map((k) =>
+        posts.map((px) => {
+          const x = px + 18 + k * 10.5;
+          return (
+            <g key={`${px}-${k}`}>
+              <path d={BALUSTER(x)} />
+              <path d={BALUSTER(x)} fill={`url(#${id})`} />
+            </g>
+          );
+        }),
+      )}
+      {/* 笠石: 上の笠と下の玉縁 */}
+      <path d="M0,16 H200 V12 H0 Z" />
+      <path d="M0,12 H200 V5 C200,3.6 198.6,3 197,3 H3 C1.4,3 0,3.6 0,5 Z" />
+      <rect x={0} y={3} width={200} height={0.9} fill={accent} opacity={0.4} />
+      <rect x={0} y={12} width={200} height={0.5} fill={accent} opacity={0.14} />
+      {/* 親柱: 笠と羽目板 */}
+      {posts.map((x) => (
+        <g key={x}>
+          <rect x={x + 1} y={2} width={14} height={62} />
+          <rect x={x - 0.5} y={0} width={17} height={3.4} />
+          <rect x={x + 3.5} y={20} width={9} height={28} fill="none" stroke={accent} strokeWidth={0.4} opacity={0.18} />
+          <rect x={x + 1} y={2} width={14} height={62} fill={`url(#${id})`} />
+          <rect x={x - 0.5} y={0} width={17} height={0.8} fill={accent} opacity={0.45} />
+        </g>
       ))}
-      <rect x={96} y={0} width={14} height={64} />
+      {/* 風化の染み */}
+      {[[40, 8, 6], [128, 58, 9], [172, 7, 5]].map(([x, y, w], k) => (
+        <ellipse key={k} cx={x} cy={y} rx={w} ry={1.4} fill="#000000" opacity={0.25} />
+      ))}
     </>
   );
 }
@@ -1140,7 +1314,7 @@ function farIsles(accent: string) {
 
 export const ART: Record<ExpeditionArt, Art> = {
   constellations: { width: 500, height: 200, render: constellations },
-  domes: { width: 400, height: 200, render: domes },
+  domes: { width: 480, height: 220, render: domes },
   balustrade: { width: 200, height: 64, render: balustrade },
   clocktower: { width: 400, height: 240, render: clocktower },
   icepillars: { width: 360, height: 220, render: icepillars },

@@ -18,70 +18,140 @@ const polar = (r: number, deg: number) => {
   return [+(Math.cos(a) * r).toFixed(2), +(Math.sin(a) * r).toFixed(2)] as const;
 };
 
-/** 天文盤の外周の歯。ところどころ欠けている（刻の崩壊で、世界の暦の歯が欠けていった） */
-const GEAR_TEETH = range(72)
-  .filter((i) => !(i % 9 === 4 || rand(i, 1) > 0.86))
+/** 正確な角度の点（真上から時計回り） */
+const pol = (r: number, deg: number, cx = 0, cy = 0) => {
+  const a = ((deg - 90) * Math.PI) / 180;
+  return [+(cx + Math.cos(a) * r).toFixed(2), +(cy + Math.sin(a) * r).toFixed(2)] as const;
+};
+/** 縁の目盛り: 2.5° ごとに細く、15° ごとに長く */
+const LIMB_TICKS = range(144)
   .map((i) => {
-    const a = i * 5;
-    const [x1, y1] = polar(92, a - 1.4), [x2, y2] = polar(99, a - 1), [x3, y3] = polar(99, a + 1), [x4, y4] = polar(92, a + 1.4);
-    return `M${x1},${y1} L${x2},${y2} L${x3},${y3} L${x4},${y4} Z`;
-  })
-  .join(" ");
-const ASTRO_TICKS = range(120)
-  .map((i) => {
-    const [x1, y1] = polar(i % 10 === 0 ? 70 : 74, i * 3), [x2, y2] = polar(78, i * 3);
+    const deg = i * 2.5;
+    const inner = i % 6 === 0 ? 82 : i % 2 === 0 ? 84.5 : 86;
+    const [x1, y1] = pol(inner, deg), [x2, y2] = pol(87.5, deg);
     return `M${x1},${y1} L${x2},${y2}`;
   })
   .join(" ");
-/** 十二の宮の区切りと、それぞれの小さな印 */
-const ZODIAC = range(12).map((i) => ({ line: [polar(60, i * 30), polar(70, i * 30)] as const, mark: polar(65, i * 30 + 15) }));
-/** 星を指す網（レテ）の爪 */
-const RETE = [20, 75, 140, 200, 255, 320].map((a, i) => {
-  const [x0, y0] = polar(30, a), [cx, cy] = polar(48, a + 18), [x1, y1] = polar(56 - (i % 3) * 4, a + 30);
-  return { d: `M${x0},${y0} Q${cx},${cy} ${x1},${y1}`, tip: [x1, y1] as const };
+/** 外周の歯。ところどころ欠けている（刻の崩壊で、世界の暦の歯が欠けていった） */
+const LIMB_TEETH = range(120)
+  .filter((i) => !(i % 13 === 5 || rand(i, 1) > 0.9))
+  .map((i) => {
+    const a = i * 3;
+    const [x1, y1] = pol(92, a - 0.9), [x2, y2] = pol(96, a - 0.5), [x3, y3] = pol(96, a + 0.5), [x4, y4] = pol(92, a + 0.9);
+    return `M${x1},${y1} L${x2},${y2} L${x3},${y3} L${x4},${y4} Z`;
+  })
+  .join(" ");
+const HOURS = ["XII", "I", "II", "III", "IIII", "V", "VI", "VII", "VIII", "IX", "X", "XI"];
+/** 盤: 天頂へ寄っていく高度の円と、天頂から地平へ落ちる方位の弧、回帰線の円 */
+const ZENITH_Y = -14;
+const ALMUCANTARS = range(9).map((k) => {
+  const f = k / 9;
+  return { cy: -6 + (ZENITH_Y + 6) * f ** 0.9, r: 52 * (1 - f) + 2 };
 });
+const AZIMUTHS = [-70, -45, -22, 0, 22, 45, 70]
+  .map((deg) => {
+    const [x, y] = pol(52, 180 + deg, 0, -6);
+    const c = deg * 0.9;
+    return `M0,${ZENITH_Y} Q${(c * 0.6).toFixed(1)},${((ZENITH_Y + y) / 2).toFixed(1)} ${x},${y}`;
+  })
+  .join(" ");
+/** 網（レテ）の炎の形の指針: 根元から弧を描いて星を指す */
+const RETE_POINTERS = [
+  [16, 40, 66], [52, 38, 72], [96, 40, 60], [140, 38, 70], [182, 40, 64], [224, 38, 74], [266, 40, 62], [310, 38, 70], [338, 40, 58],
+].map(([deg, from, to], i) => {
+  const [x0, y0] = pol(from, deg), [x1, y1] = pol(to, deg + 12), [cx1, cy1] = pol((from + to) / 2 + 6, deg - 4);
+  const [w0x, w0y] = pol(from, deg + 7);
+  return { d: `M${x0},${y0} Q${cx1},${cy1} ${x1},${y1} Q${((cx1 + w0x) / 2).toFixed(1)},${((cy1 + w0y) / 2).toFixed(1)} ${w0x},${w0y} Z`, tip: [x1, y1] as const, bright: i % 3 === 0 };
+});
+/** 黄道の輪の十二の宮の区切り（輪の中心は盤の中心からずれる） */
+// 回る網の上で輪がぶれて見えないよう、黄道の輪は盤の中心に置く
+const ECLIPTIC = { cy: 0, r: 52 };
+const ECLIPTIC_TICKS = range(72)
+  .map((i) => {
+    const deg = i * 5;
+    const [x1, y1] = pol(ECLIPTIC.r - (i % 6 === 0 ? 5 : 2.4), deg, 0, ECLIPTIC.cy), [x2, y2] = pol(ECLIPTIC.r, deg, 0, ECLIPTIC.cy);
+    return `M${x1},${y1} L${x2},${y2}`;
+  })
+  .join(" ");
 
+/**
+ * 天文盤（アストロラーベ）。真鍮の線で描く。動かない盤（高度の円・方位の弧・回帰線）と縁（細かな目盛り・時の数字・欠けた歯）、
+ * 頂の玉座と吊り輪。盤の上を、炎の形の指針と黄道の輪を持つ網がゆっくり回り、中心の定規は逆へ回る。後ろに柔らかな金の暈
+ */
 function Astrolabe({ color }: { color: string }) {
   return (
     <div className="relative size-full">
-      {/* 動かない外周の歯車 */}
-      <svg viewBox="-100 -100 200 200" className="absolute inset-0 size-full overflow-visible" fill="none" stroke={color} opacity={0.5}>
-        <path d={GEAR_TEETH} fill={color} stroke="none" opacity={0.55} />
-        <circle r={92} strokeWidth={1.4} />
+      <div className="absolute inset-[-8%] rounded-full" style={{ background: `radial-gradient(circle, ${color}1c, ${color}0a 45%, transparent 70%)` }} />
+      {/* 動かない縁と盤 */}
+      {/* 盤の中心を箱の中心にそろえる（頂の玉座の分だけ、上下に同じ余白を取る） */}
+      <svg viewBox="-112 -112 224 224" className="absolute inset-0 size-full overflow-visible" fill="none" stroke={color}>
+        <g opacity={0.6}>
+          <path d={LIMB_TEETH} fill={color} stroke="none" opacity={0.5} />
+          <circle r={92} strokeWidth={1.1} />
+          <circle r={88} strokeWidth={0.5} />
+          <path d={LIMB_TICKS} strokeWidth={0.35} />
+          <circle r={80} strokeWidth={0.7} />
+          {HOURS.map((h, i) => {
+            const [x, y] = pol(74.5, i * 30);
+            return (
+              <text key={h} x={x} y={y} fontSize={4.6} fill={color} stroke="none" textAnchor="middle" dominantBaseline="central" fontFamily="serif" opacity={0.9} transform={`rotate(${i * 30} ${x} ${y})`}>
+                {h}
+              </text>
+            );
+          })}
+          <circle r={69} strokeWidth={0.4} />
+        </g>
+        <g opacity={0.32}>
+          {/* 回帰線と赤道 */}
+          <circle r={68} strokeWidth={0.4} />
+          <circle r={50} strokeWidth={0.35} strokeDasharray="1 1.4" />
+          <circle r={36} strokeWidth={0.4} />
+          {ALMUCANTARS.map(({ cy, r }, k) => (
+            <circle key={k} cy={cy} r={r} strokeWidth={k === 0 ? 0.55 : 0.3} />
+          ))}
+          <path d={AZIMUTHS} strokeWidth={0.3} />
+          <path d="M-68,0 H68 M0,-68 V68" strokeWidth={0.3} />
+        </g>
+        {/* 頂の玉座と吊り輪 */}
+        <g opacity={0.65}>
+          <path d="M-12,-90 C-12,-98 -6,-100 0,-104 C6,-100 12,-98 12,-90" strokeWidth={0.9} />
+          <path d="M-7,-92 C-5,-97 -2,-98 0,-100 C2,-98 5,-97 7,-92" strokeWidth={0.5} />
+          <circle cy={-104} r={1.4} fill={color} stroke="none" />
+          <circle cy={-108.5} r={3.4} strokeWidth={0.9} />
+        </g>
       </svg>
-      {/* ゆっくり回る目盛りの環・十二の宮・黄道・星を指す網（箱ごと回すので、中心はずれない） */}
-      <div className="sky-astrolabe-turn absolute inset-0">
-        <svg viewBox="-100 -100 200 200" className="size-full overflow-visible" fill="none" stroke={color} opacity={0.55}>
-          <circle r={78} strokeWidth={0.8} />
-          <path d={ASTRO_TICKS} strokeWidth={0.5} />
-          <circle r={70} strokeWidth={0.5} />
-          <circle r={60} strokeWidth={0.6} />
-          {ZODIAC.map(({ line: [[x1, y1], [x2, y2]], mark: [mx, my] }, i) => (
-            <g key={i}>
-              <path d={`M${x1},${y1} L${x2},${y2}`} strokeWidth={0.5} />
-              <circle cx={mx} cy={my} r={i % 3 === 0 ? 1.6 : 1} strokeWidth={0.5} />
-            </g>
-          ))}
-          <circle cy={-14} r={40} strokeWidth={0.7} />
-          {RETE.map(({ d, tip: [x, y] }, i) => (
-            <g key={i}>
-              <path d={d} strokeWidth={0.7} />
-              <circle cx={x} cy={y} r={1.4} fill={color} stroke="none" />
-            </g>
-          ))}
-          <path d="M0,-92 L0,92 M-92,0 L92,0" strokeWidth={0.35} />
+      {/* ゆっくり回る網（レテ） */}
+      <div className="sky-astrolabe-turn absolute inset-[5.357%]">
+        <svg viewBox="-100 -100 200 200" className="size-full overflow-visible" fill="none" stroke={color}>
+          <g opacity={0.75}>
+            <circle r={68} strokeWidth={0.9} />
+            <circle r={36} strokeWidth={0.8} />
+            <path d="M-68,0 H-36 M36,0 H68 M0,36 V68" strokeWidth={0.8} />
+            {/* 黄道の輪と、十二の宮の目盛り */}
+            <circle cy={ECLIPTIC.cy} r={ECLIPTIC.r} strokeWidth={0.9} />
+            <circle cy={ECLIPTIC.cy} r={ECLIPTIC.r - 5} strokeWidth={0.4} />
+            <path d={ECLIPTIC_TICKS} strokeWidth={0.35} />
+            {/* 炎の形の指針と、その先の星 */}
+            {RETE_POINTERS.map(({ d, tip: [x, y], bright }, i) => (
+              <g key={i}>
+                <path d={d} fill={color} fillOpacity={0.14} strokeWidth={0.35} />
+                <circle cx={x} cy={y} r={bright ? 4 : 2.6} fill={color} stroke="none" opacity={0.12} />
+                <circle cx={x} cy={y} r={bright ? 1.2 : 0.8} fill="#fff8e0" stroke="none" />
+              </g>
+            ))}
+            {/* 網の透かし: 内の円をつなぐ四つ葉の飾り */}
+            <path d="M0,-36 C14,-30 14,-14 0,-8 C-14,-14 -14,-30 0,-36 Z M0,36 C14,30 14,14 0,8 C-14,14 -14,30 0,36 Z" strokeWidth={0.5} />
+          </g>
         </svg>
       </div>
-      {/* 中心の小さな環は逆へ回る */}
-      <div className="sky-astrolabe-turn-back absolute inset-[34%]">
-        <svg viewBox="-32 -32 64 64" className="size-full overflow-visible" fill="none" stroke={color} opacity={0.4}>
-          <circle r={30} strokeWidth={0.6} />
-          <path d="M0,-30 L0,-6 M0,6 L0,30 M-30,0 L-6,0 M6,0 L30,0" strokeWidth={0.6} />
+      {/* 逆へ回る定規 */}
+      <div className="sky-astrolabe-turn-back absolute inset-[5.357%]">
+        <svg viewBox="-100 -100 200 200" className="size-full overflow-visible" fill={color} stroke="none">
+          <path d="M-82,0 L-60,-2.2 L60,-2.2 L82,0 L60,2.2 L-60,2.2 Z" opacity={0.45} />
+          <circle r={4} opacity={0.8} />
+          <circle r={1.6} fill="#fff8e0" />
         </svg>
       </div>
-      <svg viewBox="-100 -100 200 200" className="absolute inset-0 size-full">
-        <circle r={3} fill={color} opacity={0.7} />
-      </svg>
     </div>
   );
 }

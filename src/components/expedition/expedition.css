@@ -439,10 +439,18 @@
   to { transform: rotate(-360deg); }
 }
 
-.sky-astrolabe-turn { animation: sky-turn 240s linear infinite; }
-.sky-astrolabe-turn-back { animation: sky-turn-back 160s linear infinite; }
-.sky-core-ring { animation: sky-turn 120s linear infinite; }
-.sky-crown-turn { animation: sky-turn 300s linear infinite; }
+/* 天文盤・炉心の陣・星冠は、少女が歩いている間だけ回り、立ち止まると止まる */
+.sky-astrolabe-turn { animation: sky-turn 240s linear infinite paused; }
+.sky-astrolabe-turn-back { animation: sky-turn-back 160s linear infinite paused; }
+.sky-core-ring { animation: sky-turn 120s linear infinite paused; }
+.sky-crown-turn { animation: sky-turn 300s linear infinite paused; }
+
+.expedition[data-walking] .sky-astrolabe-turn,
+.expedition[data-walking] .sky-astrolabe-turn-back,
+.expedition[data-walking] .sky-core-ring,
+.expedition[data-walking] .sky-crown-turn {
+  animation-play-state: running;
+}
 
 /* オーロラの幕はゆっくり横へ揺れ、明るさを変える */
 @keyframes sky-aurora {
