@@ -67,18 +67,30 @@ const WALK_ANIMATIONS = new Set([
 ]);
 /** 姿勢を持つ部位（立ち姿と歩く姿勢の間をなめらかにつなぐ） */
 const POSE_PARTS = ".wander-body, .wander-torso, .wander-thigh, .wander-shin, .wander-foot, .wander-hat, .wander-hair, .wander-cape, .wander-staff, .wander-tome";
-/** 歩き出しで歩みが速まる時間・立ち止まりで緩む時間（ミリ秒） */
-const SPEED_UP_MS = 900;
-const SLOW_DOWN_MS = 800;
+/** 歩みの1周期（ミリ秒。expedition.css の歩みのキーフレームと同じ） */
+const GAIT_MS = 1800;
+/**
+ * 立ち止まる位相: 奥の足が地面に着いて体を支え、手前の足が前へ振り出されているところ。
+ * ここから手前の足を前に下ろして立ち姿になる（立ち姿の奥の脚は、この位相の奥の脚と同じ形にしてあるので動かない）
+ */
+const STOP_PHASE = 0.72;
+/** 歩き出す位相: 手前の足に体重を移し、奥の足が地面を離れ始めるところ（立ち姿に近い） */
+const START_PHASE = 0.08;
+/** 立ち止まる前に緩め始める残り（周期に対する割合。最後の半歩ほど） */
+const SLOW_SPAN = 0.45;
+/** 歩き出しの最初の速さと、全速になるまでの時間（ミリ秒） */
+const START_RATE = 0.2;
+const SPEED_UP_MS = 1100;
 /** 姿勢を移す時間（ミリ秒） */
-const POSE_BLEND_MS = 550;
-const MIN_RATE = 0.04;
+const POSE_BLEND_MS = 450;
 
 const easeInOut = (t: number) => t * t * (3 - 2 * t);
 
 /**
- * 歩き出しと立ち止まりをなめらかにする。歩き出しは姿勢を立ち姿から歩く姿勢へ移しつつ、歩みと景色を一緒にゆっくり速め、
- * 立ち止まりは一緒に緩めてから立ち姿へ戻す（歩みと景色の速さはいつも同じ割合なので、足は床を滑らない）。
+ * 歩き出しと立ち止まりを、人の歩みに近づける。
+ * 歩き出しは両足で立った姿勢（手前の足が着いた瞬間）から一歩目を踏み出し、ゆっくりから全速へ速める。
+ * 立ち止まりは、その場で動きを止めず（片足が宙に浮いたまま固まらないよう）、次に手前の足が着いて両足で立つ瞬間まで歩き、
+ * 最後の半歩で緩めてから立ち姿へ移る。歩みと景色の速さはいつも同じ割合なので、足は床を滑らない。
  * 動きを抑える設定では、切り替えるだけにする
  */
 function useWalkTransition(walking: boolean) {
@@ -95,23 +107,18 @@ function useWalkTransition(walking: boolean) {
       for (const a of walkAnimations()) a.playbackRate = rate;
     };
     const currentRate = () => walkAnimations()[0]?.playbackRate ?? 1;
-    /** 歩みの速さを from から to へ ms かけて移す */
-    const ramp = (from: number, to: number, ms: number, done?: () => void) => {
-      const start = performance.now();
-      const tick = (now: number) => {
-        if (cancelled) return;
-        const t = Math.min(1, (now - start) / ms);
-        setRate(from + (to - from) * easeInOut(t));
-        if (t < 1) frame = requestAnimationFrame(tick);
-        else done?.();
-      };
-      frame = requestAnimationFrame(tick);
+    /** いまの歩みの位相（0〜1。手前の脚の腿の動きで測る） */
+    const gaitPhase = () => {
+      const thigh = root.querySelector(".wander-thigh.wander-front")?.getAnimations().find((a): a is CSSAnimation => a instanceof CSSAnimation);
+      const t = Number(thigh?.currentTime ?? 0);
+      return (((t % GAIT_MS) + GAIT_MS) % GAIT_MS) / GAIT_MS;
     };
     /** 姿勢の切り替え前の形を覚えておき、切り替え後の動きへなめらかに移す */
     const blendPose = (change: () => void) => {
       const parts = [...root.querySelectorAll(POSE_PARTS)].map((el) => [el, getComputedStyle(el).transform] as const);
       change();
-      for (const [el, transform] of parts) el.animate([{ transform }], { duration: POSE_BLEND_MS, easing: "cubic-bezier(0.3, 0.6, 0.3, 1)" });
+      // 覚えた形を始まり（offset: 0）に置き、終わりは切り替え後のいまの動きに任せる（キーフレームが一つだけだと終わりの形として扱われる）
+      for (const [el, transform] of parts) el.animate([{ transform, offset: 0 }], { duration: POSE_BLEND_MS, easing: "cubic-bezier(0.3, 0.6, 0.3, 1)" });
     };
 
     const isWalking = root.hasAttribute("data-walking");
@@ -122,20 +129,46 @@ function useWalkTransition(walking: boolean) {
       }
       let from = currentRate();
       if (!isWalking) {
+        // 立ち姿に近い位相（手前の足に体重を移したところ）から歩み出す。景色の位置は動かさない
         blendPose(() => root.setAttribute("data-walking", ""));
-        from = MIN_RATE;
+        for (const a of walkAnimations()) {
+          if (a.animationName !== "expedition-scroll") a.currentTime = Number(a.currentTime ?? 0) + START_PHASE * GAIT_MS;
+        }
+        from = START_RATE;
         setRate(from);
       }
-      ramp(from, 1, SPEED_UP_MS);
+      const start = performance.now();
+      const tick = (now: number) => {
+        if (cancelled) return;
+        const t = Math.min(1, (now - start) / SPEED_UP_MS);
+        setRate(from + (1 - from) * easeInOut(t));
+        if (t < 1) frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
     } else if (isWalking) {
       if (reduce) {
         root.removeAttribute("data-walking");
         return;
       }
-      ramp(currentRate(), MIN_RATE, SLOW_DOWN_MS, () => {
-        blendPose(() => root.removeAttribute("data-walking"));
-        setRate(1);
-      });
+      // 次に立ち止まれる位相まで歩く。すぐそこなら、もう一歩歩いてから止まる（全速から急に止まらないように）
+      let left = (STOP_PHASE - gaitPhase() + 1) % 1;
+      if (left < 0.2) left += 1;
+      let last = gaitPhase();
+      const top = currentRate();
+      const tick = () => {
+        if (cancelled) return;
+        const phase = gaitPhase();
+        left -= (phase - last + 1) % 1;
+        last = phase;
+        if (left <= 0.004) {
+          blendPose(() => root.removeAttribute("data-walking"));
+          setRate(1);
+          return;
+        }
+        setRate(Math.max(0.22, top * Math.min(1, 0.22 + (0.78 * left) / SLOW_SPAN)));
+        frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
     }
     return () => {
       cancelled = true;

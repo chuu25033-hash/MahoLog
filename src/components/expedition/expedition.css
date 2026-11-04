@@ -76,13 +76,14 @@
 }
 
 /* 立ち姿: 重心を奥の脚に預け、手前の脚を軽く前へ。呼吸に合わせて上体がわずかに上下し、帽子・髪・外套は風に揺れる */
-.wander-thigh.wander-front { transform: rotate(-6deg); }
-.wander-shin.wander-front { transform: rotate(3deg); }
-.wander-thigh.wander-back { transform: rotate(7deg); }
-.wander-shin.wander-back { transform: rotate(5deg); }
+/* 立ち姿の奥の脚は、立ち止まる位相（expedition-stage.tsx の STOP_PHASE）で体を支えている奥の脚と同じ形にし、止まるときに動かないようにする */
+.wander-thigh.wander-front { transform: rotate(-9deg); }
+.wander-shin.wander-front { transform: rotate(4deg); }
+.wander-thigh.wander-back { transform: rotate(-1deg); }
+.wander-shin.wander-back { transform: rotate(9deg); }
 /* 足は地面に平らに着ける（腿と脛の傾きを打ち消す） */
-.wander-foot.wander-front { transform: rotate(3deg); }
-.wander-foot.wander-back { transform: rotate(-12deg); }
+.wander-foot.wander-front { transform: rotate(5deg); }
+.wander-foot.wander-back { transform: rotate(-8deg); }
 
 @keyframes wander-breathe {
   0%, 100% { transform: rotate(0.6deg) translateY(0); }
