@@ -9,13 +9,15 @@ import { usePortraitPhone } from "@/lib/use-portrait-phone";
 /** 魔法陣が描かれはじめてから、最初の一節が浮かぶまで（ms） */
 const OPEN_MS = 3600;
 /** 一節ごとの長さ（ms）。浮かぶ → 留まる → 消え、次の一節が浮かぶまで */
-const LINE_MS = 8600;
+const LINE_MS = 6500;
 /** 一節が浮かぶ・消えるのにかける時間（ms）。CSS の transition と合わせる */
 const FADE_MS = 1800;
 /** 一節が消えてから次の一節が浮かぶまでの闇の間（ms） */
 const GAP_MS = 900;
 /** 最後の一節は長く留める（ms） */
-const LAST_LINE_MS = 7500;
+const LAST_LINE_MS = 5500;
+/** 触れて先へ進めたとき、いまの一節が消えはじめてから次の一節が浮かぶまで（ms） */
+const TAP_GAP_MS = 700;
 /** 全体が闇に溶けて、メイン画面へ移るまで（ms） */
 const CLOSE_MS = 2400;
 
@@ -42,7 +44,7 @@ export const LINES: ReactNode[][] = [
 type Phase = "waiting" | "playing" | "closing";
 
 /**
- * 初回のプロローグ（創世の記録）。飛ばせず、触れても進まない。
+ * 初回のプロローグ（創世の記録）。飛ばせないが、触れると次の一節へ進む（待てばひとりでに進む）。
  * 暗闇に 1px の魔法陣が脈打ちながら描かれ、四つの節が静かに浮かんでは消える。
  * 縦持ちのスマホは主陣を上寄りに置いて文字を下に、PC・横画面は魔法陣を左右に広げて文字を中央に置く。
  * 見届けると印を残し、onDone を呼ぶ
@@ -53,7 +55,11 @@ export function Prologue({ onDone }: { onDone?: () => void }) {
   const [phase, setPhase] = useState<Phase>(() => (soundManager.isAwake() ? "playing" : "waiting"));
   // 閉じる段階に移っても予定を取り消さないよう、始まったかどうかだけで演出の予定を組む
   const started = phase !== "waiting";
-  const [line, setLine] = useState<number | null>(null);
+  // いまの一節（-1 は魔法陣が描かれている最初の間）と、それが浮かんでいるか
+  const [cursor, setCursor] = useState(-1);
+  const [shown, setShown] = useState(false);
+  const line = cursor >= 0 && shown ? cursor : null;
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const onDoneRef = useRef(onDone);
   useEffect(() => {
@@ -73,34 +79,62 @@ export function Prologue({ onDone }: { onDone?: () => void }) {
     };
   }, []);
 
+  // 一節ずつ: 浮かべ、留め、消して次へ。触れて先へ進めたときも、次の一節はここで浮かぶ
   useEffect(() => {
     if (!started) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
     const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
 
-    at(0, () => soundManager.playSe("prologueOpen"));
-    let t = OPEN_MS;
-    LINES.forEach((_, i) => {
-      const last = i === LINES.length - 1;
-      at(t, () => {
-        setLine(i);
+    if (cursor < 0) {
+      at(0, () => soundManager.playSe("prologueOpen"));
+      at(OPEN_MS, () => setCursor(0));
+    } else {
+      at(0, () => {
+        setShown(true);
         soundManager.playSe("prologueLine");
       });
-      t += last ? LAST_LINE_MS : LINE_MS;
-      if (!last) at(t - FADE_MS - GAP_MS, () => setLine(null));
-    });
-    at(t, () => setPhase("closing"));
-    at(t + CLOSE_MS, () => {
+      if (cursor === LINES.length - 1) {
+        at(LAST_LINE_MS, () => setPhase("closing"));
+      } else {
+        at(LINE_MS - FADE_MS - GAP_MS, () => setShown(false));
+        at(LINE_MS, () => setCursor(cursor + 1));
+      }
+    }
+    return () => timers.forEach(clearTimeout);
+  }, [started, cursor]);
+
+  // 闇に溶けきったら、見届けた印を残してメイン画面へ
+  useEffect(() => {
+    if (phase !== "closing") return;
+    const timer = setTimeout(() => {
       markPrologueCompleted();
       onDoneRef.current?.();
-    });
-    return () => timers.forEach(clearTimeout);
-  }, [started]);
+    }, CLOSE_MS);
+    return () => clearTimeout(timer);
+  }, [phase]);
+
+  useEffect(() => () => {
+    if (tapTimer.current) clearTimeout(tapTimer.current);
+  }, []);
 
   function begin() {
     if (phase !== "waiting") return;
     void soundManager.wake();
     setPhase("playing");
+  }
+
+  /** 触れたとき: 始まる前なら始め、始まっていれば次の一節へ（最後の一節なら閉じる） */
+  function advance() {
+    if (phase === "waiting") return begin();
+    if (phase !== "playing" || tapTimer.current) return;
+    if (cursor === LINES.length - 1) return setPhase("closing");
+    if (cursor < 0) return setCursor(0);
+    const next = cursor + 1;
+    setShown(false);
+    tapTimer.current = setTimeout(() => {
+      tapTimer.current = null;
+      setCursor(next);
+    }, TAP_GAP_MS);
   }
 
   return createPortal(
@@ -109,9 +143,12 @@ export function Prologue({ onDone }: { onDone?: () => void }) {
       role="dialog"
       aria-modal
       aria-label="プロローグ 創世の記録"
-      onPointerDown={begin}
+      onPointerDown={advance}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") begin();
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          advance();
+        }
       }}
       tabIndex={-1}
       className={`prologue fixed inset-0 z-[95] select-none overflow-hidden bg-[#03050b] outline-none transition-opacity ease-in-out ${
@@ -133,6 +170,17 @@ export function Prologue({ onDone }: { onDone?: () => void }) {
           <span className="font-display text-[9px] tracking-[0.4em] text-starlight/50">TOUCH TO BEGIN</span>
         </button>
       )}
+
+      {/* 最初の一節が浮かんだら、触れれば先へ進めることを淡く添える */}
+      <div
+        className={`pointer-events-none absolute inset-x-0 bottom-[3dvh] flex flex-col items-center gap-0.5 pb-[env(safe-area-inset-bottom)] text-starlight/35 transition-opacity duration-[1800ms] ${
+          phase === "playing" && cursor >= 0 ? "opacity-100" : "opacity-0"
+        }`}
+        aria-hidden
+      >
+        <span className="text-[11px] tracking-[0.4em] whitespace-nowrap">触れて、先へ</span>
+        <span className="font-display text-[8px] tracking-[0.4em] text-starlight/70">TOUCH TO CONTINUE</span>
+      </div>
     </div>,
     document.body,
   );

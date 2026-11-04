@@ -16,6 +16,8 @@ type Step = {
   target?: string;
   title: string;
   label: string;
+  /** 世界観の言葉に馴染みのない人にも何をするところか伝わるよう、ふつうの言葉で言い換えた一言 */
+  plain?: string;
   body: string;
 };
 
@@ -29,42 +31,49 @@ const STEPS: Step[] = [
   {
     target: "profile",
     title: "探究者の記録",
+    plain: "プロフィール・レベル",
     label: "SCHOLAR",
     body: "あなたの名と魔術階級、探求度です。学んだ時間はエリアや遺物の加護を受けて累積魔力（MP）となり、貯まるほど探求度と階級が上がります。名前に触れると、実績で得た称号をひとつ掲げられます。",
   },
   {
     target: "chant",
     title: "詠唱を開始する",
+    plain: "勉強タイマーを始める",
     label: "BEGIN THE CHANT",
     body: "学びの時間を計る詠唱の間へ向かいます。科目を選んで集中すると、詠唱の長さに応じて流れ星が降り、遺物が届きます。30分に届くと流星群が近づき、静息を挟んで25分以上の詠唱を紡ぐほど星脈との同調が高まります。閉じても続きから戻れます。",
   },
   {
     target: "stage",
     title: "滞在するエリア",
+    plain: "ステージ選択（科目によって得られるポイントが増える）",
     label: "AREA",
     body: "いま滞在している地と、その地で魔力が増える属性です。「エリア選択」で移り住めます。魔力が貯まるほど奥地が開かれます。",
   },
   {
     target: "totals",
     title: "今宵・七夜・月巡り",
+    plain: "今日・今週・今月の勉強時間",
     label: "RECORDS",
     body: "今日・今週（月曜から）・今月に詠唱した時間です。",
   },
   {
     target: "trials",
     title: "星の試練",
+    plain: "ログインボーナス・デイリー／ウィークリーミッション",
     label: "TRIALS",
     body: "毎日の星天の導き、日課の儀式、週間の誓約がまとまっています。15分以上の詠唱が1回と数えられ、受け取れる報酬があると数字が灯ります。",
   },
   {
     target: "history",
     title: "魔導の軌跡",
+    plain: "月ごとの勉強カレンダー",
     label: "CHRONICLE",
     body: "これまでの詠唱を、月ごとの星図で振り返れます。1日から7夜ごとにひとつの星座が描かれ、月末の数夜は小さな星座になります。前の月もさかのぼって見られます。",
   },
   {
     target: "worldlines",
     title: "結びし世界線",
+    plain: "フレンド（ほかの人とゆるくつながる）",
     label: "BOUND WORLDLINES",
     body: WORLDLINES_OPEN
       ? "遠い世界線の観測者と結ばれ、互いの探求の気配を静かに感じられます。順位を競うことはありません。"
@@ -79,18 +88,21 @@ const STEPS: Step[] = [
   {
     target: "radar",
     title: "魔法陣",
+    plain: "科目ごとの勉強時間のグラフ",
     label: "ARCANE CIRCLE",
     body: "科目ごとに詠唱した時間の釣り合いを、魔法陣の形で映します。右上から画像にして共有もできます。",
   },
   {
     target: "codex",
     title: "魔導図鑑",
+    plain: "アイテム図鑑・アイテムの合成",
     label: "CODEX",
     body: "詠唱で手に入れた遺物や、復元した古代文書が収められていきます。錬成陣では余った遺物を原石に還元し、神話の遺物を生み出せます。",
   },
   {
     target: "memory",
     title: "詠唱の記憶",
+    plain: "最近の勉強記録",
     label: "OBSERVATIONAL MEMORY",
     body: "最近の詠唱と、得た魔力の記録です。",
   },
@@ -258,6 +270,11 @@ function TourCard({
             {index + 1} / {STEPS.length}
           </span>
         </div>
+        {step.plain && (
+          <p className="w-fit rounded-md border border-starlight/25 bg-starlight/[0.06] px-2 py-0.5 text-xs leading-relaxed tracking-wider text-starlight [word-break:auto-phrase]">
+            {step.plain}
+          </p>
+        )}
         <p className="text-[13px] leading-relaxed tracking-wider text-foreground/85 [word-break:auto-phrase]">{step.body}</p>
       </div>
       <div className="flex items-center gap-2">
