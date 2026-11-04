@@ -7,6 +7,7 @@ import type { AmbienceKind, Area } from "./areas";
 /** 層に描く絵の名前（components/expedition/backdrop-art.tsx の ART に対応） */
 export type ExpeditionArt =
   | "stars"
+  | "fog"
   | "arches"
   | "cathedral"
   | "desk"
@@ -161,8 +162,10 @@ export const EXPEDITION_SCENES = {
     layers: [
       { source: { art: "pines" }, height: 0.5, bottom: EXPEDITION_FLOOR + 0.06, speed: 0.12, color: "#1a3a33", opacity: 0.7 },
       haze("#2c5a4a", EXPEDITION_FLOOR + 0.04, 0.32, 0.45),
+      { source: { art: "fog" }, height: 0.3, bottom: EXPEDITION_FLOOR + 0.02, speed: 0.18, color: "#7fb8a4", opacity: 0.28 },
       { source: { art: "pines" }, height: 0.66, bottom: EXPEDITION_FLOOR + 0.01, speed: 0.25, color: "#0f241e", opacity: 0.95, accent: "#a8e6c8", rim: 0.14 },
       haze("#1d4034", EXPEDITION_FLOOR, 0.22, 0.55),
+      { source: { art: "fog" }, height: 0.24, bottom: EXPEDITION_FLOOR - 0.04, speed: 0.4, color: "#9fd4bc", opacity: 0.2 },
       { source: { art: "trunks" }, height: 1.02, bottom: EXPEDITION_FLOOR - 0.03, speed: 0.6, color: "#040a08", accent: "#d7f5a8", rim: 0.16 },
       haze("#1d4034", EXPEDITION_FLOOR - 0.02, 0.1, 0.35),
       { source: { art: "undergrowth" }, height: 0.28, bottom: ON_FLOOR - 0.004, speed: 0.88, color: "#030806", accent: "#d7f5a8", rim: 0.18 },
@@ -181,6 +184,7 @@ export const EXPEDITION_SCENES = {
     layers: [
       { source: { art: "constellations" }, height: 0.78, bottom: 0.22, speed: 0.05, color: "#e6eeff", accent: "#e2c974" },
       haze("#2a3270", 0.1, 0.36, 0.55),
+      { source: { art: "fog" }, height: 0.26, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.12, color: "#6a7ac8", opacity: 0.2 },
       { source: { art: "domes" }, height: 0.56, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.24, color: "#0f1434", accent: "#e2c974", rim: 0.2 },
       haze("#1b1e4e", EXPEDITION_FLOOR - 0.02, 0.16, 0.55),
       { source: { art: "balustrade" }, height: 0.12, bottom: EXPEDITION_FLOOR - 0.005, speed: 0.92, color: "#060818", accent: "#8db7f2", rim: 0.2 },
@@ -221,6 +225,7 @@ export const EXPEDITION_SCENES = {
       haze("#5a2412", EXPEDITION_FLOOR + 0.02, 0.3, 0.4),
       { source: { art: "foundry" }, height: 0.82, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.16, color: "#220c09", accent: "#f0a070", opacity: 0.92, rim: 0.16 },
       haze("#4a1c0e", EXPEDITION_FLOOR - 0.01, 0.22, 0.5),
+      { source: { art: "fog" }, height: 0.3, bottom: EXPEDITION_FLOOR, speed: 0.3, color: "#a85a3a", opacity: 0.2 },
       { source: { art: "alchemy" }, height: 0.56, bottom: ON_FLOOR, speed: 0.5, color: "#0e0505", accent: "#f2c27a", rim: 0.18 },
       haze("#3a150c", EXPEDITION_FLOOR - 0.02, 0.08, 0.4),
       { source: { art: "embers" }, height: 0.17, bottom: ON_FLOOR - 0.004, speed: 0.88, color: "#070202", accent: "#f2a35d", rim: 0.2 },
@@ -271,7 +276,8 @@ export const EXPEDITION_SCENES = {
     layers: [
       { source: { art: "farisles" }, height: 0.36, bottom: 0.36, speed: 0.07, color: "#241a4c", accent: "#b9a2f7", opacity: 0.75 },
       haze("#3a2a6a", 0.08, 0.36, 0.42),
-      { source: { art: "cloudsea" }, height: 0.24, bottom: 0.04, speed: 0.12, color: "#3e3070", accent: "#cfe2ff", opacity: 0.85, rim: 0.3 },
+      { source: { art: "cloudsea" }, height: 0.3, bottom: 0.08, speed: 0.12, color: "#3e3070", accent: "#cfe2ff", opacity: 0.85, rim: 0.3 },
+      { source: { art: "fog" }, height: 0.3, bottom: 0.2, speed: 0.16, color: "#8a6ad8", opacity: 0.18 },
       { source: { art: "fragments" }, height: 0.52, bottom: EXPEDITION_FLOOR + 0.06, speed: 0.22, color: "#130b2e", accent: "#9fd8ff" },
       haze("#1a0f3e", EXPEDITION_FLOOR - 0.02, 0.12, 0.5),
       floor("#07041a", "#b9a2f7", "starglass"),

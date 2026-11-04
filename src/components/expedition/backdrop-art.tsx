@@ -369,6 +369,11 @@ function trunks(accent: string) {
           <stop offset="0.5" stopColor="#c8823a" stopOpacity="0.35" />
           <stop offset="1" stopColor="#c8823a" stopOpacity="0" />
         </radialGradient>
+        <radialGradient id={`${id}-spill`}>
+          <stop offset="0" stopColor="#f2c27a" stopOpacity="0.34" />
+          <stop offset="0.5" stopColor="#c8823a" stopOpacity="0.12" />
+          <stop offset="1" stopColor="#c8823a" stopOpacity="0" />
+        </radialGradient>
       </defs>
       {TRUNKS.map((t, i) => {
         const { cx, w, lean, hollow } = t;
@@ -416,6 +421,8 @@ function trunks(accent: string) {
                 ))}
                 <path d={`M${cx + 7},126 h3 v-4 h-3 Z`} />
                 <circle cx={cx + 8.5} cy={124} r={1.1} fill="#fff2cc" className="expedition-flame" />
+                {/* ランタンの灯が洞の縁からこぼれ、幹の肌をほのかに照らす */}
+                <ellipse cx={cx + 2} cy={118} rx={34} ry={44} fill={`url(#${id}-spill)`} className="expedition-flame" />
               </g>
             )}
           </g>
@@ -1740,13 +1747,15 @@ function cloudBank() {
  * 端で切れる塊は反対の端にも描き、横に並べたとき継ぎ目なく続くようにする
  */
 /** 積雲の塊（中心・底・幅・高さ）。奥の列は高く大きく、手前の列は低い */
-const SEA_MOUNDS = range(11).map((i) => {
+const SEA_MOUNDS = range(12).map((i) => {
   const back = i < 5;
+  // 大きさと間合いを不揃いにし、同じ形が並んで見えないようにする（ときどき大きな雲の峰が立つ）
+  const tower = !back && rand(i, 94) > 0.75;
   return {
-    x: back ? 20 + i * 100 + rand(i, 90) * 40 : 60 + (i - 5) * 84 + rand(i, 90) * 30,
-    base: back ? 84 : 104,
-    w: back ? 90 + rand(i, 91) * 60 : 60 + rand(i, 91) * 50,
-    h: back ? 34 + rand(i, 92) * 24 : 20 + rand(i, 92) * 18,
+    x: back ? 20 + i * 100 + rand(i, 90) * 50 : 30 + (i - 5) * 72 + rand(i, 90) * 50,
+    base: back ? 84 + rand(i, 95) * 6 : 102 + rand(i, 95) * 10,
+    w: back ? 80 + rand(i, 91) * 90 : tower ? 70 + rand(i, 91) * 30 : 36 + rand(i, 91) * 80,
+    h: back ? 28 + rand(i, 92) * 32 : tower ? 46 + rand(i, 92) * 14 : 12 + rand(i, 92) * 26,
   };
 });
 /** 塊を、縁が盛り上がる小さな丸の重なりにする（もくもくした積雲の頭）。端で切れる塊は反対の端にも描く */
@@ -2428,7 +2437,39 @@ function farIsles(accent: string) {
 }
 
 
+/* ---------- 霧（どの舞台でも使う） ---------- */
+
+/**
+ * 流れる霧の帯: 横に長く柔らかな霧の塊を、濃さと高さを変えて重ねる。色は層の色（currentColor）。
+ * 端で切れる塊は反対の端にも描き、横に並べたとき継ぎ目なく続くようにする
+ */
+const FOG_BLOBS = range(9).map((i) => ({
+  x: +(i * 70 + rand(i, 120) * 50).toFixed(1),
+  y: +(52 + rand(i, 121) * 36).toFixed(1),
+  rx: +(70 + rand(i, 122) * 90).toFixed(1),
+  ry: +(14 + rand(i, 123) * 16).toFixed(1),
+  o: +(0.45 + rand(i, 124) * 0.55).toFixed(2),
+}));
+const FOG_WRAPPED = FOG_BLOBS.flatMap((b) => [b, { ...b, x: b.x - 600 }, { ...b, x: b.x + 600 }]).filter((b) => b.x + b.rx > 0 && b.x - b.rx < 600);
+function fogBank() {
+  return (
+    <>
+      <defs>
+        <radialGradient id="expedition-fog">
+          <stop offset="0" stopColor="currentColor" stopOpacity="0.9" />
+          <stop offset="0.5" stopColor="currentColor" stopOpacity="0.4" />
+          <stop offset="1" stopColor="currentColor" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {FOG_WRAPPED.map((b, i) => (
+        <ellipse key={i} cx={b.x} cy={b.y} rx={b.rx} ry={b.ry} fill="url(#expedition-fog)" opacity={b.o} />
+      ))}
+    </>
+  );
+}
+
 export const ART: Record<ExpeditionArt, Art> = {
+  fog: { width: 600, height: 120, render: fogBank },
   constellations: { width: 500, height: 200, render: constellations },
   domes: { width: 480, height: 220, render: domes },
   balustrade: { width: 200, height: 64, render: balustrade },
