@@ -1,13 +1,20 @@
 import { memo, type CSSProperties } from "react";
 import { EXPEDITION_FLOOR, type ExpeditionLayer, type ExpeditionScene } from "@/lib/expedition";
 import { cn } from "@/lib/utils";
-import { BackdropTile, sourceAspect } from "./backdrop-art";
+import { BackdropTile, FLOOR_SURFACE, sourceAspect } from "./backdrop-art";
 import { Wanderer } from "./wanderer";
+import "./expedition.css";
 
-/** 少女の歩む速さ（舞台の高さ / 秒）。足元の床がこの速さで流れる */
-const WALK_SPEED = 0.11;
+/** 少女の歩む速さ（舞台の高さ / 秒）。足元の床がこの速さで流れる。地面に着いた足の送り（expedition.css の歩みのキーフレーム）と同じ速さにし、足が床を滑らないようにする */
+const WALK_SPEED = 0.0335;
 /** 層を敷き詰めるときに見込む、舞台の横長さ（幅 ÷ 高さ）の上限 */
 const MAX_STAGE_ASPECT = 3;
+/** 少女の背丈（舞台の高さに対する割合） */
+const WANDERER_HEIGHT = 0.26;
+/** 少女の絵の下端から足裏までの割合（wanderer.tsx の viewBox は高さ 100、足裏は 96.6） */
+const SOLE_INSET = (100 - 96.6) / 100;
+/** 足裏が床の地面の線にちょうど着く位置 */
+const WANDERER_BOTTOM = EXPEDITION_FLOOR * (1 - FLOOR_SURFACE) - WANDERER_HEIGHT * SOLE_INSET;
 
 const MOTES = Array.from({ length: 14 }, (_, i) => ({
   left: (i * 7.3 + ((i * 53) % 11)) % 100,
@@ -92,8 +99,8 @@ export const ExpeditionStage = memo(function ExpeditionStage({
       ))}
       <Wanderer
         glow={glow}
-        className="wanderer absolute aspect-[3/5] h-[26%]"
-        style={{ left: "22%", bottom: `${(EXPEDITION_FLOOR - 0.012) * 100}%` }}
+        className="wanderer absolute aspect-[3/5]"
+        style={{ left: "22%", height: `${WANDERER_HEIGHT * 100}%`, bottom: `${WANDERER_BOTTOM * 100}%` }}
       />
       {/* 四隅を沈め、重ねる時計や札を読みやすくする */}
       <div className="absolute inset-0 shadow-[inset_0_0_80px_20px_rgba(3,4,10,0.75)]" />

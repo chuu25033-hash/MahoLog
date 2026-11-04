@@ -106,10 +106,15 @@ const ICICLES = (() => {
 
 const CLOUD_PUFFS = range(12).map((i) => ({ cx: 22 + i * 40 + rand(i, 11) * 16, cy: 62 - rand(i, 12) * 24, r: 18 + rand(i, 13) * 18 }));
 
+/** 床の絵（高さ 64）で、少女が踏む地面の線の高さ */
+const GROUND = 6;
+/** 床の層の上端から地面の線までの割合。少女の足裏をここに合わせる */
+export const FLOOR_SURFACE = GROUND / 64;
+
 const GRASS = range(70).map((i) => {
   const x = 3 + i * 5.6 + rand(i, 14) * 2;
-  const h = 3 + rand(i, 15) * 7;
-  return `M${x - 1.6},11 L${x + rand(i, 16) * 2 - 1},${11 - h} L${x + 1.6},11 Z`;
+  const h = 3 + rand(i, 15) * 4;
+  return `M${x - 1.6},${GROUND + 1} L${x + rand(i, 16) * 2 - 1},${GROUND + 1 - h} L${x + 1.6},${GROUND + 1} Z`;
 }).join(" ");
 
 export const ART: Record<ExpeditionArt, Art> = {
@@ -225,10 +230,10 @@ export const ART: Record<ExpeditionArt, Art> = {
     height: 64,
     render: (accent) => (
       <>
-        <rect x={0} y={4} width={400} height={60} />
-        <rect x={0} y={4} width={400} height={0.8} fill={accent} opacity={0.35} />
+        <rect x={0} y={GROUND} width={400} height={64 - GROUND} />
+        <rect x={0} y={GROUND} width={400} height={0.8} fill={accent} opacity={0.35} />
         <path
-          d="M0,26 H400 M0,46 H400 M60,4 V26 M180,4 V26 M300,4 V26 M120,26 V46 M240,26 V46 M360,26 V46 M30,46 V64 M150,46 V64 M270,46 V64 M390,46 V64"
+          d="M0,26 H400 M0,46 H400 M60,6 V26 M180,6 V26 M300,6 V26 M120,26 V46 M240,26 V46 M360,26 V46 M30,46 V64 M150,46 V64 M270,46 V64 M390,46 V64"
           stroke={accent}
           strokeWidth={0.6}
           opacity={0.08}
@@ -242,10 +247,10 @@ export const ART: Record<ExpeditionArt, Art> = {
     height: 64,
     render: (accent) => (
       <>
-        <rect x={0} y={10} width={400} height={54} />
+        <rect x={0} y={GROUND} width={400} height={64 - GROUND} />
         <path d={GRASS} />
         {range(7).map((i) => (
-          <circle key={i} cx={28 + i * 56 + rand(i, 20) * 20} cy={8 - rand(i, 21) * 3} r={0.9} fill={accent} opacity={0.7} />
+          <circle key={i} cx={28 + i * 56 + rand(i, 20) * 20} cy={GROUND - 2 - rand(i, 21) * 2} r={0.9} fill={accent} opacity={0.7} />
         ))}
       </>
     ),
