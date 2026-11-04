@@ -47,7 +47,7 @@ const STEPS: Step[] = [
   {
     target: "stage",
     title: "滞在するエリア",
-    plain: "ステージ選択（科目によって得られるポイントが増える）",
+    plain: "ステージ選択",
     label: "AREA",
     body: "地ごとに魔力が増える属性が違います。魔力が貯まると奥地が開きます。",
   },
