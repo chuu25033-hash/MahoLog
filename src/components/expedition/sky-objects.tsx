@@ -42,38 +42,46 @@ const RETE = [20, 75, 140, 200, 255, 320].map((a, i) => {
 
 function Astrolabe({ color }: { color: string }) {
   return (
-    <svg viewBox="-100 -100 200 200" className="size-full overflow-visible" fill="none" stroke={color}>
-      <g opacity={0.5}>
+    <div className="relative size-full">
+      {/* 動かない外周の歯車 */}
+      <svg viewBox="-100 -100 200 200" className="absolute inset-0 size-full overflow-visible" fill="none" stroke={color} opacity={0.5}>
         <path d={GEAR_TEETH} fill={color} stroke="none" opacity={0.55} />
         <circle r={92} strokeWidth={1.4} />
-      </g>
-      <g className="sky-astrolabe-turn" opacity={0.55}>
-        <circle r={78} strokeWidth={0.8} />
-        <path d={ASTRO_TICKS} strokeWidth={0.5} />
-        <circle r={70} strokeWidth={0.5} />
-        <circle r={60} strokeWidth={0.6} />
-        {ZODIAC.map(({ line: [[x1, y1], [x2, y2]], mark: [mx, my] }, i) => (
-          <g key={i}>
-            <path d={`M${x1},${y1} L${x2},${y2}`} strokeWidth={0.5} />
-            <circle cx={mx} cy={my} r={i % 3 === 0 ? 1.6 : 1} strokeWidth={0.5} />
-          </g>
-        ))}
-        {/* 黄道の輪（中心からずれた円）と、星を指す網 */}
-        <circle cy={-14} r={40} strokeWidth={0.7} />
-        {RETE.map(({ d, tip: [x, y] }, i) => (
-          <g key={i}>
-            <path d={d} strokeWidth={0.7} />
-            <circle cx={x} cy={y} r={1.4} fill={color} stroke="none" />
-          </g>
-        ))}
-        <path d="M0,-92 L0,92 M-92,0 L92,0" strokeWidth={0.35} />
-      </g>
-      <g className="sky-astrolabe-turn-back" opacity={0.4}>
-        <circle r={30} strokeWidth={0.6} />
-        <path d="M0,-30 L0,-6 M0,6 L0,30 M-30,0 L-6,0 M6,0 L30,0" strokeWidth={0.6} />
-      </g>
-      <circle r={3} fill={color} stroke="none" opacity={0.7} />
-    </svg>
+      </svg>
+      {/* ゆっくり回る目盛りの環・十二の宮・黄道・星を指す網（箱ごと回すので、中心はずれない） */}
+      <div className="sky-astrolabe-turn absolute inset-0">
+        <svg viewBox="-100 -100 200 200" className="size-full overflow-visible" fill="none" stroke={color} opacity={0.55}>
+          <circle r={78} strokeWidth={0.8} />
+          <path d={ASTRO_TICKS} strokeWidth={0.5} />
+          <circle r={70} strokeWidth={0.5} />
+          <circle r={60} strokeWidth={0.6} />
+          {ZODIAC.map(({ line: [[x1, y1], [x2, y2]], mark: [mx, my] }, i) => (
+            <g key={i}>
+              <path d={`M${x1},${y1} L${x2},${y2}`} strokeWidth={0.5} />
+              <circle cx={mx} cy={my} r={i % 3 === 0 ? 1.6 : 1} strokeWidth={0.5} />
+            </g>
+          ))}
+          <circle cy={-14} r={40} strokeWidth={0.7} />
+          {RETE.map(({ d, tip: [x, y] }, i) => (
+            <g key={i}>
+              <path d={d} strokeWidth={0.7} />
+              <circle cx={x} cy={y} r={1.4} fill={color} stroke="none" />
+            </g>
+          ))}
+          <path d="M0,-92 L0,92 M-92,0 L92,0" strokeWidth={0.35} />
+        </svg>
+      </div>
+      {/* 中心の小さな環は逆へ回る */}
+      <div className="sky-astrolabe-turn-back absolute inset-[34%]">
+        <svg viewBox="-32 -32 64 64" className="size-full overflow-visible" fill="none" stroke={color} opacity={0.4}>
+          <circle r={30} strokeWidth={0.6} />
+          <path d="M0,-30 L0,-6 M0,6 L0,30 M-30,0 L-6,0 M6,0 L30,0" strokeWidth={0.6} />
+        </svg>
+      </div>
+      <svg viewBox="-100 -100 200 200" className="absolute inset-0 size-full">
+        <circle r={3} fill={color} opacity={0.7} />
+      </svg>
+    </div>
   );
 }
 
@@ -184,30 +192,57 @@ function Galaxy({ color }: { color: string }) {
   );
 }
 
-/** 星々の間へ果てなく伸びる螺旋の塔（星天の塔）。上は空に溶ける */
+/**
+ * 星々の間へ果てなく伸びる螺旋の塔（星天の塔）。下は太く上へ細る塔に、段ごとの張り出しと灯る窓、塔を巻いて昇る階段。
+ * 縁は灯を受けて淡く光り、上は空に溶けて一筋の光になる
+ */
+const TOWER_TIERS = range(9).map((i) => {
+  const y = 392 - i * 40;
+  const half = 15 - i * 1.25;
+  return { y, half, top: y - 40, nextHalf: half - 1.25 };
+});
 function SpiralTower({ color }: { color: string }) {
-  const turns = range(14);
   return (
-    <svg viewBox="0 0 100 400" preserveAspectRatio="xMidYMax meet" className="size-full">
+    <svg viewBox="0 0 100 400" preserveAspectRatio="xMidYMax meet" className="size-full overflow-visible">
       <defs>
-        <linearGradient id="expedition-tower-fade" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id="expedition-tower-body" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#2a1d5c" stopOpacity="0" />
-          <stop offset="0.35" stopColor="#2a1d5c" stopOpacity="0.8" />
-          <stop offset="1" stopColor="#1a1240" stopOpacity="1" />
+          <stop offset="0.3" stopColor="#21174c" stopOpacity="0.9" />
+          <stop offset="1" stopColor="#120c30" stopOpacity="1" />
+        </linearGradient>
+        <linearGradient id="expedition-tower-beam" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor={color} stopOpacity="0.5" />
+          <stop offset="1" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>
-      <path d="M38,400 L42,40 L50,0 L58,40 L62,400 Z" fill="url(#expedition-tower-fade)" />
-      {/* 塔を巻いて昇る階段と、ところどころ灯る窓 */}
-      {turns.map((i) => {
-        const y = 390 - i * 27;
-        const w = 12 + (y / 400) * 8;
+      {/* 塔の先から天へ昇る光 */}
+      <path d="M48.5,40 L47,-260 L53,-260 L51.5,40 Z" fill="url(#expedition-tower-beam)" style={{ filter: "blur(1.5px)" }} />
+      <g fill="url(#expedition-tower-body)">
+        {TOWER_TIERS.map(({ y, half, top, nextHalf }, i) => (
+          <g key={i}>
+            <path d={`M${50 - half},${y} L${50 - nextHalf},${top} L${50 + nextHalf},${top} L${50 + half},${y} Z`} />
+            {/* 段の張り出し（バルコニー） */}
+            <path d={`M${50 - half - 3},${y} L${50 + half + 3},${y} L${50 + half + 1.5},${y + 2.2} L${50 - half - 1.5},${y + 2.2} Z`} />
+          </g>
+        ))}
+        <path d="M45,32 L50,0 L55,32 Z" />
+      </g>
+      {TOWER_TIERS.map(({ y, half, top }, i) => {
+        const fade = Math.min(1, (y - 40) / 220);
         return (
-          <g key={i} opacity={Math.min(1, y / 260)}>
-            <path d={`M${50 - w},${y} Q50,${y - 8} ${50 + w},${y - 14}`} fill="none" stroke={color} strokeWidth={0.8} opacity={0.7} />
-            {rand(i, 7) > 0.4 && <rect x={48.6} y={y - 9} width={2.8} height={4} rx={1} fill={color} opacity={0.75} />}
+          <g key={i} opacity={fade}>
+            {/* 張り出しの縁と、塔の右の縁に差す灯 */}
+            <path d={`M${50 - half - 3},${y} L${50 + half + 3},${y}`} stroke={color} strokeWidth={0.5} opacity={0.5} />
+            <path d={`M${50 + half},${y} L${50 + half - 1.25},${top}`} stroke={color} strokeWidth={0.4} opacity={0.3} />
+            {/* 塔を巻いて昇る階段（手前の半周） */}
+            <path d={`M${50 - half + 1},${y - 6} Q50,${y - 12} ${50 + half - 1},${y - 26}`} fill="none" stroke={color} strokeWidth={0.7} opacity={0.45} />
+            {/* 灯る尖頭窓 */}
+            {rand(i, 7) > 0.25 && <path d={`M${48.6},${y - 14} v-5 a1.4,1.4 0 0,1 2.8,0 v5 z`} fill={color} opacity={0.85} />}
+            {i % 2 === 0 && <path d={`M${50 - half * 0.55},${y - 22} v-3.5 a1,1 0 0,1 2,0 v3.5 z`} fill={color} opacity={0.5} />}
           </g>
         );
       })}
+      <circle cx={50} cy={26} r={1.6} fill={color} opacity={0.9} />
     </svg>
   );
 }

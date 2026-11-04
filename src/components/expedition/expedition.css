@@ -439,8 +439,8 @@
   to { transform: rotate(-360deg); }
 }
 
-.sky-astrolabe-turn { animation: sky-turn 240s linear infinite; transform-box: view-box; transform-origin: center; }
-.sky-astrolabe-turn-back { animation: sky-turn-back 160s linear infinite; transform-box: view-box; transform-origin: center; }
+.sky-astrolabe-turn { animation: sky-turn 240s linear infinite; }
+.sky-astrolabe-turn-back { animation: sky-turn-back 160s linear infinite; }
 .sky-core-ring { animation: sky-turn 120s linear infinite; }
 .sky-crown-turn { animation: sky-turn 300s linear infinite; }
 

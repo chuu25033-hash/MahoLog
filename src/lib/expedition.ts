@@ -75,6 +75,8 @@ export type ExpeditionScene = {
   layers: (ExpeditionLayer | ExpeditionHaze)[];
   /** 空に掛かる、流れない大きな物（components/expedition/sky-objects.tsx） */
   celestial?: ExpeditionCelestial[];
+  /** 景色全体を沈める暗さ（0〜1）。どの舞台も、書庫と同じ薄暗さにそろえる（少女は沈めない） */
+  dim?: number;
   /** 窓や月から差し込む光の筋 */
   rays?: { color: string; opacity: number; from: "left" | "right" };
 };
@@ -105,6 +107,9 @@ const floor = (color: string, accent: string, art: ExpeditionArt = "floor"): Exp
   accent,
 });
 
+/** 床の地面の線の高さ。下端に据えた器具などは、層の下端をここに合わせて床に立たせる */
+const ON_FLOOR = EXPEDITION_FLOOR * (1 - 6 / 64);
+
 const haze = (color: string, bottom: number, height: number, opacity: number): ExpeditionHaze => ({ haze: color, bottom, height, opacity });
 
 export const EXPEDITION_SCENES = {
@@ -125,6 +130,7 @@ export const EXPEDITION_SCENES = {
   },
   forest: {
     id: "forest",
+    dim: 0.12,
     name: "月明かりの森",
     sky: ["#040a0c", "#0b1c1c", "#153229"],
     glow: "#8fdcc4",
@@ -144,6 +150,7 @@ export const EXPEDITION_SCENES = {
   // STAGE 3 星空の観測塔（刻の崩壊）: 歯の欠けた天文盤が空に掛かり、星座の線が星（誰かの一夜）を結ぶ
   observatory: {
     id: "observatory",
+    dim: 0.3,
     name: "星空の観測塔",
     sky: ["#02031a", "#0a1036", "#1b1e4e"],
     glow: "#8db7f2",
@@ -161,6 +168,7 @@ export const EXPEDITION_SCENES = {
   // STAGE 4 蒼氷の大回廊（大沈黙）: 凍った星脈のオーロラ、針の止まった時計塔、誰かの一時間が凍った氷の柱
   frost: {
     id: "frost",
+    dim: 0.3,
     name: "蒼氷の大回廊",
     sky: ["#030914", "#0a1a2e", "#173049"],
     glow: "#cfe9ff",
@@ -179,6 +187,7 @@ export const EXPEDITION_SCENES = {
   // STAGE 5 紅蓮の魔導炉（詠唱の儀式）: 落ちた星が炉心で燃え、ルーンの陣が巡る。錬金術の器具と熾火の床
   forge: {
     id: "forge",
+    dim: 0.3,
     name: "紅蓮の魔導炉",
     sky: ["#0c0303", "#200907", "#3a150c"],
     glow: "#f2a38d",
@@ -189,13 +198,14 @@ export const EXPEDITION_SCENES = {
       haze("#5a2412", EXPEDITION_FLOOR + 0.06, 0.4, 0.45),
       { source: { art: "spires" }, height: 0.46, bottom: EXPEDITION_FLOOR + 0.01, speed: 0.12, color: "#240e0b", accent: "#f2a38d", opacity: 0.8, rim: 0.14 },
       haze("#4a1c0e", EXPEDITION_FLOOR - 0.01, 0.24, 0.5),
-      { source: { art: "alchemy" }, height: 0.56, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.5, color: "#0e0505", accent: "#f2c27a", rim: 0.18 },
+      { source: { art: "alchemy" }, height: 0.56, bottom: ON_FLOOR, speed: 0.5, color: "#0e0505", accent: "#f2c27a", rim: 0.18 },
       floor("#0a0303", "#f2a35d", "magma"),
     ],
   },
   // STAGE 6 天空の大聖堂（継承）: 星冠の光輪と光の柱、雲に浮かぶ聖堂の島、鈴の下がる白い列柱
   sanctum: {
     id: "sanctum",
+    dim: 0.42,
     name: "天空の大聖堂",
     sky: ["#14112a", "#3a2f52", "#6a5868"],
     glow: "#fbf3d4",
@@ -215,6 +225,7 @@ export const EXPEDITION_SCENES = {
   // 星天の塔（再創生）: 銀河の帯の下、星々の間へ螺旋の塔が果てなく伸び、ルーンの足場が浮かぶ
   zenith: {
     id: "zenith",
+    dim: 0.22,
     name: "星天の塔",
     sky: ["#020109", "#0c0722", "#1b1140"],
     glow: "#a882fb",
@@ -226,8 +237,8 @@ export const EXPEDITION_SCENES = {
     layers: [
       { source: { art: "stars" }, height: 1, bottom: 0, speed: 0.03, color: "#e6eeff", opacity: 0.9 },
       haze("#3a2a6a", 0.08, 0.34, 0.4),
-      { source: { art: "fragments" }, height: 0.5, bottom: EXPEDITION_FLOOR + 0.12, speed: 0.18, color: "#140c30", accent: "#71e2ef", opacity: 0.9, rim: 0.2 },
-      { source: { art: "fragments" }, height: 0.4, bottom: EXPEDITION_FLOOR - 0.04, speed: 0.45, color: "#090520", accent: "#a882fb", rim: 0.2 },
+      { source: { art: "fragments" }, height: 0.5, bottom: EXPEDITION_FLOOR + 0.12, speed: 0.18, color: "#140c30", accent: "#71e2ef", opacity: 0.9 },
+      { source: { art: "fragments" }, height: 0.4, bottom: EXPEDITION_FLOOR - 0.04, speed: 0.45, color: "#090520", accent: "#a882fb" },
       haze("#1b1140", EXPEDITION_FLOOR - 0.02, 0.1, 0.5),
       floor("#06041a", "#a882fb"),
     ],

@@ -279,6 +279,8 @@ export const ExpeditionStage = memo(function ExpeditionStage({
           }}
         />
       ))}
+      {/* 景色全体を沈め、どの舞台も書庫と同じ薄暗さにする（少女はこの上に描くので沈まない） */}
+      {scene.dim ? <div className="pointer-events-none absolute inset-0" style={{ background: `rgba(4, 3, 10, ${scene.dim})` }} /> : null}
       <Wanderer
         glow={glow}
         className="wanderer absolute aspect-[3/5]"

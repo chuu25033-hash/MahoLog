@@ -82,6 +82,29 @@ const archesPath =
 
 const STARS = range(46).map((i) => ({ x: 4 + rand(i, 1) * 392, y: 4 + rand(i, 2) * 192, r: 0.4 + rand(i, 3) * 1.1 }));
 
+/** 星の色: 白・青白・暖色・薄紫を混ぜる */
+const STAR_TINTS = ["#fff8ec", "#dce6ff", "#ffe6c4", "#e9dcff"];
+/** 明るい星は、四方に光の筋を伸ばす */
+const sparklePath = (x: number, y: number, s: number) =>
+  `M${x},${y - s * 2.4} L${x + s * 0.32},${y - s * 0.32} L${x + s * 2.4},${y} L${x + s * 0.32},${y + s * 0.32} L${x},${y + s * 2.4} L${x - s * 0.32},${y + s * 0.32} L${x - s * 2.4},${y} L${x - s * 0.32},${y - s * 0.32} Z`;
+const SPARKLES = range(5).map((i) => ({ x: 30 + i * 78 + rand(i, 50) * 30, y: 15 + rand(i, 51) * 150, s: 0.9 + rand(i, 52) * 0.8 }));
+function starfield() {
+  return (
+    <>
+      {STARS.map((s, i) => (
+        <circle key={i} cx={s.x} cy={s.y} r={s.r * 0.85} fill={STAR_TINTS[i % 4]} opacity={0.3 + rand(i, 17) * 0.6} />
+      ))}
+      {SPARKLES.map((p, i) => (
+        <g key={i} fill={STAR_TINTS[i % 4]}>
+          <circle cx={p.x} cy={p.y} r={p.s * 2.4} opacity={0.08} />
+          <path d={sparklePath(p.x, p.y, p.s)} opacity={0.85} />
+        </g>
+      ))}
+    </>
+  );
+}
+
+
 /** 書架: 棚板の間に背の不ぞろいな本を詰める */
 function shelfBooks(x0: number, x1: number, shelfY: number, seed: number) {
   const books: ReactNode[] = [];
@@ -183,16 +206,6 @@ const TOWERS = [
   { x: 318, w: 28, top: 78 },
 ];
 
-/** 氷の結晶の柱: [根元の中心, 高さ, 幅, 傾き] */
-const SHARDS: [number, number, number, number][] = [
-  [48, 110, 22, -6], [70, 160, 26, 4], [92, 90, 18, 10],
-  [196, 70, 16, -8], [214, 130, 24, 0], [236, 84, 16, 9],
-  [318, 120, 22, -5], [342, 176, 28, 3], [366, 96, 18, 8],
-];
-
-const shardPoints = ([cx, h, w, tilt]: (typeof SHARDS)[number]) =>
-  `${cx - w / 2},200 ${cx - w / 2 + tilt * 0.6},${200 - h * 0.82} ${cx + tilt},${200 - h} ${cx + w / 2 + tilt * 0.6},${200 - h * 0.82} ${cx + w / 2},200`;
-
 const ICICLES = (() => {
   let d = "M0,0 H300 V16 ";
   for (let x = 0; x < 300; x += 12) {
@@ -202,7 +215,6 @@ const ICICLES = (() => {
   return d + "V0 Z";
 })();
 
-const CLOUD_PUFFS = range(12).map((i) => ({ cx: 22 + i * 40 + rand(i, 11) * 16, cy: 62 - rand(i, 12) * 24, r: 18 + rand(i, 13) * 18 }));
 
 /** 床の絵（高さ 64）で、少女が踏む地面の線の高さ */
 const GROUND = 6;
@@ -217,7 +229,7 @@ const GRASS = range(70).map((i) => {
 
 /* ---------- STAGE 3 星空の観測塔 ---------- */
 
-/** 星座: 明るい星を細い線で結ぶ（夜空の星は、どれも誰かの一夜） */
+/** 星座: 明るい星を細い線で結ぶ（夜空の星は、どれも誰かの一夜）。先頭の星は光の筋を伸ばす */
 const CONSTELLATIONS: [number, number][][] = [
   [[30, 60], [62, 44], [92, 58], [118, 40], [150, 52]],
   [[200, 120], [226, 96], [258, 104], [270, 136], [236, 150], [200, 120]],
@@ -228,15 +240,23 @@ function constellations(accent: string) {
   return (
     <>
       {STARS.map((s, i) => (
-        <circle key={i} cx={(s.x * 500) / 400} cy={s.y} r={s.r * 0.8} opacity={0.25 + rand(i, 17) * 0.5} />
+        <circle key={i} cx={(s.x * 500) / 400} cy={s.y} r={s.r * 0.7} fill={STAR_TINTS[i % 4]} opacity={0.2 + rand(i, 17) * 0.45} />
       ))}
       {CONSTELLATIONS.map((line, i) => (
         <g key={i}>
-          <path d={`M${line.map(([x, y]) => `${x},${y}`).join(" L")}`} fill="none" stroke={accent} strokeWidth={0.5} opacity={0.35} />
+          <path
+            d={`M${line.map(([x, y]) => `${x},${y}`).join(" L")}`}
+            fill="none"
+            stroke={accent}
+            strokeWidth={0.4}
+            strokeLinecap="round"
+            strokeDasharray="0.1 2.2"
+            opacity={0.55}
+          />
           {line.map(([x, y], j) => (
             <g key={j}>
-              <circle cx={x} cy={y} r={3.2} fill={accent} opacity={0.12} />
-              <circle cx={x} cy={y} r={1.3} fill="#fffbe8" opacity={0.95} />
+              <circle cx={x} cy={y} r={5} fill={accent} opacity={0.07} />
+              {j === 0 ? <path d={sparklePath(x, y, 1.5)} fill="#fff8e6" opacity={0.95} /> : <circle cx={x} cy={y} r={1.1} fill="#fffbe8" opacity={0.9} />}
             </g>
           ))}
         </g>
@@ -245,44 +265,70 @@ function constellations(accent: string) {
   );
 }
 
-/** 観測所: 円屋根から望遠鏡がのぞき、細い塔の窓に灯がともる */
-function domes(accent: string) {
-  const dome = (cx: number, base: number, r: number, tilt: number) => (
-    <>
-      <path d={`M${cx - r},${base} A${r},${r} 0 0,1 ${cx + r},${base} Z`} />
-      {/* 円屋根の細い開口と、そこから空を仰ぐ望遠鏡 */}
-      <path d={`M${cx - 2},${base - r + 1} L${cx + 2},${base - r + 1} L${cx + 3},${base - 4} L${cx - 3},${base - 4} Z`} fill={accent} opacity={0.35} />
-      <g transform={`rotate(${tilt} ${cx} ${base - r * 0.55})`}>
-        <rect x={cx - 3} y={base - r * 0.55 - r * 1.15} width={6} height={r * 1.15} rx={1.5} />
-        <rect x={cx - 4} y={base - r * 0.55 - r * 1.15} width={8} height={3} rx={1} />
-      </g>
+/**
+ * 観測所の円屋根。屋根に細い開口が空いて内の灯が漏れ、架台に据えた望遠鏡がその開口から空へ突き出る。
+ * angle は望遠鏡の仰角（度。右上が正）
+ */
+function observatoryDome(cx: number, base: number, r: number, angle: number, accent: string, key: string) {
+  const a = (angle * Math.PI) / 180;
+  const ux = Math.cos(a), uy = -Math.sin(a);
+  const px = -uy, py = ux;
+  const pivot = [cx, base - r * 0.32] as const;
+  const at = (along: number, side: number) => `${(pivot[0] + ux * along + px * side).toFixed(1)},${(pivot[1] + uy * along + py * side).toFixed(1)}`;
+  const slitW = r * 0.24;
+  const clip = `expedition-dome-${key}`;
+  const domePath = `M${cx - r},${base} A${r},${r} 0 0,1 ${cx + r},${base} Z`;
+  return (
+    <g key={key}>
+      <defs>
+        <clipPath id={clip}>
+          <path d={domePath} />
+        </clipPath>
+      </defs>
+      {/* 円屋根を載せる胴と蛇腹 */}
+      <rect x={cx - r - 4} y={base} width={r * 2 + 8} height={200 - base} />
+      <rect x={cx - r - 7} y={base - 2} width={r * 2 + 14} height={4} />
+      <rect x={cx - r - 7} y={base - 2} width={r * 2 + 14} height={0.8} fill={accent} opacity={0.3} />
+      <path d={domePath} />
       {/* 円屋根の肋 */}
-      <path d={`M${cx - r * 0.7},${base - r * 0.71} A${r},${r} 0 0,1 ${cx + r * 0.7},${base - r * 0.71}`} fill="none" stroke={accent} strokeWidth={0.5} opacity={0.18} />
-    </>
+      <path
+        d={`M${cx},${base - r} A${r * 0.45},${r} 0 0,0 ${cx - r * 0.45},${base} M${cx},${base - r} A${r * 0.45},${r} 0 0,1 ${cx + r * 0.45},${base} M${cx - r * 0.87},${base - r * 0.5} A${r},${r * 0.35} 0 0,1 ${cx + r * 0.87},${base - r * 0.5}`}
+        fill="none"
+        stroke={accent}
+        strokeWidth={0.5}
+        opacity={0.16}
+      />
+      {/* 開口: 望遠鏡の向きに沿って屋根が割れ、内の灯が漏れる */}
+      <g clipPath={`url(#${clip})`}>
+        <path d={`M${at(-r * 0.2, slitW / 2)} L${at(r * 1.6, slitW / 2)} L${at(r * 1.6, -slitW / 2)} L${at(-r * 0.2, -slitW / 2)} Z`} fill={accent} opacity={0.22} />
+      </g>
+      {/* 架台と、先へ行くほど太る筒。筒先には遮光の覆い、筒には締め輪 */}
+      <path d={`M${cx - r * 0.12},${base} L${pivot[0] - r * 0.04},${pivot[1]} L${pivot[0] + r * 0.04},${pivot[1]} L${cx + r * 0.12},${base} Z`} />
+      <path d={`M${at(-r * 0.32, r * 0.07)} L${at(r * 1.3, r * 0.1)} L${at(r * 1.3, -r * 0.1)} L${at(-r * 0.32, -r * 0.07)} Z`} />
+      <path d={`M${at(r * 1.22, r * 0.13)} L${at(r * 1.45, r * 0.14)} L${at(r * 1.45, -r * 0.14)} L${at(r * 1.22, -r * 0.13)} Z`} />
+      <path d={`M${at(r * 0.4, r * 0.085)} L${at(r * 0.4, -r * 0.085)} M${at(r * 0.85, r * 0.095)} L${at(r * 0.85, -r * 0.095)}`} stroke={accent} strokeWidth={0.6} opacity={0.35} />
+      <circle cx={pivot[0]} cy={pivot[1]} r={r * 0.07} fill={accent} opacity={0.35} />
+    </g>
   );
+}
+function domes(accent: string) {
   return (
     <>
       <rect x={0} y={178} width={400} height={22} />
-      {/* 大きな観測所 */}
-      <rect x={30} y={120} width={100} height={80} />
-      {dome(80, 120, 44, 28)}
+      {observatoryDome(86, 122, 44, 40, accent, "a")}
       {/* 細い塔と、灯のともる窓 */}
-      <rect x={176} y={70} width={26} height={130} />
-      <path d="M172,72 L189,30 L206,72 Z" />
+      <rect x={180} y={70} width={26} height={130} />
+      <path d="M176,72 L193,30 L210,72 Z" />
+      <rect x={176} y={70} width={34} height={3} />
       {[90, 112, 134, 156].map((y, i) => (
-        <path key={y} d={`M186,${y + 8} v-6 a3,3 0 0,1 6,0 v6 z`} fill={accent} opacity={i === 1 ? 0.35 : 0.7} />
+        <path key={y} d={`M190,${y + 8} v-6 a3,3 0 0,1 6,0 v6 z`} fill={accent} opacity={i === 1 ? 0.3 : 0.65} />
       ))}
-      {/* 小さな観測所 */}
-      <rect x={250} y={140} width={80} height={60} />
-      {dome(290, 140, 30, -22)}
-      {range(4).map((i) => (
-        <rect key={i} x={262 + i * 16} y={160} width={5} height={8} rx={2.5} fill={accent} opacity={0.55} />
-      ))}
+      {observatoryDome(300, 146, 30, 62, accent, "b")}
       {/* 渡り廊下のアーチ */}
-      <path d="M130,150 H176 V200 H130 Z M138,200 V168 A7,7 0 0,1 152,168 V200 Z M156,200 V168 A7,7 0 0,1 170,168 V200 Z" fillRule="evenodd" />
-      <path d="M202,160 H250 V200 H202 Z" />
-      {range(5).map((i) => (
-        <rect key={i} x={360 + (i % 2) * 12} y={150 + i * 9} width={14} height={4} />
+      <path d="M134,152 H180 V200 H134 Z M142,200 V170 A7,7 0 0,1 156,170 V200 Z M160,200 V170 A7,7 0 0,1 174,170 V200 Z" fillRule="evenodd" />
+      <path d="M206,164 H266 V200 H206 Z" />
+      {range(3).map((i) => (
+        <path key={i} d={`M${214 + i * 18},186 v-8 a3,3 0 0,1 6,0 v8 z`} fill={accent} opacity={0.4} />
       ))}
     </>
   );
@@ -394,35 +440,156 @@ function icepillars(accent: string) {
   );
 }
 
-/* ---------- STAGE 5 紅蓮の魔導炉 ---------- */
-
-/** 錬金術の器具: 蒸留器・鎖で吊られた坩堝・配管と弁・ルーンの刻まれた台 */
-function alchemy(accent: string) {
+/** 氷の結晶の群れ: [根元の中心, 高さ, 幅, 傾き] */
+const CRYSTAL_SHARDS: [number, number, number, number][] = [
+  [40, 96, 18, -10], [58, 150, 24, 3], [78, 108, 18, 12], [92, 64, 12, 18],
+  [190, 70, 14, -14], [206, 124, 20, -2], [224, 90, 16, 10],
+  [318, 112, 18, -8], [338, 172, 26, 2], [360, 120, 20, 9], [376, 70, 12, 16],
+];
+/** 面取りした結晶: 暗い面と、灯を受けて明るい面。稜線と縁に光、先にきらめき */
+function crystalShard([cx, h, w, tilt]: (typeof CRYSTAL_SHARDS)[number], i: number, accent: string) {
+  const p = (x: number, y: number) => `${x.toFixed(1)},${y.toFixed(1)}`;
+  const bl = [cx - w / 2, 200], br = [cx + w / 2, 200];
+  const sl = [cx - w / 2 + tilt * 0.6, 200 - h * 0.8], sr = [cx + w / 2 + tilt * 0.6, 200 - h * 0.8];
+  const tip = [cx + tilt, 200 - h];
+  const mid = [cx + w * 0.08, 200];
+  const ridgeTop = [cx + tilt * 0.62 + w * 0.06, 200 - h * 0.82];
+  const id = gradId("facet", accent);
+  return (
+    <g key={i}>
+      <path d={`M${p(bl[0], bl[1])} L${p(sl[0], sl[1])} L${p(tip[0], tip[1])} L${p(ridgeTop[0], ridgeTop[1])} L${p(mid[0], mid[1])} Z`} />
+      <path d={`M${p(mid[0], mid[1])} L${p(ridgeTop[0], ridgeTop[1])} L${p(tip[0], tip[1])} L${p(sr[0], sr[1])} L${p(br[0], br[1])} Z`} />
+      <path d={`M${p(mid[0], mid[1])} L${p(ridgeTop[0], ridgeTop[1])} L${p(tip[0], tip[1])} L${p(sr[0], sr[1])} L${p(br[0], br[1])} Z`} fill={`url(#${id})`} />
+      <path d={`M${p(sl[0], sl[1])} L${p(tip[0], tip[1])} L${p(sr[0], sr[1])}`} fill="none" stroke={accent} strokeWidth={0.6} opacity={0.55} strokeLinejoin="round" />
+      <path d={`M${p(mid[0], mid[1])} L${p(ridgeTop[0], ridgeTop[1])} L${p(tip[0], tip[1])}`} fill="none" stroke="#ffffff" strokeWidth={0.4} opacity={0.3} />
+      {h > 100 && <path d={sparklePath(tip[0], tip[1] + 2, 1.1)} fill="#ffffff" opacity={0.8} />}
+    </g>
+  );
+}
+function crystalField(accent: string) {
+  const id = gradId("facet", accent);
   return (
     <>
-      <rect x={0} y={206} width={420} height={14} />
-      {/* 蒸留器: 丸い胴と長い首、受け瓶 */}
-      <circle cx={70} cy={168} r={30} />
-      <path d="M62,140 L62,116 C62,96 96,80 128,92 L176,124 L172,130 L126,100 C100,90 78,100 78,116 L78,140 Z" />
-      <path d="M168,128 L182,170 L196,170 L196,206 L160,206 L160,170 L174,170 Z" />
-      <ellipse cx={70} cy={176} rx={18} ry={10} fill={accent} opacity={0.5} />
-      <path d="M48,206 L54,196 L86,196 L92,206 Z" />
-      {/* 鎖で吊られた坩堝。中の溶けた星が灯る */}
-      <path d="M250,0 V86 M244,0 V86" stroke="currentColor" strokeWidth={1.4} strokeDasharray="4 2" fill="none" />
-      <path d="M222,86 H272 L266,118 C262,130 232,130 228,118 Z" />
-      <ellipse cx={247} cy={88} rx={22} ry={4} fill={accent} opacity={0.75} />
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={accent} stopOpacity="0.42" />
+          <stop offset="0.6" stopColor={accent} stopOpacity="0.14" />
+          <stop offset="1" stopColor={accent} stopOpacity="0.04" />
+        </linearGradient>
+        <radialGradient id={`${id}-glow`} cx="0.5" cy="1" r="0.6">
+          <stop offset="0" stopColor={accent} stopOpacity="0.35" />
+          <stop offset="1" stopColor={accent} stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {/* 群れの根元の光 */}
+      {[64, 208, 344].map((x) => (
+        <ellipse key={x} cx={x} cy={200} rx={60} ry={36} fill={`url(#${id}-glow)`} />
+      ))}
+      {CRYSTAL_SHARDS.map((s, i) => crystalShard(s, i, accent))}
+      {/* 根元に積もる霜 */}
+      <path d="M0,200 C20,192 40,190 60,194 C80,188 110,190 130,196 C160,192 180,188 210,193 C240,190 270,194 300,192 C330,186 360,190 400,196 L400,200 Z" />
+      <path d="M0,200 C20,192 40,190 60,194 C80,188 110,190 130,196 C160,192 180,188 210,193 C240,190 270,194 300,192 C330,186 360,190 400,196" fill="none" stroke="#ffffff" strokeWidth={0.5} opacity={0.25} />
+    </>
+  );
+}
+
+/* ---------- STAGE 5 紅蓮の魔導炉 ---------- */
+
+/**
+ * 錬金術の器具。どれも床（下端）に据える。
+ * 炉台に掛けた硝子の蒸留器（中の液が灯り、泡が立つ）と受け瓶、鎖で吊られて溶けた星の光る坩堝、配管と弁、ルーンの台
+ */
+function alchemy(accent: string) {
+  const id = gradId("brew", accent);
+  return (
+    <>
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#fff2c8" stopOpacity="0.95" />
+          <stop offset="0.25" stopColor={accent} stopOpacity="0.85" />
+          <stop offset="1" stopColor={accent} stopOpacity="0.35" />
+        </linearGradient>
+        <radialGradient id={`${id}-molten`} cx="0.45" cy="0.5" r="0.55">
+          <stop offset="0" stopColor="#fff6dc" />
+          <stop offset="0.45" stopColor={accent} />
+          <stop offset="1" stopColor={accent} stopOpacity="0.5" />
+        </radialGradient>
+        <radialGradient id={`${id}-halo`} cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0" stopColor={accent} stopOpacity="0.4" />
+          <stop offset="1" stopColor={accent} stopOpacity="0" />
+        </radialGradient>
+        <clipPath id={`${id}-flask`}>
+          <circle cx={78} cy={150} r={27} />
+        </clipPath>
+      </defs>
+      {/* 炉台: 三本脚と、熾火の灯る火皿 */}
+      <path d="M52,220 L60,184 L64,184 L58,220 Z M104,220 L96,184 L92,184 L98,220 Z M76,220 L76,184 L80,184 L80,220 Z" />
+      <path d="M50,180 H106 L100,188 H56 Z" />
+      <ellipse cx={78} cy={180} rx={22} ry={3} fill={accent} opacity={0.65} className="expedition-flame" />
+      {/* 硝子の蒸留器: 胴は暗い硝子、中の液は上ほど明るく、泡が立つ */}
+      <circle cx={78} cy={150} r={28} opacity={0.6} />
+      <g clipPath={`url(#${id}-flask)`}>
+        <rect x={48} y={152} width={60} height={30} fill={`url(#${id})`} />
+        <path d="M50,152 Q78,149 106,152" fill="none" stroke="#fff6dc" strokeWidth={0.9} opacity={0.85} />
+        {[[66, 166, 1.6], [84, 170, 1.1], [74, 160, 0.9], [92, 162, 1.3], [80, 174, 0.8]].map(([x, y, r], k) => (
+          <circle key={k} cx={x} cy={y} r={r} fill="none" stroke="#fff6dc" strokeWidth={0.5} opacity={0.7} />
+        ))}
+      </g>
+      <circle cx={78} cy={150} r={28} fill="none" stroke={accent} strokeWidth={0.7} opacity={0.4} />
+      <path d="M62,134 A20,20 0 0,1 74,126" fill="none" stroke="#ffffff" strokeWidth={1} opacity={0.3} strokeLinecap="round" />
+      {/* 首と、受け瓶へ下る細い管 */}
+      <path d="M70,124 L70,104 C70,88 98,76 128,86 L184,122 L180,128 L126,94 C102,86 86,94 86,106 L86,124 Z" opacity={0.85} />
+      <path d="M86,106 C86,94 102,86 126,94 L180,128" fill="none" stroke={accent} strokeWidth={0.5} opacity={0.35} />
+      <path d="M182,126 L190,190" stroke="currentColor" strokeWidth={2.4} />
+      {/* 受け瓶と、溜まった滴 */}
+      <path d="M180,190 C176,198 174,212 182,220 L198,220 C206,212 204,198 200,190 Z" opacity={0.65} />
+      <path d="M177,204 C177,214 180,220 182,220 L198,220 C200,220 203,214 203,204 Z" fill={`url(#${id})`} opacity={0.75} />
+      <path d="M180,190 C176,198 174,212 182,220 L198,220 C206,212 204,198 200,190 Z" fill="none" stroke={accent} strokeWidth={0.6} opacity={0.35} />
+      {/* 鎖で吊られた坩堝。溶けた星の面が光り、上に熱の暈 */}
+      <path d="M244,0 V84 M254,0 V84" stroke="currentColor" strokeWidth={1.4} strokeDasharray="4 2" fill="none" />
+      <ellipse cx={249} cy={86} rx={40} ry={18} fill={`url(#${id}-halo)`} />
+      <path d="M224,88 H274 L268,118 C264,130 234,130 230,118 Z" />
+      <ellipse cx={249} cy={89} rx={23} ry={4.2} fill={`url(#${id}-molten)`} className="expedition-flame" />
+      <path d="M226,96 H272" stroke={accent} strokeWidth={0.6} opacity={0.3} />
+      {[[240, 78], [258, 74], [250, 68]].map(([x, y], k) => (
+        <circle key={k} cx={x} cy={y} r={0.9} fill="#fff2c8" opacity={0.8} />
+      ))}
       {/* 配管と弁 */}
-      <path d="M300,206 V120 C300,104 312,96 328,96 H420 V108 H330 C320,108 314,114 314,124 V206 Z" />
-      <circle cx={360} cy={102} r={11} />
-      <path d="M352,94 L368,110 M368,94 L352,110" stroke={accent} strokeWidth={1} opacity={0.35} />
-      {/* ルーンの刻まれた台 */}
-      <path d="M220,206 L226,176 H290 L296,206 Z" />
-      <path d="M232,190 h6 m6,0 h8 m6,0 h4 m6,0 h10" stroke={accent} strokeWidth={1.2} opacity={0.55} />
+      <path d="M306,220 V122 C306,106 318,98 334,98 H420 V110 H336 C326,110 320,116 320,126 V220 Z" />
+      <circle cx={366} cy={104} r={11} />
+      <circle cx={366} cy={104} r={11} fill="none" stroke={accent} strokeWidth={0.6} opacity={0.35} />
+      <path d="M358,96 L374,112 M374,96 L358,112" stroke={accent} strokeWidth={0.8} opacity={0.3} />
+      {/* ルーンの刻まれた台と、積んだ古書 */}
+      <path d="M222,220 L228,190 H292 L298,220 Z" />
+      <path d="M234,204 h6 m6,0 h8 m6,0 h4 m6,0 h10" stroke={accent} strokeWidth={1.2} opacity={0.55} className="expedition-flame" />
+      <path d="M130,220 V212 H160 V220 Z M134,212 V205 H158 V212 Z M128,205 V199 H154 V205 Z" />
+      <path d="M130,212 H160 M134,205 H158" stroke={accent} strokeWidth={0.4} opacity={0.25} />
     </>
   );
 }
 
 /* ---------- STAGE 6 天空の大聖堂 ---------- */
+
+const CLOUD_PUFFS2 = range(14).map((i) => ({ cx: 18 + i * 36 + rand(i, 11) * 14, cy: 58 - rand(i, 12) * 22, r: 16 + rand(i, 13) * 18 }));
+/** 雲の帯: 上は明るく、下は霞へ溶ける */
+function cloudBank() {
+  return (
+    <>
+      <defs>
+        <linearGradient id="expedition-cloud" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0.25" stopColor="currentColor" stopOpacity="1" />
+          <stop offset="1" stopColor="currentColor" stopOpacity="0.1" />
+        </linearGradient>
+      </defs>
+      <g fill="url(#expedition-cloud)">
+        <rect x={0} y={60} width={500} height={40} />
+        {CLOUD_PUFFS2.map((c, i) => (
+          <circle key={i} cx={c.cx} cy={c.cy + 18} r={c.r} />
+        ))}
+      </g>
+    </>
+  );
+}
 
 /** 雲に浮かぶ聖堂の島: 岩の島の上に尖塔の聖堂が立ち、下には岩が垂れる */
 const ISLES = [
@@ -452,52 +619,107 @@ function skyisles(accent: string) {
   );
 }
 
-/** 鈴の列柱: 雲の上に崩れかけの白い列柱が並び、アーチから鈴が下がる */
+/** 鈴の形 */
 const bellPath = (cx: number, top: number, s: number) =>
   `M${cx - 9 * s},${top + 26 * s} C${cx - 9 * s},${top + 14 * s} ${cx - 6 * s},${top + 8 * s} ${cx},${top + 8 * s} C${cx + 6 * s},${top + 8 * s} ${cx + 9 * s},${top + 14 * s} ${cx + 9 * s},${top + 26 * s} L${cx + 11 * s},${top + 29 * s} L${cx - 11 * s},${top + 29 * s} Z`;
+/**
+ * 鈴の列柱: 雲の上に並ぶ聖堂の列柱。アーチには二重の刳形と要石、柱には柱頭と台座、上端は少し崩れている。
+ * アーチから下がる鈴は縁に灯を受け、舌が淡く光る
+ */
+const BELFRY_BAYS = [90, 270];
 function belfry(accent: string) {
   return (
     <>
-      <path d="M0,10 H360 V220 H0 Z M30,220 V96 Q30,46 90,34 Q150,46 150,96 V220 Z M210,220 V96 Q210,46 270,34 Q330,46 330,96 V220 Z" fillRule="evenodd" />
-      {/* 崩れた上端 */}
-      <path d="M0,10 L20,16 L50,8 L80,18 L110,6 L140,16 L170,8 L200,18 L240,6 L270,16 L300,8 L322,20 L340,10 L360,14 V24 H0 Z" />
-      {/* アーチから下がる鈴 */}
-      <path d="M90,34 V42 M270,34 V41" stroke="currentColor" strokeWidth={1.4} />
-      <path d={`${bellPath(90, 34, 1)} ${bellPath(270, 34, 0.85)}`} />
-      <circle cx={90} cy={66} r={3.4} fill={accent} opacity={0.75} />
-      <circle cx={270} cy={61} r={2.8} fill={accent} opacity={0.75} />
-      {/* 柱の溝 */}
-      <path d="M170,40 V220 M180,40 V220 M190,40 V220 M350,40 V220 M10,40 V220" stroke={accent} strokeWidth={0.6} opacity={0.12} />
+      <path
+        d={`M0,16 H360 V220 H0 Z ${BELFRY_BAYS.map((cx) => `M${cx - 60},220 V100 Q${cx - 60},50 ${cx},38 Q${cx + 60},50 ${cx + 60},100 V220 Z`).join(" ")}`}
+        fillRule="evenodd"
+      />
+      {/* 崩れかけの上端と、蛇腹 */}
+      <path d="M0,16 L24,20 L46,13 L80,18 L120,12 L150,19 L176,12 L212,18 L248,11 L284,18 L320,13 L344,19 L360,15 V30 H0 Z" />
+      <rect x={0} y={30} width={360} height={3} fill={accent} opacity={0.18} />
+      {BELFRY_BAYS.map((cx) => (
+        <g key={cx}>
+          {/* 二重の刳形と要石 */}
+          <path d={`M${cx - 60},100 Q${cx - 60},50 ${cx},38 Q${cx + 60},50 ${cx + 60},100`} fill="none" stroke={accent} strokeWidth={0.9} opacity={0.35} />
+          <path d={`M${cx - 54},102 Q${cx - 54},58 ${cx},47 Q${cx + 54},58 ${cx + 54},102`} fill="none" stroke={accent} strokeWidth={0.5} opacity={0.2} />
+          <path d={`M${cx - 5},34 L${cx + 5},34 L${cx + 4},44 L${cx - 4},44 Z`} />
+          {/* 鈴と吊り金具、灯を受ける縁と光る舌 */}
+          <path d={`M${cx},44 V${52}`} stroke="currentColor" strokeWidth={1.6} />
+          <path d={bellPath(cx, 44, 1.05)} />
+          <path d={bellPath(cx, 44, 1.05)} fill="none" stroke={accent} strokeWidth={0.7} opacity={0.5} />
+          <circle cx={cx} cy={76} r={2.6} fill={accent} opacity={0.8} />
+          <circle cx={cx} cy={76} r={7} fill={accent} opacity={0.1} />
+        </g>
+      ))}
+      {/* 柱頭・台座と、柱の溝 */}
+      {[0, 180, 360].map((x) => (
+        <g key={x}>
+          <rect x={x - 32} y={96} width={64} height={5} />
+          <rect x={x - 32} y={96} width={64} height={0.8} fill={accent} opacity={0.3} />
+          <rect x={x - 34} y={206} width={68} height={14} />
+          <path d={`M${x - 14},104 V206 M${x - 4},104 V206 M${x + 6},104 V206 M${x + 16},104 V206`} stroke={accent} strokeWidth={0.5} opacity={0.12} />
+        </g>
+      ))}
     </>
   );
 }
 
 /* ---------- 星天の塔 ---------- */
 
-/** 浮かぶ足場: ルーンの刻まれた石の板と、宙に途切れる階段 */
-function fragments(accent: string) {
-  const slab = (x: number, y: number, w: number, i: number) => (
+/**
+ * 浮かぶ島: 上面は平らな石畳で縁が灯を受け、ルーンの環が光る。下は岩がぎざぎざに垂れ、鎖と結晶が下がる。
+ * 島の下には淡い光が滲む
+ */
+function floatingIsle(x: number, y: number, w: number, i: number, accent: string) {
+  const depth = w * 0.55;
+  const under = range(7)
+    .map((k) => {
+      const t = 1 - k / 6;
+      const px = x + 4 + (w - 8) * t;
+      const dip = Math.sin(t * Math.PI) * depth * (0.55 + rand(i * 9 + k, 60) * 0.45);
+      return `L${px.toFixed(1)},${(y + 6 + dip).toFixed(1)}`;
+    })
+    .join(" ");
+  const id = gradId("isle", accent);
+  return (
     <g key={i}>
-      <path d={`M${x},${y} H${x + w} L${x + w - 8},${y + 10} L${x + w * 0.6},${y + 26} L${x + w * 0.4},${y + 18} L${x + 8},${y + 10} Z`} />
-      <path d={`M${x + w * 0.25},${y + 5} h4 m5,0 h6 m5,0 h3`} stroke={accent} strokeWidth={1} opacity={0.6} />
-      <rect x={x} y={y - 1} width={w} height={1} fill={accent} opacity={0.35} />
+      <ellipse cx={x + w / 2} cy={y + depth * 0.9} rx={w * 0.55} ry={depth * 0.6} fill={`url(#${id})`} />
+      <path d={`M${x},${y} H${x + w} L${x + w - 4},${y + 6} ${under} L${x + 4},${y + 6} Z`} />
+      {/* 岩肌の割れ目 */}
+      <path d={`M${x + w * 0.3},${y + 8} L${x + w * 0.36},${y + depth * 0.4} L${x + w * 0.32},${y + depth * 0.6} M${x + w * 0.62},${y + 8} L${x + w * 0.58},${y + depth * 0.35}`} stroke={accent} strokeWidth={0.4} opacity={0.18} fill="none" />
+      <rect x={x} y={y - 0.6} width={w} height={1.2} fill={accent} opacity={0.45} />
+      {/* ルーンの環 */}
+      <ellipse cx={x + w / 2} cy={y - 1} rx={w * 0.22} ry={2.4} fill="none" stroke={accent} strokeWidth={0.7} opacity={0.6} />
+      {/* 下がる鎖と結晶 */}
+      <path d={`M${x + w * 0.7},${y + depth * 0.4} V${y + depth * 0.4 + 16}`} stroke="currentColor" strokeWidth={0.8} strokeDasharray="2 1.2" />
+      <path d={`M${x + w * 0.7},${y + depth * 0.4 + 16} l2.4,4 l-2.4,5 l-2.4,-5 Z`} fill={accent} opacity={0.75} />
     </g>
   );
+}
+function fragments(accent: string) {
+  const id = gradId("isle", accent);
   return (
     <>
-      {slab(20, 120, 80, 0)}
-      {slab(160, 70, 60, 1)}
-      {slab(300, 140, 90, 2)}
-      {/* 宙に途切れる階段 */}
-      {range(6).map((i) => (
-        <rect key={i} x={226 + i * 12} y={150 - i * 12} width={14} height={5} />
-      ))}
+      <defs>
+        <radialGradient id={id} cx="0.5" cy="0.3" r="0.5">
+          <stop offset="0" stopColor={accent} stopOpacity="0.22" />
+          <stop offset="1" stopColor={accent} stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {floatingIsle(20, 112, 84, 0, accent)}
+      {floatingIsle(170, 62, 56, 1, accent)}
+      {floatingIsle(296, 132, 92, 2, accent)}
+      {/* 島に立つ折れた柱 */}
+      <path d="M44,112 V86 L48,82 L52,88 L56,84 V112 Z" />
+      <path d="M318,132 V100 H328 V106 L332,102 V132 Z" />
+      {/* 宙に浮かぶ階段の欠片（それぞれの段の下にも岩が残る） */}
       {range(5).map((i) => (
-        <circle key={i} cx={60 + i * 80 + rand(i, 40) * 20} cy={40 + rand(i, 41) * 60} r={1.4} fill={accent} opacity={0.7} />
+        <path key={i} d={`M${232 + i * 13},${150 - i * 13} h14 v4 l-4,5 h-7 l-3,-5 Z`} />
       ))}
     </>
   );
 }
+
 
 export const ART: Record<ExpeditionArt, Art> = {
   constellations: { width: 500, height: 200, render: constellations },
@@ -515,7 +737,7 @@ export const ART: Record<ExpeditionArt, Art> = {
   stars: {
     width: 400,
     height: 200,
-    render: () => STARS.map((s, i) => <circle key={i} cx={s.x} cy={s.y} r={s.r} opacity={0.35 + rand(i, 17) * 0.65} />),
+    render: starfield,
   },
   arches: {
     width: 300,
@@ -565,17 +787,7 @@ export const ART: Record<ExpeditionArt, Art> = {
       </>
     ),
   },
-  crystals: {
-    width: 400,
-    height: 200,
-    render: (accent) =>
-      SHARDS.map((s, i) => (
-        <g key={i}>
-          <polygon points={shardPoints(s)} />
-          <path d={`M${s[0]},200 L${s[0] + s[3]},${200 - s[1]}`} stroke={accent} strokeWidth={0.8} opacity={0.35} fill="none" />
-        </g>
-      )),
-  },
+  crystals: { width: 400, height: 200, render: crystalField },
   icicles: {
     width: 300,
     height: 100,
@@ -607,18 +819,7 @@ export const ART: Record<ExpeditionArt, Art> = {
       </>
     ),
   },
-  clouds: {
-    width: 500,
-    height: 100,
-    render: () => (
-      <>
-        <rect x={0} y={64} width={500} height={36} />
-        {CLOUD_PUFFS.map((c, i) => (
-          <circle key={i} cx={c.cx} cy={c.cy + 18} r={c.r} />
-        ))}
-      </>
-    ),
-  },
+  clouds: { width: 500, height: 100, render: cloudBank },
   floor: {
     width: 400,
     height: 64,
