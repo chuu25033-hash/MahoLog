@@ -7,7 +7,6 @@ import { ArrowGlyph } from "@/components/arcane-icons";
 import { Button } from "@/components/ui/button";
 import { markLibraryTourDone, useLibraryTourDone } from "@/lib/onboarding";
 import { useStoredUserData } from "@/lib/user-store";
-import { WORLDLINES_OPEN } from "@/lib/worldline-store";
 import { usePortraitPhone } from "@/lib/use-portrait-phone";
 import { cn } from "@/lib/utils";
 
@@ -21,95 +20,69 @@ type Step = {
   body: string;
 };
 
-/** 書庫を巡る順。各ボタンが何をするところかを、一つずつ照らして語る */
+/**
+ * 書庫を巡る順。各ボタンが何をするところかを、一つずつ照らして語る。
+ * 長いと読まれないので、頁は要のところだけに絞り、本文は一、二文に留める（細かな仕組みは各画面で語る）
+ */
 const STEPS: Step[] = [
   {
     title: "魔術書庫へようこそ",
     label: "WELCOME TO THE LIBRARY",
-    body: "ここは旅の拠点となる書庫です。はじめに、書庫に並ぶ扉をひとつずつ巡ってみましょう。",
+    body: "ここが旅の拠点です。書庫の扉を少しだけ巡ってみましょう。",
   },
   {
     target: "profile",
     title: "探究者の記録",
     plain: "プロフィール・レベル",
     label: "SCHOLAR",
-    body: "あなたの名と魔術階級、探求度です。学んだ時間はエリアや遺物の加護を受けて累積魔力（MP）となり、貯まるほど探求度と階級が上がります。名前に触れると、実績で得た称号をひとつ掲げられます。",
+    body: "学んだ時間が魔力（MP）になり、貯まるほど階級が上がります。",
   },
   {
     target: "chant",
     title: "詠唱を開始する",
     plain: "勉強タイマーを始める",
     label: "BEGIN THE CHANT",
-    body: "学びの時間を計る詠唱の間へ向かいます。科目を選んで集中すると、詠唱の長さに応じて流れ星が降り、遺物が届きます。30分に届くと流星群が近づき、静息を挟んで25分以上の詠唱を紡ぐほど星脈との同調が高まります。閉じても続きから戻れます。",
+    body: "科目を選んで学ぶと、長さに応じて流れ星が降り、遺物が届きます。",
   },
   {
     target: "stage",
     title: "滞在するエリア",
     plain: "ステージ選択（科目によって得られるポイントが増える）",
     label: "AREA",
-    body: "いま滞在している地と、その地で魔力が増える属性です。「エリア選択」で移り住めます。魔力が貯まるほど奥地が開かれます。",
-  },
-  {
-    target: "totals",
-    title: "今宵・七夜・月巡り",
-    plain: "今日・今週・今月の勉強時間",
-    label: "RECORDS",
-    body: "今日・今週（月曜から）・今月に詠唱した時間です。",
+    body: "地ごとに魔力が増える属性が違います。魔力が貯まると奥地が開きます。",
   },
   {
     target: "trials",
     title: "星の試練",
     plain: "ログインボーナス・デイリー／ウィークリーミッション",
     label: "TRIALS",
-    body: "毎日の星天の導き、日課の儀式、週間の誓約がまとまっています。15分以上の詠唱が1回と数えられ、受け取れる報酬があると数字が灯ります。",
+    body: "報酬を受け取れるときは、数字が灯ります。",
   },
   {
     target: "history",
     title: "魔導の軌跡",
     plain: "月ごとの勉強カレンダー",
     label: "CHRONICLE",
-    body: "これまでの詠唱を、月ごとの星図で振り返れます。1日から7夜ごとにひとつの星座が描かれ、月末の数夜は小さな星座になります。前の月もさかのぼって見られます。",
-  },
-  {
-    target: "worldlines",
-    title: "結びし世界線",
-    plain: "フレンド（ほかの人とゆるくつながる）",
-    label: "BOUND WORLDLINES",
-    body: WORLDLINES_OPEN
-      ? "遠い世界線の観測者と結ばれ、互いの探求の気配を静かに感じられます。順位を競うことはありません。"
-      : "遠い世界線の観測者と結ばれ、互いの探求の気配を静かに感じられる場所です。いまは準備中で、開くまでもうしばらくお待ちください。",
-  },
-  {
-    target: "settings",
-    title: "設定（秘術探究者の書斎）",
-    label: "SETTINGS",
-    body: "名前や紋章、詠唱時間、音を整えるところです。記録を引き継ぐための観測者IDと復元キーもここにあります。",
+    body: "学んだ日々が、月ごとの星図に描かれていきます。",
   },
   {
     target: "radar",
     title: "魔法陣",
     plain: "科目ごとの勉強時間のグラフ",
     label: "ARCANE CIRCLE",
-    body: "科目ごとに詠唱した時間の釣り合いを、魔法陣の形で映します。右上から画像にして共有もできます。",
+    body: "右上から画像にして共有できます。",
   },
   {
     target: "codex",
     title: "魔導図鑑",
     plain: "アイテム図鑑・アイテムの合成",
     label: "CODEX",
-    body: "詠唱で手に入れた遺物や、復元した古代文書が収められていきます。錬成陣では余った遺物を原石に還元し、神話の遺物を生み出せます。",
-  },
-  {
-    target: "memory",
-    title: "詠唱の記憶",
-    plain: "最近の勉強記録",
-    label: "OBSERVATIONAL MEMORY",
-    body: "最近の詠唱と、得た魔力の記録です。",
+    body: "手に入れた遺物や古代文書が収められていきます。",
   },
   {
     title: "準備は整いました",
     label: "READY TO OBSERVE",
-    body: "まずは書庫を気ままに巡ってみてください。学びの時が来たら「詠唱を開始する」から。この案内は設定からいつでも見返せます。",
+    body: "学びの時が来たら「詠唱を開始する」から。この案内は設定からいつでも見返せます。",
   },
 ];
 
