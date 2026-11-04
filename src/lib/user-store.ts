@@ -115,6 +115,8 @@ export type UserSettings = {
   customFocusMinutes: number | null;
   /** 背景の粒子・重いアニメーションを抑える */
   liteMode: boolean;
+  /** 詠唱の間に、魔法陣の代わりに探索の景色（魔法使いの少女が滞在中のエリアを歩む）を映す */
+  expeditionMode: boolean;
   /** 詠唱完了時のベル音・振動 */
   chime: boolean;
   /** 音声全般（環境音・効果音）の ON / OFF */
@@ -173,7 +175,7 @@ export function initialUserData(): UserData {
     inventory: {},
     unlockedStages: unlockedAt(0),
     equipment: { catalystId: null, skinId: null, titleId: null },
-    settings: { defaultFocusMinutes: 25, customFocusMinutes: null, liteMode: false, chime: true, sound: true, bgmVolume: 0.4, seVolume: 0.7, chapterTheme: "default" },
+    settings: { defaultFocusMinutes: 25, customFocusMinutes: null, liteMode: false, expeditionMode: false, chime: true, sound: true, bgmVolume: 0.4, seVolume: 0.7, chapterTheme: "default" },
     tasks: { daily: { periodKey: "", items: {} }, weekly: { periodKey: "", items: {} } },
     worldlines: { code: generateWorldlineCode(), bonds: [] },
     cycle: { count: 1, startMp: 0 },

@@ -25,6 +25,8 @@ export function PortraitTimer({
   mpSummary,
   magicCircle,
   clockFace,
+  viewToggle,
+  expedition,
   overlays,
 }: {
   locked: boolean;
@@ -38,6 +40,10 @@ export function PortraitTimer({
   mpSummary: ReactNode;
   magicCircle: ReactNode;
   clockFace: ReactNode;
+  /** 魔法陣と探索の景色を切り替える札 */
+  viewToggle: ReactNode;
+  /** 探索の景色（時計を重ねたもの）。あれば魔法陣の代わりに映す */
+  expedition: ReactNode;
   overlays: ReactNode;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -47,31 +53,40 @@ export function PortraitTimer({
     <div className="flex h-full flex-col animate-in fade-in duration-700">
       <header className="flex shrink-0 items-center justify-between gap-3 px-4 pt-3">
         <BackToLibrary guard={locked} />
-        {preparing && (
-          <button
-            type="button"
-            onClick={() => setSheetOpen(true)}
-            aria-haspopup="dialog"
-            className="flex min-w-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] py-1 pr-3 pl-2.5 text-[11px] tracking-[0.2em] whitespace-nowrap text-muted-foreground backdrop-blur transition-all duration-300 hover:border-starlight/40 hover:text-starlight"
-          >
-            <SlidersHorizontal className="size-3.5 shrink-0 text-starlight" strokeWidth={1.5} />
-            詠唱の支度
-          </button>
-        )}
+        <div className="flex min-w-0 items-center gap-1.5">
+          {viewToggle}
+          {preparing && (
+            <button
+              type="button"
+              onClick={() => setSheetOpen(true)}
+              aria-haspopup="dialog"
+              className="flex min-w-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] py-1 pr-3 pl-2.5 text-[11px] tracking-[0.2em] whitespace-nowrap text-muted-foreground backdrop-blur transition-all duration-300 hover:border-starlight/40 hover:text-starlight"
+            >
+              <SlidersHorizontal className="size-3.5 shrink-0 text-starlight" strokeWidth={1.5} />
+              詠唱の支度
+            </button>
+          )}
+        </div>
       </header>
 
       {/* 魔法陣は幅いっぱいに描き、背の低い端末では下の操作の分だけ縮める */}
-      <section className="flex min-h-0 flex-1 items-center justify-center px-2">
-        <div className="relative flex aspect-square w-full max-w-[min(100%,calc(100dvh-15rem))] items-center justify-center">
-          {magicCircle}
-          {clockFace}
-        </div>
-      </section>
+      {expedition ? (
+        <section className="flex min-h-0 flex-1 px-2 pt-2">{expedition}</section>
+      ) : (
+        <section className="flex min-h-0 flex-1 items-center justify-center px-2">
+          <div className="relative flex aspect-square w-full max-w-[min(100%,calc(100dvh-15rem))] items-center justify-center">
+            {magicCircle}
+            {clockFace}
+          </div>
+        </section>
+      )}
 
       <footer
         className={cn(
           "flex shrink-0 flex-col gap-2.5 px-4 pt-2 pb-4 transition-all duration-700",
           !preparing && "pointer-events-none translate-y-4 opacity-0",
+          // 探索の景色は、詠唱の間は退けた操作の分まで下へ広げる
+          !preparing && expedition && "hidden",
         )}
         aria-hidden={!preparing}
       >

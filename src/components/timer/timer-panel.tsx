@@ -1,14 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { ChevronDown, FastForward, Hourglass, MapPin, Moon, Pause, Pencil, Play, Square, Timer as TimerIcon } from "lucide-react";
+import { ChevronDown, FastForward, Footprints, Hourglass, MapPin, Moon, Orbit, Pause, Pencil, Play, Square, Timer as TimerIcon } from "lucide-react";
 import { saveStudyLog } from "@/app/actions/study";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { BackToLibrary } from "@/components/back-to-library";
 import { CustomMinutesEditor } from "@/components/custom-minutes-editor";
 import { DropTierList } from "@/components/drop-tier-list";
+import { ExpeditionStage } from "@/components/expedition/expedition-stage";
 import { ItemArt } from "@/components/item-art";
 import { MagicCircle } from "@/components/magic-circle";
+import { MpBar } from "@/components/mp-bar";
 import { SubjectPicker } from "@/components/subject-picker";
 import { SubjectRuneChip } from "@/components/subject-rune-chip";
 import { WhisperText, whisperHost } from "@/components/whisper";
@@ -26,6 +28,7 @@ import { startOfJstWeek } from "@/lib/date";
 import { loadChantSession, saveChantSession, sessionElapsedMs, type ChantPhase, type ChantSession } from "@/lib/chant-session";
 import { areaMultiplier, boostLabel, resolveArea } from "@/lib/areas";
 import { cycleMarkMultiplier } from "@/lib/cycles";
+import { expeditionSceneOf } from "@/lib/expedition";
 import { DAILY_LIMIT_MINUTES, formatMinutes } from "@/lib/game";
 import { radarAxesOf, resolveSubSubject, ruleNameOf, subSubjectLimitsOf } from "@/lib/subjects";
 import { soundManager } from "@/lib/sound/sound-manager";
@@ -188,6 +191,10 @@ export function TimerPanel({
   const color = resting ? "#cfe9ff" : (subject?.color ?? "#a882fb");
   const lineColor = resting ? "#a882fb" : skin.lineColor;
   const boost = subject ? areaMultiplier(area, ruleNameOf(subject)) : 1;
+  // 探索の景色: 滞在中のエリアの舞台を、詠唱の時計が動いている間だけ少女が歩む
+  const exploring = data.settings.expeditionMode;
+  const scene = useMemo(() => expeditionSceneOf(area), [area]);
+  const walking = phase === "focus" && running;
 
   /** 計った詠唱を刻む。minutes は詠唱の間で実際に計った時間、endedAt は詠唱が終わった時刻（裏で満了していたら満了の時刻） */
   const save = useCallback(
@@ -791,6 +798,61 @@ export function TimerPanel({
     </div>
   );
 
+  // 魔法陣と探索の景色を切り替える札。詠唱の途中でも切り替えられる（時計には触れない）
+  const viewToggle = (
+    <div className="flex shrink-0 gap-0.5 rounded-full border border-white/10 bg-white/[0.03] p-0.5 backdrop-blur" role="group" aria-label="詠唱の間に映す景色">
+      {(
+        [
+          { on: false, label: "魔法陣", icon: Orbit },
+          { on: true, label: "探索", icon: Footprints },
+        ] as const
+      ).map(({ on, label, icon: Icon }) => (
+        <button
+          key={label}
+          type="button"
+          aria-pressed={exploring === on}
+          onClick={() => userActions.updateSettings({ expeditionMode: on })}
+          className={cn(
+            "flex items-center gap-1 rounded-full py-0.5 pr-2 pl-1.5 text-[11px] tracking-[0.15em] whitespace-nowrap transition-all duration-300",
+            exploring === on ? "bg-starlight/10 text-starlight ring-1 ring-starlight/40" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Icon className="size-3.5" strokeWidth={1.5} />
+          {/* 幅の狭いスマホでは、詠唱の支度の札と並ぶよう印だけにする */}
+          <span className="max-[400px]:sr-only">{label}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  // 探索の景色。時計と操作は景色の上の方に、魔力の集束は足元に重ねる（魔法陣は描かない）
+  const expedition = exploring ? (
+    <div className="relative h-full w-full overflow-hidden rounded-2xl ring-1 ring-white/10">
+      <ExpeditionStage scene={scene} walking={walking} glow={color} className="absolute inset-0" />
+      {/* 時刻が景色に溶けないよう、上に薄い帳を下ろす */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-3/5 bg-gradient-to-b from-[#04050b]/75 via-[#04050b]/35 to-transparent" />
+      <div className="absolute inset-x-0 top-0 flex justify-center px-4 pt-[5%]">
+        <div className="w-full max-w-sm">{clockFace}</div>
+      </div>
+      <div className="absolute inset-x-0 bottom-0 space-y-1 px-4 pb-2.5">
+        <p className="flex items-center gap-1.5 text-[10px] tracking-[0.2em] whitespace-nowrap text-muted-foreground">
+          <MapPin className="size-3 shrink-0 text-aqua/80" strokeWidth={1.25} />
+          <span className="font-display text-starlight/80">{area.zenith ? "ASTRA ZENITH" : `AREA ${area.id}`}</span>
+          <span className="truncate text-foreground/85">{area.name}</span>
+        </p>
+        <div className="flex items-center gap-3 text-[11px] tracking-wider text-muted-foreground">
+          <span className="whitespace-nowrap">魔力集束</span>
+          <div className="flex-1">
+            <MpBar ratio={intensity} />
+          </div>
+          <span className="font-display text-sm whitespace-nowrap text-starlight text-glow-gold">
+            {totalMp.toLocaleString()} <span className="text-[10px]">MP</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   const overlays = (
     <>
       {/* 放置確認ダイアログ */}
@@ -829,6 +891,8 @@ export function TimerPanel({
         mpSummary={mpSummary}
         magicCircle={magicCircle}
         clockFace={clockFace}
+        viewToggle={viewToggle}
+        expedition={expedition}
         overlays={overlays}
       />
     );
@@ -852,10 +916,15 @@ export function TimerPanel({
       {/* 中央: 魔法陣 + タイマー */}
       <section className="relative col-span-8 flex min-h-0 flex-col items-center justify-center">
         <BackToLibrary guard={locked} className="absolute top-0 left-0 z-20" />
-        <div className="relative flex aspect-square h-full max-h-[calc(100dvh-4rem)] max-w-full items-center justify-center">
-          {magicCircle}
-          {clockFace}
-        </div>
+        <div className="absolute top-0 right-0 z-20">{viewToggle}</div>
+        {expedition ? (
+          <div className="absolute inset-x-0 top-10 bottom-0">{expedition}</div>
+        ) : (
+          <div className="relative flex aspect-square h-full max-h-[calc(100dvh-4rem)] max-w-full items-center justify-center">
+            {magicCircle}
+            {clockFace}
+          </div>
+        )}
       </section>
 
       {overlays}

@@ -4,7 +4,7 @@ import { WhisperText, whisperHost } from "@/components/whisper";
 import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, BookOpen, Check, Compass, FlaskConical, Download, Feather, Hexagon, LogOut, Music, Pencil, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
+import { Bell, BookOpen, Check, Compass, FlaskConical, Download, Feather, Footprints, Hexagon, LogOut, Music, Pencil, RotateCcw, ScrollText, Sparkle, Undo2, Unlock, Upload, UserRound, Volume2, Wind, Wrench } from "lucide-react";
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { ObserverIdField } from "@/components/observer/observer-id";
 import { BackToLibrary } from "@/components/back-to-library";
@@ -171,6 +171,13 @@ export function SettingsView({
                 description="星屑や粒子を間引き、常に動くアニメーションを止めて軽くします"
                 checked={settings.liteMode}
                 onChange={(liteMode) => userActions.updateSettings({ liteMode })}
+              />
+              <ToggleRow
+                icon={Footprints}
+                label="探索の景色"
+                description="詠唱の間、魔法陣の代わりに、魔法使いの少女が滞在中のエリアを歩む景色を映します。電池を保ちたいときは切ってください"
+                checked={settings.expeditionMode}
+                onChange={(expeditionMode) => userActions.updateSettings({ expeditionMode })}
               />
               <ToggleRow
                 icon={Bell}
