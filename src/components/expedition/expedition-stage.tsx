@@ -9,7 +9,7 @@ import { Wanderer } from "./wanderer";
 import "./expedition.css";
 
 /** 少女の歩む速さ（舞台の高さ / 秒）。足元の床がこの速さで流れる。地面に着いた足の送り（expedition.css の歩みのキーフレーム）と同じ速さにし、足が床を滑らないようにする */
-const WALK_SPEED = 0.0387;
+const WALK_SPEED = 0.0253;
 /** 層を敷き詰めるときに見込む、舞台の横長さ（幅 ÷ 高さ）の上限 */
 const MAX_STAGE_ASPECT = 3;
 /** 少女の背丈（舞台の高さに対する割合） */
@@ -93,7 +93,7 @@ const WALK_ANIMATIONS = new Set([
 /** 姿勢を持つ部位（立ち姿と歩く姿勢の間をなめらかにつなぐ） */
 const POSE_PARTS = ".wander-body, .wander-torso, .wander-thigh, .wander-shin, .wander-foot, .wander-hat, .wander-hair, .wander-cape, .wander-staff, .wander-tome, .wander-skirt, .wander-skirt-hem, .wander-strand, .wander-strand-tip";
 /** 歩みの1周期（ミリ秒。expedition.css の歩みのキーフレームと同じ） */
-const GAIT_MS = 1800;
+const GAIT_MS = 2200;
 /**
  * 立ち止まる位相: 奥の足が地面に着いて体を支え、手前の足が前へ振り出されているところ。
  * ここから手前の足を前に下ろして立ち姿になる（立ち姿の奥の脚は、この位相の奥の脚と同じ形にしてあるので動かない）
