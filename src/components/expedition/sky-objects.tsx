@@ -168,81 +168,240 @@ function StarCrown({ color }: { color: string }) {
   );
 }
 
-/** 斜めに渡る銀河。ぼかした光の帯に、細かな星を散らす */
-const GALAXY_DUST = range(90).map((i) => {
-  const t = rand(i, 3);
-  const spread = (rand(i, 4) - 0.5) * (18 + 20 * Math.sin(t * Math.PI));
-  return { x: t * 400, y: 100 + spread, r: 0.3 + rand(i, 5) * 0.9, o: 0.3 + rand(i, 6) * 0.6 };
+/** 正規分布に近い乱数（帯の中ほどに星を集める） */
+const gauss = (i: number, salt: number) => (rand(i, salt) + rand(i, salt + 1) + rand(i, salt + 2) - 1.5) / 1.5;
+const GALAXY_TINTS = ["#fff6ec", "#dfe7ff", "#ffe3c4", "#eddcff", "#cdeeff"];
+/** 銀河の帯に集まる無数の星（帯の中心ほど密に） */
+const GALAXY_STARS = range(420).map((i) => {
+  const along = rand(i, 3);
+  const across = gauss(i, 10) * (0.9 - Math.abs(along - 0.5) * 0.6);
+  return {
+    x: along * 1000,
+    y: 200 + across * 120,
+    r: 0.25 + rand(i, 5) ** 3 * 1.4,
+    o: 0.35 + rand(i, 6) * 0.6,
+    tint: GALAXY_TINTS[i % GALAXY_TINTS.length],
+  };
 });
+/** 光の筋を持つ明るい星（ゆっくり瞬く） */
+const BRIGHT_STARS = [
+  { x: 0.14, y: 0.22, s: 1, d: 0 },
+  { x: 0.36, y: 0.1, s: 0.7, d: -2.3 },
+  { x: 0.58, y: 0.28, s: 0.85, d: -4.1 },
+  { x: 0.9, y: 0.12, s: 1.1, d: -1.2 },
+  { x: 0.27, y: 0.42, s: 0.6, d: -3.4 },
+  { x: 0.72, y: 0.06, s: 0.65, d: -5.2 },
+];
 
+/**
+ * 斜めに渡る銀河。淡く広い光、明るい芯、芯を割る暗い塵の筋を重ね、無数の星を帯に集める。
+ * 光の筋を持つ明るい星がいくつか、ゆっくり瞬く
+ */
 function Galaxy({ color }: { color: string }) {
   return (
-    <div className="relative size-full" style={{ transform: "rotate(-18deg)" }}>
-      <div
-        className="absolute inset-x-0 top-[38%] h-[24%]"
-        style={{ background: `radial-gradient(ellipse 50% 50% at 50% 50%, ${color}40, ${color}14 55%, transparent 75%)`, filter: "blur(10px)" }}
-      />
-      <div className="absolute inset-x-[15%] top-[45%] h-[10%]" style={{ background: `radial-gradient(ellipse 50% 50% at 50% 50%, #fff6ff33, transparent 70%)`, filter: "blur(6px)" }} />
-      <svg viewBox="0 0 400 200" preserveAspectRatio="none" className="absolute inset-0 size-full">
-        {GALAXY_DUST.map((s, i) => (
-          <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="#f4f0ff" opacity={s.o} />
-        ))}
-      </svg>
+    <div className="relative size-full">
+      <div className="absolute inset-[-20%]" style={{ transform: "rotate(-20deg)" }}>
+        <div
+          className="absolute inset-x-0 top-[30%] h-[40%]"
+          style={{ background: `radial-gradient(ellipse 55% 50% at 55% 50%, ${color}38, ${color}12 55%, transparent 75%)`, filter: "blur(18px)" }}
+        />
+        <div
+          className="absolute inset-x-[12%] top-[43%] h-[14%]"
+          style={{ background: "radial-gradient(ellipse 50% 50% at 55% 50%, #fff4e6aa, #e8d8ff44 45%, transparent 75%)", filter: "blur(10px)" }}
+        />
+        {/* 芯を割る暗い塵の筋 */}
+        <div
+          className="absolute inset-x-[20%] top-[48.5%] h-[3.5%]"
+          style={{ background: "radial-gradient(ellipse 50% 50% at 50% 50%, #05031299, transparent 75%)", filter: "blur(5px)", transform: "rotate(1.5deg)" }}
+        />
+        <div
+          className="absolute inset-x-[34%] top-[46%] h-[2.5%]"
+          style={{ background: "radial-gradient(ellipse 50% 50% at 50% 50%, #05031277, transparent 75%)", filter: "blur(4px)", transform: "rotate(-2deg)" }}
+        />
+        <svg viewBox="0 0 1000 400" preserveAspectRatio="xMidYMid slice" className="absolute inset-x-0 top-[25%] h-[50%] w-full">
+          {GALAXY_STARS.map((s, i) => (
+            <circle key={i} cx={s.x} cy={s.y} r={s.r} fill={s.tint} opacity={s.o} />
+          ))}
+        </svg>
+      </div>
+      {BRIGHT_STARS.map((b, i) => (
+        <div
+          key={i}
+          className="sky-twinkle absolute"
+          style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.s * 3.2}cqh`, height: `${b.s * 3.2}cqh`, transform: "translate(-50%, -50%)", animationDelay: `${b.d}s` }}
+        >
+          <svg viewBox="-20 -20 40 40" className="size-full overflow-visible">
+            <circle r={6} fill={GALAXY_TINTS[i % GALAXY_TINTS.length]} opacity={0.12} />
+            <path d="M0,-20 L0.7,-0.7 L20,0 L0.7,0.7 L0,20 L-0.7,0.7 L-20,0 L-0.7,-0.7 Z" fill={GALAXY_TINTS[i % GALAXY_TINTS.length]} opacity={0.9} />
+            <circle r={1.6} fill="#ffffff" />
+          </svg>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** 星雲: 紫・青・桃色の淡い雲が空いっぱいに重なり、ごくゆっくり漂う */
+const NEBULA_CLOUDS = [
+  { x: 18, y: 30, w: 60, h: 40, c: "#7a3cff", o: 0.22, d: 0 },
+  { x: 62, y: 18, w: 55, h: 36, c: "#2ad1c9", o: 0.12, d: -20 },
+  { x: 78, y: 52, w: 50, h: 34, c: "#ff6fae", o: 0.12, d: -40 },
+  { x: 40, y: 62, w: 70, h: 30, c: "#5a3cd8", o: 0.16, d: -10 },
+];
+function Nebula() {
+  return (
+    <div className="relative size-full overflow-hidden">
+      {NEBULA_CLOUDS.map((n, i) => (
+        <div
+          key={i}
+          className="sky-nebula absolute"
+          style={{
+            left: `${n.x - n.w / 2}%`,
+            top: `${n.y - n.h / 2}%`,
+            width: `${n.w}%`,
+            height: `${n.h}%`,
+            background: `radial-gradient(ellipse 50% 50% at 50% 50%, ${n.c}, transparent 70%)`,
+            opacity: n.o,
+            filter: "blur(24px)",
+            animationDelay: `${n.d}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/** 流れ星: ときおり空を斜めに横切る（詠唱に応えて星脈から零れる、刻の欠片） */
+const METEORS = [
+  { x: 70, y: 8, delay: -3 },
+  { x: 40, y: 4, delay: -11 },
+];
+function Meteors() {
+  return (
+    <div className="relative size-full overflow-hidden">
+      {METEORS.map((m, i) => (
+        <div key={i} className="sky-meteor absolute" style={{ left: `${m.x}%`, top: `${m.y}%`, animationDelay: `${m.delay}s` }}>
+          <div className="h-px w-[14cqh] origin-left" style={{ background: "linear-gradient(to right, #ffffff, #d9ccff88 30%, transparent)", boxShadow: "0 0 4px #ffffff" }} />
+        </div>
+      ))}
     </div>
   );
 }
 
 /**
- * 星々の間へ果てなく伸びる螺旋の塔（星天の塔）。下は太く上へ細る塔に、段ごとの張り出しと灯る窓、塔を巻いて昇る階段。
- * 縁は灯を受けて淡く光り、上は空に溶けて一筋の光になる
+ * 星々の間へ果てなく伸びる星天の塔。雲海から立ち上がる巨きな石の塔で、片側は陰に、もう片側は灯を受ける。
+ * 段ごとに張り出しと狭間、脇には小塔、小さな窓に灯がともり、塔を巻く回廊の灯が昇っていく。
+ * 上へ行くほど空に霞み、頂には光の輪が掛かり、そこから光が天へ昇る
  */
-const TOWER_TIERS = range(9).map((i) => {
-  const y = 392 - i * 40;
-  const half = 15 - i * 1.25;
-  return { y, half, top: y - 40, nextHalf: half - 1.25 };
-});
+const TOWER_TOP = 110;
+const TOWER_BASE = 700;
+const towerHalf = (y: number) => 6 + 40 * ((y - TOWER_TOP) / (TOWER_BASE - TOWER_TOP)) ** 1.25;
+const TOWER_LEDGES = range(10).map((i) => TOWER_BASE - 40 - i * 56);
+const TOWER_WINDOWS = TOWER_LEDGES.flatMap((y, i) =>
+  range(5).map((k) => {
+    const half = towerHalf(y - 28);
+    return {
+      x: 100 + (rand(i * 11 + k, 70) - 0.5) * half * 1.5,
+      y: y - 12 - rand(i * 11 + k, 71) * 34,
+      on: rand(i * 11 + k, 72) > 0.35,
+      warm: rand(i * 11 + k, 73) > 0.5,
+    };
+  }),
+);
 function SpiralTower({ color }: { color: string }) {
+  const body = (() => {
+    const left: string[] = [], right: string[] = [];
+    for (let y = TOWER_TOP; y <= TOWER_BASE; y += 10) {
+      left.push(`${(100 - towerHalf(y)).toFixed(1)},${y}`);
+      right.unshift(`${(100 + towerHalf(y)).toFixed(1)},${y}`);
+    }
+    return `M${left.join(" L")} L${right.join(" L")} Z`;
+  })();
   return (
-    <svg viewBox="0 0 100 400" preserveAspectRatio="xMidYMax meet" className="size-full overflow-visible">
+    <svg viewBox="0 0 200 700" preserveAspectRatio="xMidYMax meet" className="size-full overflow-visible">
       <defs>
-        <linearGradient id="expedition-tower-body" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#2a1d5c" stopOpacity="0" />
-          <stop offset="0.3" stopColor="#21174c" stopOpacity="0.9" />
-          <stop offset="1" stopColor="#120c30" stopOpacity="1" />
+        {/* 左は陰、右は灯を受ける */}
+        <linearGradient id="expedition-tower-shade" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stopColor="#0c0722" />
+          <stop offset="0.55" stopColor="#1a1240" />
+          <stop offset="0.9" stopColor="#2b2060" />
+          <stop offset="1" stopColor="#3b2d7a" />
+        </linearGradient>
+        {/* 上へ行くほど空に霞む */}
+        <linearGradient id="expedition-tower-air" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#1b1140" stopOpacity="0.92" />
+          <stop offset="0.45" stopColor="#1b1140" stopOpacity="0.45" />
+          <stop offset="1" stopColor="#1b1140" stopOpacity="0" />
         </linearGradient>
         <linearGradient id="expedition-tower-beam" x1="0" y1="1" x2="0" y2="0">
-          <stop offset="0" stopColor={color} stopOpacity="0.5" />
+          <stop offset="0" stopColor={color} stopOpacity="0.55" />
           <stop offset="1" stopColor={color} stopOpacity="0" />
         </linearGradient>
+        <linearGradient id="expedition-tower-cloud" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#5a4a8c" stopOpacity="0" />
+          <stop offset="0.4" stopColor="#5a4a8c" stopOpacity="0.75" />
+          <stop offset="1" stopColor="#2a1f50" stopOpacity="1" />
+        </linearGradient>
       </defs>
-      {/* 塔の先から天へ昇る光 */}
-      <path d="M48.5,40 L47,-260 L53,-260 L51.5,40 Z" fill="url(#expedition-tower-beam)" style={{ filter: "blur(1.5px)" }} />
-      <g fill="url(#expedition-tower-body)">
-        {TOWER_TIERS.map(({ y, half, top, nextHalf }, i) => (
-          <g key={i}>
-            <path d={`M${50 - half},${y} L${50 - nextHalf},${top} L${50 + nextHalf},${top} L${50 + half},${y} Z`} />
-            {/* 段の張り出し（バルコニー） */}
-            <path d={`M${50 - half - 3},${y} L${50 + half + 3},${y} L${50 + half + 1.5},${y + 2.2} L${50 - half - 1.5},${y + 2.2} Z`} />
-          </g>
-        ))}
-        <path d="M45,32 L50,0 L55,32 Z" />
+      {/* 頂から天へ昇る光 */}
+      <path d="M97,60 L94,-500 L106,-500 L103,60 Z" fill="url(#expedition-tower-beam)" style={{ filter: "blur(3px)" }} />
+      <g fill="url(#expedition-tower-shade)">
+        <path d={body} />
+        {/* 頂の尖塔 */}
+        <path d={`M${100 - towerHalf(TOWER_TOP)},${TOWER_TOP} L100,30 L${100 + towerHalf(TOWER_TOP)},${TOWER_TOP} Z`} />
+        {/* 段ごとの張り出しと狭間 */}
+        {TOWER_LEDGES.map((y, i) => {
+          const h = towerHalf(y) + 5;
+          const teeth = range(Math.floor((h * 2) / 5)).map((k) => `M${(100 - h + k * 5).toFixed(1)},${y - 4} h2.6 v4 h-2.6 Z`).join(" ");
+          return (
+            <g key={i}>
+              <path d={`M${100 - h},${y} L${100 + h},${y} L${100 + h - 2},${y + 4} L${100 - h + 2},${y + 4} Z`} />
+              <path d={teeth} />
+            </g>
+          );
+        })}
+        {/* 脇の小塔 */}
+        {[TOWER_LEDGES[1], TOWER_LEDGES[3], TOWER_LEDGES[6]].map((y, i) => {
+          const side = i % 2 === 0 ? 1 : -1;
+          const cx = 100 + side * (towerHalf(y) + 4);
+          return <path key={i} d={`M${cx - 5},${y} V${y - 44} H${cx - 6} L${cx},${y - 62} L${cx + 6},${y - 44} H${cx + 5} V${y} Z`} />;
+        })}
       </g>
-      {TOWER_TIERS.map(({ y, half, top }, i) => {
-        const fade = Math.min(1, (y - 40) / 220);
+      {/* 灯を受ける右の縁と、張り出しの縁 */}
+      <path d={`M${(100 + towerHalf(TOWER_BASE)).toFixed(1)},${TOWER_BASE} ${range(60).map((k) => `L${(100 + towerHalf(TOWER_BASE - k * 10)).toFixed(1)},${TOWER_BASE - k * 10}`).join(" ")}`} fill="none" stroke={color} strokeWidth={0.8} opacity={0.35} />
+      {TOWER_LEDGES.map((y, i) => (
+        <path key={i} d={`M${100 - towerHalf(y) - 5},${y} L${100 + towerHalf(y) + 5},${y}`} stroke={color} strokeWidth={0.6} opacity={0.35} />
+      ))}
+      {/* 塔を巻いて昇る回廊の灯 */}
+      {TOWER_LEDGES.map((y, i) => {
+        const h = towerHalf(y - 28);
         return (
-          <g key={i} opacity={fade}>
-            {/* 張り出しの縁と、塔の右の縁に差す灯 */}
-            <path d={`M${50 - half - 3},${y} L${50 + half + 3},${y}`} stroke={color} strokeWidth={0.5} opacity={0.5} />
-            <path d={`M${50 + half},${y} L${50 + half - 1.25},${top}`} stroke={color} strokeWidth={0.4} opacity={0.3} />
-            {/* 塔を巻いて昇る階段（手前の半周） */}
-            <path d={`M${50 - half + 1},${y - 6} Q50,${y - 12} ${50 + half - 1},${y - 26}`} fill="none" stroke={color} strokeWidth={0.7} opacity={0.45} />
-            {/* 灯る尖頭窓 */}
-            {rand(i, 7) > 0.25 && <path d={`M${48.6},${y - 14} v-5 a1.4,1.4 0 0,1 2.8,0 v5 z`} fill={color} opacity={0.85} />}
-            {i % 2 === 0 && <path d={`M${50 - half * 0.55},${y - 22} v-3.5 a1,1 0 0,1 2,0 v3.5 z`} fill={color} opacity={0.5} />}
+          <g key={i}>
+            <path d={`M${100 - h},${y - 6} Q100,${y - 18} ${100 + h},${y - 46}`} fill="none" stroke={color} strokeWidth={0.6} opacity={0.3} />
+            {range(4).map((k) => {
+              const t = (k + 0.5) / 4;
+              const x = 100 - h + 2 * h * t;
+              const yy = (1 - t) ** 2 * (y - 6) + 2 * (1 - t) * t * (y - 18) + t * t * (y - 46);
+              return <circle key={k} cx={x} cy={yy} r={0.9} fill={color} opacity={0.8} />;
+            })}
           </g>
         );
       })}
-      <circle cx={50} cy={26} r={1.6} fill={color} opacity={0.9} />
+      {/* 小さな窓の灯 */}
+      {TOWER_WINDOWS.filter((w) => w.on).map((w, i) => (
+        <rect key={i} x={w.x - 0.8} y={w.y - 1.4} width={1.6} height={2.8} rx={0.6} fill={w.warm ? "#ffd9a0" : color} opacity={0.85} />
+      ))}
+      {/* 上ほど空に霞む */}
+      <path d={body} fill="url(#expedition-tower-air)" />
+      {/* 頂の光の輪 */}
+      <ellipse cx={100} cy={70} rx={22} ry={5} fill="none" stroke={color} strokeWidth={1} opacity={0.65} />
+      <ellipse cx={100} cy={70} rx={30} ry={7} fill="none" stroke={color} strokeWidth={0.5} opacity={0.3} />
+      <circle cx={100} cy={34} r={2.4} fill="#ffffff" opacity={0.9} />
+      <circle cx={100} cy={34} r={8} fill={color} opacity={0.25} />
+      {/* 足元を包む雲海 */}
+      <ellipse cx={100} cy={690} rx={130} ry={60} fill="url(#expedition-tower-cloud)" />
+      <ellipse cx={40} cy={672} rx={60} ry={26} fill="url(#expedition-tower-cloud)" />
+      <ellipse cx={168} cy={668} rx={56} ry={24} fill="url(#expedition-tower-cloud)" />
     </svg>
   );
 }
@@ -264,12 +423,12 @@ function Moon({ color }: { color: string }) {
 export function SkyObject({ object }: { object: ExpeditionCelestial }) {
   const { kind, x, y, size, color } = object;
   // 縦長の舞台（スマホ）で大きくなりすぎないよう、幅と高さの小さい方に合わせる。オーロラと銀河は空いっぱいに広げる
-  const wide = kind === "aurora" || kind === "galaxy";
+  const wide = kind === "aurora" || kind === "galaxy" || kind === "nebula" || kind === "meteor";
   const tall = kind === "spire";
   const style: CSSProperties = wide
     ? { left: 0, right: 0, top: `${y * 100}%`, height: `${size * 100}%` }
     : tall
-      ? { left: `${x * 100}%`, bottom: `${y * 100}%`, height: `${size * 100}%`, aspectRatio: "1 / 4", transform: "translateX(-50%)" }
+      ? { left: `${x * 100}%`, bottom: `${y * 100}%`, height: `${size * 100}%`, aspectRatio: "2 / 7", maxWidth: "30cqw", transform: "translateX(-50%)" }
       : {
           left: `${x * 100}%`,
           top: `${y * 100}%`,
@@ -286,6 +445,8 @@ export function SkyObject({ object }: { object: ExpeditionCelestial }) {
       {kind === "crown" && <StarCrown color={color} />}
       {kind === "galaxy" && <Galaxy color={color} />}
       {kind === "spire" && <SpiralTower color={color} />}
+      {kind === "nebula" && <Nebula />}
+      {kind === "meteor" && <Meteors />}
     </div>
   );
 }

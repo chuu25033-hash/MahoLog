@@ -666,56 +666,167 @@ function belfry(accent: string) {
 
 /* ---------- 星天の塔 ---------- */
 
-/**
- * 浮かぶ島: 上面は平らな石畳で縁が灯を受け、ルーンの環が光る。下は岩がぎざぎざに垂れ、鎖と結晶が下がる。
- * 島の下には淡い光が滲む
- */
-function floatingIsle(x: number, y: number, w: number, i: number, accent: string) {
-  const depth = w * 0.55;
-  const under = range(7)
-    .map((k) => {
-      const t = 1 - k / 6;
-      const px = x + 4 + (w - 8) * t;
-      const dip = Math.sin(t * Math.PI) * depth * (0.55 + rand(i * 9 + k, 60) * 0.45);
-      return `L${px.toFixed(1)},${(y + 6 + dip).toFixed(1)}`;
-    })
-    .join(" ");
-  const id = gradId("isle", accent);
-  return (
-    <g key={i}>
-      <ellipse cx={x + w / 2} cy={y + depth * 0.9} rx={w * 0.55} ry={depth * 0.6} fill={`url(#${id})`} />
-      <path d={`M${x},${y} H${x + w} L${x + w - 4},${y + 6} ${under} L${x + 4},${y + 6} Z`} />
-      {/* 岩肌の割れ目 */}
-      <path d={`M${x + w * 0.3},${y + 8} L${x + w * 0.36},${y + depth * 0.4} L${x + w * 0.32},${y + depth * 0.6} M${x + w * 0.62},${y + 8} L${x + w * 0.58},${y + depth * 0.35}`} stroke={accent} strokeWidth={0.4} opacity={0.18} fill="none" />
-      <rect x={x} y={y - 0.6} width={w} height={1.2} fill={accent} opacity={0.45} />
-      {/* ルーンの環 */}
-      <ellipse cx={x + w / 2} cy={y - 1} rx={w * 0.22} ry={2.4} fill="none" stroke={accent} strokeWidth={0.7} opacity={0.6} />
-      {/* 下がる鎖と結晶 */}
-      <path d={`M${x + w * 0.7},${y + depth * 0.4} V${y + depth * 0.4 + 16}`} stroke="currentColor" strokeWidth={0.8} strokeDasharray="2 1.2" />
-      <path d={`M${x + w * 0.7},${y + depth * 0.4 + 16} l2.4,4 l-2.4,5 l-2.4,-5 Z`} fill={accent} opacity={0.75} />
-    </g>
-  );
-}
-function fragments(accent: string) {
-  const id = gradId("isle", accent);
+/** 星天の塔の床: 星空を淡く映す硝子の床。灯の照り返しと、映り込んだ星、流れる光の筋 */
+function starglass(accent: string) {
+  const id = gradId("starglass", accent);
   return (
     <>
       <defs>
-        <radialGradient id={id} cx="0.5" cy="0.3" r="0.5">
-          <stop offset="0" stopColor={accent} stopOpacity="0.22" />
+        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={accent} stopOpacity="0.28" />
+          <stop offset="0.35" stopColor={accent} stopOpacity="0.08" />
           <stop offset="1" stopColor={accent} stopOpacity="0" />
-        </radialGradient>
+        </linearGradient>
       </defs>
-      {floatingIsle(20, 112, 84, 0, accent)}
-      {floatingIsle(170, 62, 56, 1, accent)}
-      {floatingIsle(296, 132, 92, 2, accent)}
-      {/* 島に立つ折れた柱 */}
-      <path d="M44,112 V86 L48,82 L52,88 L56,84 V112 Z" />
-      <path d="M318,132 V100 H328 V106 L332,102 V132 Z" />
-      {/* 宙に浮かぶ階段の欠片（それぞれの段の下にも岩が残る） */}
-      {range(5).map((i) => (
-        <path key={i} d={`M${232 + i * 13},${150 - i * 13} h14 v4 l-4,5 h-7 l-3,-5 Z`} />
+      <rect x={0} y={GROUND} width={400} height={64 - GROUND} />
+      <rect x={0} y={GROUND} width={400} height={64 - GROUND} fill={`url(#${id})`} />
+      <rect x={0} y={GROUND} width={400} height={0.7} fill="#ffffff" opacity={0.35} />
+      {range(24).map((i) => (
+        <circle key={i} cx={rand(i, 90) * 400} cy={GROUND + 4 + rand(i, 91) * 50} r={0.3 + rand(i, 92) * 0.6} fill="#e8e0ff" opacity={0.25 + rand(i, 93) * 0.35} />
       ))}
+      <path d="M40,24 L120,24 M210,40 L260,40 M300,18 L380,18" stroke="#ffffff" strokeWidth={0.4} opacity={0.12} />
+    </>
+  );
+}
+
+
+/**
+ * 浮かぶ島。上面はわずかに起伏する岩棚で、縁が灯を受ける。下は幾層もの岩が重なって先細りに垂れ、
+ * 光を受ける右の面は明るく、下ほど暗い。根と鎖が下がり、先に結晶が灯る。縁からは星屑が滝のように零れ落ちる。
+ * detail が大きい島には、折れた柱やアーチの残骸、小さな結晶の群れを載せる
+ */
+function floatingIsle(x: number, y: number, w: number, i: number, accent: string, detail: number) {
+  const id = gradId("isle", accent);
+  const depth = w * 0.62;
+  const p = (px: number, py: number) => `${px.toFixed(1)},${py.toFixed(1)}`;
+  // 上面: わずかな起伏
+  const top = range(9)
+    .map((k) => {
+      const t = k / 8;
+      return p(x + w * t, y - Math.sin(t * Math.PI) * 2.5 - (rand(i * 13 + k, 80) - 0.5) * 2.4);
+    })
+    .join(" L");
+  // 下面: 岩の層が重なって先細りに垂れる
+  const strata = [1, 0.72, 0.46].map((scale, layer) => {
+    const lw = w * (1 - layer * 0.16);
+    const lx = x + (w - lw) / 2 + (layer % 2 ? w * 0.05 : -w * 0.03);
+    const ly = y + 4 + layer * depth * 0.18;
+    const pts = range(9)
+      .map((k) => {
+        const t = 1 - k / 8;
+        const dip = Math.sin(t * Math.PI) ** 0.8 * depth * scale * (0.6 + rand(i * 17 + k + layer * 5, 81) * 0.4);
+        return p(lx + lw * t, ly + dip);
+      })
+      .join(" L");
+    return `M${p(lx, ly)} L${p(lx + lw, ly)} L${pts} Z`;
+  });
+  const tipX = x + w * (0.45 + rand(i, 82) * 0.1);
+  return (
+    <g key={i}>
+      {/* 島の下に滲む光 */}
+      <ellipse cx={x + w / 2} cy={y + depth * 0.7} rx={w * 0.6} ry={depth * 0.55} fill={`url(#${id}-glow)`} />
+      {/* 縁から零れ落ちる星屑の滝 */}
+      {detail > 0 && (
+        <g>
+          <rect x={x + w * 0.86} y={y} width={1.6} height={depth * 1.6} fill={`url(#${id}-fall)`} />
+          {range(5).map((k) => (
+            <circle key={k} cx={x + w * 0.86 + 0.8 + (rand(i * 7 + k, 83) - 0.5) * 3} cy={y + 8 + k * depth * 0.28} r={0.5} fill="#ffffff" opacity={0.8 - k * 0.14} />
+          ))}
+        </g>
+      )}
+      {strata.map((d, k) => (
+        <path key={k} d={d} />
+      ))}
+      <path d={`M${p(x, y + 4)} L${top} L${p(x + w, y + 4)} Z`} />
+      {/* 光を受ける右の面と、下ほど暗い陰 */}
+      {strata.map((d, k) => (
+        <path key={k} d={d} fill={`url(#${id}-light)`} />
+      ))}
+      {strata.map((d, k) => (
+        <path key={k} d={d} fill={`url(#${id}-shade)`} />
+      ))}
+      {/* 岩の層の境目 */}
+      <path d={`M${p(x + w * 0.1, y + depth * 0.2)} Q${p(x + w * 0.5, y + depth * 0.26)} ${p(x + w * 0.88, y + depth * 0.18)} M${p(x + w * 0.22, y + depth * 0.42)} Q${p(x + w * 0.5, y + depth * 0.48)} ${p(x + w * 0.76, y + depth * 0.4)}`} fill="none" stroke={accent} strokeWidth={0.4} opacity={0.16} />
+      {/* 灯を受ける上の縁 */}
+      <path d={`M${top}`} fill="none" stroke={accent} strokeWidth={0.8} opacity={0.55} />
+      {/* 下がる根と、鎖の先の結晶 */}
+      <path d={`M${p(tipX - 6, y + depth * 0.6)} C${p(tipX - 9, y + depth * 0.85)} ${p(tipX - 3, y + depth)} ${p(tipX - 6, y + depth * 1.2)}`} fill="none" stroke="currentColor" strokeWidth={0.7} />
+      <path d={`M${p(tipX + 4, y + depth * 0.7)} V${(y + depth * 0.7 + 14).toFixed(1)}`} stroke="currentColor" strokeWidth={0.7} strokeDasharray="1.6 1" />
+      <path d={`M${p(tipX + 4, y + depth * 0.7 + 14)} l2.2,3.6 l-2.2,4.6 l-2.2,-4.6 Z`} fill={accent} opacity={0.85} />
+      <circle cx={tipX + 4} cy={y + depth * 0.7 + 18} r={4} fill={accent} opacity={0.15} />
+      {/* 上に載る残骸と結晶 */}
+      {detail > 1 && (
+        <g>
+          <path d={`M${p(x + w * 0.2, y - 1)} V${(y - w * 0.32).toFixed(1)} L${p(x + w * 0.23, y - w * 0.36)} L${p(x + w * 0.26, y - w * 0.3)} L${p(x + w * 0.28, y - w * 0.34)} V${(y - 1).toFixed(1)} Z`} />
+          {/* 崩れたアーチ: 外の弧と内の弧のあいだの石 */}
+          <path
+            d={`M${p(x + w * 0.5, y - 1)} V${(y - w * 0.26).toFixed(1)} A${(w * 0.1).toFixed(1)},${(w * 0.1).toFixed(1)} 0 0,1 ${p(x + w * 0.7, y - w * 0.26)} V${(y - 1).toFixed(1)} L${p(x + w * 0.66, y - 1)} V${(y - w * 0.24).toFixed(1)} A${(w * 0.06).toFixed(1)},${(w * 0.06).toFixed(1)} 0 0,0 ${p(x + w * 0.54, y - w * 0.24)} V${(y - 1).toFixed(1)} Z`}
+          />
+          <path d={`M${p(x + w * 0.2, y - w * 0.32)} V${(y - 1).toFixed(1)}`} stroke={accent} strokeWidth={0.4} opacity={0.3} />
+        </g>
+      )}
+      {detail > 0 &&
+        [[0.78, 9], [0.83, 13], [0.88, 7]].map(([t, h], k) => (
+          <g key={k}>
+            <path d={`M${p(x + w * t - 2, y)} L${p(x + w * t, y - h)} L${p(x + w * t + 2, y)} Z`} fill={accent} opacity={0.55} />
+            <path d={`M${p(x + w * t, y)} L${p(x + w * t, y - h)}`} stroke="#ffffff" strokeWidth={0.3} opacity={0.5} />
+          </g>
+        ))}
+    </g>
+  );
+}
+function isleDefs(accent: string) {
+  const id = gradId("isle", accent);
+  return (
+    <defs>
+      <radialGradient id={`${id}-glow`} cx="0.5" cy="0.3" r="0.5">
+        <stop offset="0" stopColor={accent} stopOpacity="0.2" />
+        <stop offset="1" stopColor={accent} stopOpacity="0" />
+      </radialGradient>
+      <linearGradient id={`${id}-light`} x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0.45" stopColor={accent} stopOpacity="0" />
+        <stop offset="1" stopColor={accent} stopOpacity="0.22" />
+      </linearGradient>
+      <linearGradient id={`${id}-shade`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#000000" stopOpacity="0" />
+        <stop offset="1" stopColor="#000000" stopOpacity="0.5" />
+      </linearGradient>
+      <linearGradient id={`${id}-fall`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor="#ffffff" stopOpacity="0.75" />
+        <stop offset="0.3" stopColor={accent} stopOpacity="0.45" />
+        <stop offset="1" stopColor={accent} stopOpacity="0" />
+      </linearGradient>
+    </defs>
+  );
+}
+/** 手前の浮島: 大きな島に残骸と結晶、宙に浮かぶ階段の欠片 */
+function fragments(accent: string) {
+  return (
+    <>
+      {isleDefs(accent)}
+      {floatingIsle(16, 108, 96, 0, accent, 2)}
+      {floatingIsle(176, 64, 58, 1, accent, 1)}
+      {floatingIsle(290, 128, 104, 2, accent, 2)}
+      {/* 宙に浮かぶ階段の欠片（段の下にも岩が残る） */}
+      {range(5).map((i) => (
+        <g key={i}>
+          <path d={`M${238 + i * 12},${150 - i * 12} h13 v3.4 l-3.4,5.6 h-6.4 l-3.2,-5.6 Z`} />
+          <path d={`M${238 + i * 12},${150 - i * 12} h13`} stroke={accent} strokeWidth={0.5} opacity={0.45} />
+        </g>
+      ))}
+    </>
+  );
+}
+/** 遠くの浮島: 小さく霞んだ島が散らばる */
+function farIsles(accent: string) {
+  return (
+    <>
+      {isleDefs(accent)}
+      {floatingIsle(30, 70, 40, 10, accent, 0)}
+      {floatingIsle(140, 120, 28, 11, accent, 0)}
+      {floatingIsle(230, 50, 54, 12, accent, 1)}
+      {floatingIsle(360, 100, 34, 13, accent, 0)}
+      {floatingIsle(440, 140, 24, 14, accent, 0)}
     </>
   );
 }
@@ -730,7 +841,13 @@ export const ART: Record<ExpeditionArt, Art> = {
   alchemy: { width: 420, height: 220, render: alchemy },
   skyisles: { width: 500, height: 200, render: skyisles },
   belfry: { width: 360, height: 220, render: belfry },
-  fragments: { width: 400, height: 200, render: fragments },
+  fragments: { width: 420, height: 220, render: fragments },
+  farisles: { width: 500, height: 200, render: farIsles },
+  starglass: {
+    width: 400,
+    height: 64,
+    render: starglass,
+  },
   pines: { width: 400, height: 200, render: () => <path d={PINE_D} /> },
   trunks: { width: 400, height: 200, render: () => TRUNK_PARTS.map((d, i) => <path key={i} d={d} />) },
   cathedral: { width: 360, height: 240, render: cathedral },

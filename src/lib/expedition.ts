@@ -29,7 +29,9 @@ export type ExpeditionArt =
   | "alchemy"
   | "skyisles"
   | "belfry"
-  | "fragments";
+  | "fragments"
+  | "farisles"
+  | "starglass";
 
 /** 層の絵の出どころ。描く絵か、public に置いた画像（横に継ぎ目なく繋がるもの） */
 export type ExpeditionSource = { art: ExpeditionArt } | { image: string; /** 幅 ÷ 高さ */ aspect: number };
@@ -82,11 +84,11 @@ export type ExpeditionScene = {
 };
 
 /**
- * 空に掛かる物。月・天文盤（観測塔）・オーロラ（大回廊）・炉心（魔導炉）・星冠（大聖堂）・銀河と螺旋の塔（星天の塔）。
+ * 空に掛かる物。月・天文盤（観測塔）・オーロラ（大回廊）・炉心（魔導炉）・星冠（大聖堂）・星雲と銀河と塔と流れ星（星天の塔）。
  * x・y は舞台に対する割合（塔は下端）、size は舞台の高さに対する割合（オーロラと銀河は帯の高さ）
  */
 export type ExpeditionCelestial = {
-  kind: "moon" | "astrolabe" | "aurora" | "core" | "crown" | "galaxy" | "spire";
+  kind: "moon" | "astrolabe" | "aurora" | "core" | "crown" | "galaxy" | "spire" | "nebula" | "meteor";
   x: number;
   y: number;
   size: number;
@@ -222,25 +224,29 @@ export const EXPEDITION_SCENES = {
       floor("#120f1c", "#fbe8b0"),
     ],
   },
-  // 星天の塔（再創生）: 銀河の帯の下、星々の間へ螺旋の塔が果てなく伸び、ルーンの足場が浮かぶ
+  // 星天の塔（再創生）: 星雲の漂う空に銀河が渡り、ときおり流れ星が横切る。雲海から星々の間へ巨きな塔が立ち上がり、
+  // 岩の層を垂らした浮島から星屑が零れ落ちる。床は星空を映す硝子
   zenith: {
     id: "zenith",
-    dim: 0.22,
+    dim: 0.12,
     name: "星天の塔",
-    sky: ["#020109", "#0c0722", "#1b1140"],
+    sky: ["#010008", "#070420", "#1a0f3e"],
     glow: "#a882fb",
-    motes: { kind: "float", color: "#71e2ef" },
+    motes: { kind: "float", color: "#cfe2ff" },
     celestial: [
-      { kind: "galaxy", x: 0, y: 0.02, size: 0.6, color: "#b9a2f7" },
-      { kind: "spire", x: 0.8, y: EXPEDITION_FLOOR, size: 0.95, color: "#71e2ef" },
+      { kind: "nebula", x: 0, y: 0, size: 0.8, color: "#a882fb" },
+      { kind: "galaxy", x: 0, y: 0, size: 0.75, color: "#b9a2f7" },
+      { kind: "meteor", x: 0, y: 0, size: 0.6, color: "#ffffff" },
+      { kind: "spire", x: 0.8, y: 0.1, size: 1.05, color: "#9fd8ff" },
     ],
     layers: [
-      { source: { art: "stars" }, height: 1, bottom: 0, speed: 0.03, color: "#e6eeff", opacity: 0.9 },
-      haze("#3a2a6a", 0.08, 0.34, 0.4),
-      { source: { art: "fragments" }, height: 0.5, bottom: EXPEDITION_FLOOR + 0.12, speed: 0.18, color: "#140c30", accent: "#71e2ef", opacity: 0.9 },
-      { source: { art: "fragments" }, height: 0.4, bottom: EXPEDITION_FLOOR - 0.04, speed: 0.45, color: "#090520", accent: "#a882fb" },
-      haze("#1b1140", EXPEDITION_FLOOR - 0.02, 0.1, 0.5),
-      floor("#06041a", "#a882fb"),
+      { source: { art: "stars" }, height: 1, bottom: 0, speed: 0.03, color: "#e6eeff", opacity: 0.7 },
+      { source: { art: "farisles" }, height: 0.36, bottom: 0.36, speed: 0.07, color: "#241a4c", accent: "#b9a2f7", opacity: 0.75 },
+      haze("#3a2a6a", 0.08, 0.36, 0.42),
+      { source: { art: "clouds" }, height: 0.24, bottom: 0.06, speed: 0.12, color: "#4a3a80", opacity: 0.55 },
+      { source: { art: "fragments" }, height: 0.52, bottom: EXPEDITION_FLOOR + 0.06, speed: 0.22, color: "#130b2e", accent: "#9fd8ff" },
+      haze("#1a0f3e", EXPEDITION_FLOOR - 0.02, 0.12, 0.5),
+      floor("#07041a", "#b9a2f7", "starglass"),
     ],
   },
 } satisfies Record<string, ExpeditionScene>;

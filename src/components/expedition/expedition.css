@@ -490,3 +490,42 @@
 [data-lite] .sky-crown-pillar {
   animation: none;
 }
+
+/* 星天の塔の空: 明るい星の瞬き、星雲の漂い、ときおり横切る流れ星 */
+@keyframes sky-twinkle {
+  0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+}
+
+.sky-twinkle { animation: sky-twinkle 5s ease-in-out infinite; }
+
+@keyframes sky-nebula {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(3%, -2%) scale(1.06); }
+}
+
+.sky-nebula { animation: sky-nebula 60s ease-in-out infinite; }
+
+@keyframes sky-meteor {
+  0%, 88% { transform: rotate(-28deg) translateX(0); opacity: 0; }
+  89% { opacity: 1; }
+  96% { opacity: 0.9; }
+  100% { transform: rotate(-28deg) translateX(-38cqh); opacity: 0; }
+}
+
+.sky-meteor { animation: sky-meteor 16s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-twinkle,
+  .sky-nebula { animation: none; }
+  .sky-meteor { display: none; }
+}
+
+[data-lite] .sky-twinkle,
+[data-lite] .sky-nebula {
+  animation: none;
+}
+
+[data-lite] .sky-meteor {
+  display: none;
+}
