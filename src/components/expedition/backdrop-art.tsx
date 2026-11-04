@@ -1082,7 +1082,10 @@ const CRYSTAL_SHARDS: [number, number, number, number][] = [
   [190, 70, 14, -14], [206, 124, 20, -2], [224, 90, 16, 10],
   [318, 112, 18, -8], [338, 172, 26, 2], [360, 120, 20, 9], [376, 70, 12, 16],
 ];
-/** 面取りした結晶: 暗い面と、灯を受けて明るい面。稜線と縁に光、先にきらめき */
+/**
+ * 面取りした氷の結晶: わずかに透ける暗い面と、灯を受けて明るい面。中心の稜線に沿って内側から光が通り、
+ * 先の面取りが白く照り、内には細いひびが走る。稜線と縁に光、先にきらめき
+ */
 function crystalShard([cx, h, w, tilt]: (typeof CRYSTAL_SHARDS)[number], i: number, accent: string) {
   const p = (x: number, y: number) => `${x.toFixed(1)},${y.toFixed(1)}`;
   const bl = [cx - w / 2, 200], br = [cx + w / 2, 200];
@@ -1091,14 +1094,34 @@ function crystalShard([cx, h, w, tilt]: (typeof CRYSTAL_SHARDS)[number], i: numb
   const mid = [cx + w * 0.08, 200];
   const ridgeTop = [cx + tilt * 0.62 + w * 0.06, 200 - h * 0.82];
   const id = gradId("facet", accent);
+  const left = `M${p(bl[0], bl[1])} L${p(sl[0], sl[1])} L${p(tip[0], tip[1])} L${p(ridgeTop[0], ridgeTop[1])} L${p(mid[0], mid[1])} Z`;
+  const right = `M${p(mid[0], mid[1])} L${p(ridgeTop[0], ridgeTop[1])} L${p(tip[0], tip[1])} L${p(sr[0], sr[1])} L${p(br[0], br[1])} Z`;
+  // 内を通る光: 稜線に沿う細い帯
+  const core = `M${p(mid[0] - w * 0.12, 200)} L${p(ridgeTop[0] - w * 0.06, ridgeTop[1] + h * 0.04)} L${p(tip[0], tip[1] + h * 0.06)} L${p(ridgeTop[0] + w * 0.08, ridgeTop[1] + h * 0.04)} L${p(mid[0] + w * 0.14, 200)} Z`;
+  // 先の面取りの照り
+  const cap = `M${p(ridgeTop[0], ridgeTop[1])} L${p(tip[0], tip[1])} L${p(sr[0], sr[1])} Z`;
+  const crackX = cx + (rand(i, 130) - 0.5) * w * 0.4;
   return (
     <g key={i}>
-      <path d={`M${p(bl[0], bl[1])} L${p(sl[0], sl[1])} L${p(tip[0], tip[1])} L${p(ridgeTop[0], ridgeTop[1])} L${p(mid[0], mid[1])} Z`} />
-      <path d={`M${p(mid[0], mid[1])} L${p(ridgeTop[0], ridgeTop[1])} L${p(tip[0], tip[1])} L${p(sr[0], sr[1])} L${p(br[0], br[1])} Z`} />
-      <path d={`M${p(mid[0], mid[1])} L${p(ridgeTop[0], ridgeTop[1])} L${p(tip[0], tip[1])} L${p(sr[0], sr[1])} L${p(br[0], br[1])} Z`} fill={`url(#${id})`} />
-      <path d={`M${p(sl[0], sl[1])} L${p(tip[0], tip[1])} L${p(sr[0], sr[1])}`} fill="none" stroke={accent} strokeWidth={0.6} opacity={0.55} strokeLinejoin="round" />
-      <path d={`M${p(mid[0], mid[1])} L${p(ridgeTop[0], ridgeTop[1])} L${p(tip[0], tip[1])}`} fill="none" stroke="#ffffff" strokeWidth={0.4} opacity={0.3} />
-      {h > 100 && <path d={sparklePath(tip[0], tip[1] + 2, 1.1)} fill="#ffffff" opacity={0.8} />}
+      <path d={left} opacity={0.88} />
+      <path d={left} fill={accent} opacity={0.06} />
+      <path d={right} opacity={0.82} />
+      <path d={right} fill={`url(#${id})`} />
+      <path d={core} fill={`url(#${id}-core)`} />
+      <path d={cap} fill="#ffffff" opacity={0.18} />
+      {h > 80 && (
+        <path
+          d={`M${p(crackX, 200 - h * 0.25)} L${p(crackX + w * 0.12, 200 - h * 0.38)} L${p(crackX + w * 0.05, 200 - h * 0.48)} M${p(crackX + w * 0.12, 200 - h * 0.38)} L${p(crackX + w * 0.24, 200 - h * 0.42)}`}
+          fill="none"
+          stroke="#e8f8ff"
+          strokeWidth={0.3}
+          opacity={0.35}
+        />
+      )}
+      <path d={`M${p(sl[0], sl[1])} L${p(tip[0], tip[1])} L${p(sr[0], sr[1])}`} fill="none" stroke={accent} strokeWidth={0.6} opacity={0.6} strokeLinejoin="round" />
+      <path d={`M${p(mid[0], mid[1])} L${p(ridgeTop[0], ridgeTop[1])} L${p(tip[0], tip[1])}`} fill="none" stroke="#ffffff" strokeWidth={0.45} opacity={0.4} />
+      <path d={`M${p(sr[0], sr[1])} L${p(br[0], br[1])}`} fill="none" stroke={accent} strokeWidth={0.5} opacity={0.35} />
+      {h > 100 && <path d={sparklePath(tip[0], tip[1] + 2, 1.1)} fill="#ffffff" opacity={0.85} />}
     </g>
   );
 }
@@ -1111,6 +1134,11 @@ function crystalField(accent: string) {
           <stop offset="0" stopColor={accent} stopOpacity="0.42" />
           <stop offset="0.6" stopColor={accent} stopOpacity="0.14" />
           <stop offset="1" stopColor={accent} stopOpacity="0.04" />
+        </linearGradient>
+        <linearGradient id={`${id}-core`} x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor={accent} stopOpacity="0.5" />
+          <stop offset="0.5" stopColor="#e8fbff" stopOpacity="0.22" />
+          <stop offset="1" stopColor="#ffffff" stopOpacity="0.05" />
         </linearGradient>
         <radialGradient id={`${id}-glow`} cx="0.5" cy="1" r="0.6">
           <stop offset="0" stopColor={accent} stopOpacity="0.35" />
