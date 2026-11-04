@@ -33,6 +33,8 @@ export type StudyResult = {
   areaBoost: number;
   /** 所持している遺物（秘宝・至宝・神話・天界遺物・復元した古代文書）の加護 */
   blessing: number;
+  /** 加護の素の合計（逓減の前の上乗せ。0.5 = +50%） */
+  blessingRaw: number;
   /** 周天の刻印 */
   cycleMark: number;
   catalyst: CatalystItem | null;
@@ -340,6 +342,11 @@ function ResultPanel({
             {result.catalyst && <span className="text-starlight"> × {result.catalyst.name} {result.catalyst.multiplier}</span>}
             {result.cycleMark > 1 && <span className="text-amethyst"> × 周天の刻印 {Number(result.cycleMark.toFixed(2))}</span>}
             {result.comboMp > 1 && <span className="text-starlight"> × 同調 {result.combo}連 {Number(result.comboMp.toFixed(2))}</span>}
+          </p>
+        )}
+        {result.blessingRaw > result.blessing - 1 + 0.005 && (
+          <p className="animate-in text-[11px] tracking-wider text-muted-foreground fade-in duration-700">
+            星脈が受け止める加護は、満ちるほど細くなる（遺物の加護 +{Math.round(result.blessingRaw * 100)}% → +{Math.round((result.blessing - 1) * 100)}%）
           </p>
         )}
         {result.combo > 0 && <ComboNote result={result} />}

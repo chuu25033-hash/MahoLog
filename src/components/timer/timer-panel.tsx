@@ -31,7 +31,7 @@ import { radarAxesOf, resolveSubSubject, ruleNameOf, subSubjectLimitsOf } from "
 import { soundManager } from "@/lib/sound/sound-manager";
 import { setChantPresence } from "@/lib/worldline-store";
 import { COMBO_GRACE_MINUTES, COMBO_MIN_MINUTES, restEndNotice } from "@/lib/combo";
-import { CATALYSTS, STARDUST_ORE, blessingMultiplier, dropMultiplier } from "@/lib/items";
+import { CATALYSTS, GUIDANCE_CATALYSTS, STARDUST_ORE, blessingMultiplier, blessingRawRate, dropMultiplier } from "@/lib/items";
 import { PITY_MISSES, STORY_FRAGMENTS_PER_DAY, isPityRarity } from "@/lib/drops";
 import { calculateFinalReward } from "@/lib/reward";
 import {
@@ -61,6 +61,8 @@ import { useWakeLock, wakeLockNotice } from "./use-wake-lock";
 const BREAK_OPTIONS = [5, 10, 20] as const;
 const IDLE_CHECK_MS = 2 * 60 * 60 * 1000; // ストップウォッチの放置確認（2時間）
 const IDLE_RESPONSE_MS = 5 * 60 * 1000; // 確認ダイアログの応答待ち
+/** 詠唱の間で選べる触媒: 流れ星が運ぶものと、星天の導きでだけ授かるもの */
+const OWNABLE_CATALYSTS = [...CATALYSTS, ...GUIDANCE_CATALYSTS];
 
 type Phase = ChantPhase;
 
@@ -226,6 +228,8 @@ export function TimerPanel({
         // 加護は手元にある秘宝・神話遺物・復元した文書だけが授ける（錬成に捧げた秘宝は外れる）
         const owned = (id: string) => hasItem(getUserData(), id);
         const areaBoost = areaMultiplier(area, ruleNameOf(subject));
+        // 加護は素の合計が +30% を越えると、上限 +80% に近づくほど伸びが鈍る（lib/items.ts の diminishBlessing）
+        const blessingRaw = blessingRawRate(owned, ruleNameOf(subject));
         const blessing = blessingMultiplier(owned, ruleNameOf(subject));
         const usedCatalyst = userActions.consumeCatalyst();
         const { cycle } = getUserData();
@@ -286,6 +290,7 @@ export function TimerPanel({
           gainedMp,
           areaBoost,
           blessing,
+          blessingRaw,
           cycleMark,
           catalyst: usedCatalyst,
           beforeMp: res.beforeMp,
@@ -617,7 +622,7 @@ export function TimerPanel({
       <div>
         <p className="mb-1 text-[11px] text-muted-foreground">触媒（次回の詠唱に使用）</p>
         <div className="flex flex-wrap gap-1">
-          {CATALYSTS.filter((c) => (data.inventory[c.id] ?? 0) > 0).map((c) => {
+          {OWNABLE_CATALYSTS.filter((c) => (data.inventory[c.id] ?? 0) > 0).map((c) => {
             const armed = catalyst?.id === c.id;
             return (
               <button
@@ -639,7 +644,7 @@ export function TimerPanel({
               </button>
             );
           })}
-          {CATALYSTS.every((c) => (data.inventory[c.id] ?? 0) === 0) && (
+          {OWNABLE_CATALYSTS.every((c) => (data.inventory[c.id] ?? 0) === 0) && (
             <span className="text-[11px] text-muted-foreground/70">所持していません</span>
           )}
         </div>

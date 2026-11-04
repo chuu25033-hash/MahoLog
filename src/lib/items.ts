@@ -692,10 +692,31 @@ export const RARITY_LABEL: Record<ItemRarity, string> = {
 /** 加護を持つもの（秘宝・神話遺物・天界遺物・復元した古代文書） */
 const BLESSED: (RelicItem | MemoryItem)[] = [...RELICS, ...MYTHICS, ...CELESTIAL_RELICS, ...MEMORIES];
 
-/** 所持している秘宝・神話遺物・古代文書の加護による獲得MPの倍率 */
-export function blessingMultiplier(owned: (id: string) => boolean, subjectName: string) {
+/** 加護の上乗せがそのまま効く幅（+30% まで） */
+export const BLESSING_FULL_RATE = 0.3;
+/** 加護の上乗せが近づいていく上限（+80%）。全部そろえた素の合計は +222% ほど */
+export const BLESSING_MAX_RATE = 0.8;
+
+/**
+ * 加護の素の合計（rate の和）を、実際に乗る上乗せに直す。
+ * +30% まではそのまま、その先は上限 +80% に近づくほど伸びが鈍る（指数の逓減。境目で傾きが 1 のままつながる）。
+ * 遺物が増えるほど必ず少しは増えるので、終盤の品も無駄にはならない
+ */
+export function diminishBlessing(rawRate: number) {
+  if (rawRate <= BLESSING_FULL_RATE) return Math.max(0, rawRate);
+  const room = BLESSING_MAX_RATE - BLESSING_FULL_RATE;
+  return BLESSING_FULL_RATE + room * (1 - Math.exp(-(rawRate - BLESSING_FULL_RATE) / room));
+}
+
+/** 所持している秘宝・神話遺物・古代文書の加護の、素の合計（逓減の前） */
+export function blessingRawRate(owned: (id: string) => boolean, subjectName: string) {
   return BLESSED.filter((r) => owned(r.id) && r.blessing.mp && (!r.blessing.mp.subjects || r.blessing.mp.subjects.includes(subjectName)))
-    .reduce((acc, r) => acc + r.blessing.mp!.rate, 1);
+    .reduce((acc, r) => acc + r.blessing.mp!.rate, 0);
+}
+
+/** 所持している秘宝・神話遺物・古代文書の加護による獲得MPの倍率（逓減のあと） */
+export function blessingMultiplier(owned: (id: string) => boolean, subjectName: string) {
+  return 1 + diminishBlessing(blessingRawRate(owned, subjectName));
 }
 
 /** 所持している秘宝・神話遺物の加護による、稀品以上の流れ星が降る確率の倍率 */
