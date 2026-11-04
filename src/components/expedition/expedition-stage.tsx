@@ -95,10 +95,13 @@ const POSE_PARTS = ".wander-body, .wander-torso, .wander-thigh, .wander-shin, .w
 /** 歩みの1周期（ミリ秒。expedition.css の歩みのキーフレームと同じ） */
 const GAIT_MS = 2200;
 /**
- * 立ち止まる位相: 奥の足が地面に着いて体を支え、手前の足が前へ振り出されているところ。
- * ここから手前の足を前に下ろして立ち姿になる（立ち姿の奥の脚は、この位相の奥の脚と同じ形にしてあるので動かない）
+ * 立ち止まる位相: 振り出した手前の足が、前で地面に着いたところ（膝はほぼ伸び、足は立ち姿とほぼ同じ位置）。
+ * 振り出しの途中（膝を深く曲げ、足が体より後ろ）で止めて一気に立たせると「かくっ」と見えるので、着地まで歩いてから止める。
+ * そこから奥の足を軽く持ち上げて引き寄せ、立ち姿に揃える（STEP_IN）
  */
-const STOP_PHASE = 0.72;
+const STOP_PHASE = 0;
+/** 立ち止まった後、奥の足を引き寄せるときに持ち上げる途中の形（腿・脛・足の角度）と、その時刻（姿勢を移す時間に対する割合） */
+const STEP_IN = { at: 0.45, ".wander-thigh.wander-back": "rotate(-7deg)", ".wander-shin.wander-back": "rotate(30deg)", ".wander-foot.wander-back": "rotate(-13deg)" } as const;
 /** 歩き出す位相: 手前の足に体重を移し、奥の足が地面を離れ始めるところ（立ち姿に近い） */
 const START_PHASE = 0.08;
 /** 立ち止まる前に緩め始める残り（周期に対する割合。最後の半歩ほど） */
@@ -106,8 +109,9 @@ const SLOW_SPAN = 0.45;
 /** 歩き出しの最初の速さと、全速になるまでの時間（ミリ秒） */
 const START_RATE = 0.2;
 const SPEED_UP_MS = 1100;
-/** 姿勢を移す時間（ミリ秒） */
+/** 姿勢を移す時間（ミリ秒）。立ち止まるときは、奥の足を引き寄せる一歩の分だけ長く取る */
 const POSE_BLEND_MS = 450;
+const STOP_BLEND_MS = 750;
 
 const easeInOut = (t: number) => t * t * (3 - 2 * t);
 
@@ -139,11 +143,21 @@ function useWalkTransition(walking: boolean) {
       return (((t % GAIT_MS) + GAIT_MS) % GAIT_MS) / GAIT_MS;
     };
     /** 姿勢の切り替え前の形を覚えておき、切り替え後の動きへなめらかに移す */
-    const blendPose = (change: () => void) => {
+    const blendPose = (change: () => void, stopping = false) => {
       const parts = [...root.querySelectorAll(POSE_PARTS)].map((el) => [el, getComputedStyle(el).transform] as const);
       change();
-      // 覚えた形を始まり（offset: 0）に置き、終わりは切り替え後のいまの動きに任せる（キーフレームが一つだけだと終わりの形として扱われる）
-      for (const [el, transform] of parts) el.animate([{ transform, offset: 0 }], { duration: POSE_BLEND_MS, easing: "cubic-bezier(0.3, 0.6, 0.3, 1)" });
+      // 切り替え後のスタイル（新しく始まる立ち姿・歩みのアニメーション）を先に確定させてから繋ぎを重ねる。
+      // 確定前に重ねると、上体など両方の姿勢でアニメーションする部位で、新しい動きの始まりの形が一瞬だけ先に出てしまう
+      for (const [el] of parts) void getComputedStyle(el).transform;
+      // 覚えた形を始まり（offset: 0）に置き、終わりは切り替え後のいまの動きに任せる（キーフレームが一つだけだと終わりの形として扱われる）。
+      // 立ち止まるときは、奥の足を一度持ち上げてから下ろす
+      for (const [el, transform] of parts) {
+        const lift = stopping ? Object.entries(STEP_IN).find(([sel]) => sel !== "at" && el.matches(sel))?.[1] : undefined;
+        el.animate(lift ? [{ transform, offset: 0 }, { transform: String(lift), offset: STEP_IN.at }] : [{ transform, offset: 0 }], {
+          duration: stopping ? STOP_BLEND_MS : POSE_BLEND_MS,
+          easing: stopping ? "cubic-bezier(0.4, 0, 0.3, 1)" : "cubic-bezier(0.3, 0.6, 0.3, 1)",
+        });
+      }
     };
 
     const isWalking = root.hasAttribute("data-walking");
@@ -186,7 +200,7 @@ function useWalkTransition(walking: boolean) {
         left -= (phase - last + 1) % 1;
         last = phase;
         if (left <= 0.004) {
-          blendPose(() => root.removeAttribute("data-walking"));
+          blendPose(() => root.removeAttribute("data-walking"), true);
           setRate(1);
           return;
         }

@@ -268,14 +268,16 @@ export function Wanderer({ glow, className, style }: { glow: string; className?:
           <Leg side="front" cx={33.5} lit={0.3} />
         </g>
       </svg>
-      {/* 杖先から零れ、後ろへ流れていく光 */}
-      {SPARKS.map((s, i) => (
-        <span
-          key={i}
-          className="wander-spark absolute size-[3px] rounded-full"
-          style={{ left: "75%", top: "21%", background: glow, boxShadow: `0 0 4px ${glow}`, animationDelay: `${s.delay}s`, "--drift": s.drift } as CSSProperties}
-        />
-      ))}
+      {/* 杖先から零れ、後ろへ流れていく光。粒はいつも流れていて、歩いている間だけ見える（立ち止まると、流れながらゆっくり薄れて消える） */}
+      <span className="wander-sparks pointer-events-none absolute inset-0">
+        {SPARKS.map((s, i) => (
+          <span
+            key={i}
+            className="wander-spark absolute size-[3px] rounded-full"
+            style={{ left: "75%", top: "21%", background: glow, boxShadow: `0 0 4px ${glow}`, animationDelay: `${s.delay}s`, "--drift": s.drift } as CSSProperties}
+          />
+        ))}
+      </span>
     </div>
   );
 }
