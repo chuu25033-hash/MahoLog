@@ -261,13 +261,24 @@ const PINES: [number, number, number][] = [
 function pinePath([cx, h, w]: (typeof PINES)[number], seed: number) {
   const top = 200 - h;
   const tiers = Math.round(h / 12);
+  const girth = w / 46;
+  const lean = (rand(seed, 44) - 0.5) * 2;
   const polys: number[][][] = [
-    [[cx - 1.8, 200], [cx - 1.1, top + h * 0.25], [cx + 1.1, top + h * 0.25], [cx + 1.8, 200]],
-    [[cx, top - 5], [cx + 2.6, top + 9], [cx - 2.6, top + 9]],
+    [
+      [cx - 3.2 * girth, 200],
+      [cx - 1.5 * girth, 197],
+      [cx - 1.1 * girth + lean * 0.5, top + h * 0.6],
+      [cx - 0.5 * girth + lean, top + h * 0.2],
+      [cx + 0.5 * girth + lean, top + h * 0.2],
+      [cx + 1.1 * girth + lean * 0.5, top + h * 0.6],
+      [cx + 1.5 * girth, 197],
+      [cx + 3.2 * girth, 200],
+    ],
+    [[cx + lean, top - 5], [cx + lean + 2.6, top + 9], [cx + lean - 2.6, top + 9]],
   ];
   for (let t = 0; t < tiers; t++) {
     const f = (t + 1) / tiers;
-    const y = top + h * 0.86 * f;
+    const y = top + h * 0.93 * f;
     for (const side of [-1, 1]) {
       const r = (k: number) => rand(seed * 37 + t * 4 + (side > 0 ? 2 : 0) + k, 40);
       const len = (w / 2) * (0.16 + 0.84 * f ** 0.85) * (0.68 + r(0) * 0.5);
@@ -312,6 +323,33 @@ function trunkParts({ cx, w, lean }: (typeof TRUNKS)[number]) {
     `M${cx + lean * 0.5},40 C${cx - 26},30 ${cx - 44},16 ${cx - 54},-2 L${cx - 48},-4 C${cx - 38},12 ${cx - 22},24 ${cx + lean * 0.5},28 Z`,
   ];
 }
+/** 幹の横の位置 u（0 が左の縁、1 が右の縁）と高さ y にある点。幹は上ほど傾きの分だけずれる */
+function trunkAt({ cx, w, lean }: (typeof TRUNKS)[number], u: number, y: number) {
+  const k = 1 - Math.min(1, y / 176);
+  const left = cx - w / 2 + lean * k * 0.9;
+  const width = w * (1 - k * 0.12);
+  return [left + width * u, y] as const;
+}
+/** 樹皮の裂け目: 幹の曲がりに沿って、短く、ときに途中で分かれる。[path, 太さ, 濃さ] */
+function barkFissures(t: (typeof TRUNKS)[number], seed: number): [string, number, number][] {
+  return range(26).map((k) => {
+    const r = (s: number) => rand(seed * 53 + k, s);
+    const u = 0.08 + r(1) * 0.84;
+    const y0 = 4 + r(2) * 160;
+    const len = 10 + r(3) ** 1.5 * 34;
+    const wob = (r(4) - 0.5) * 1.6;
+    const [x0] = trunkAt(t, u, y0);
+    const [x1] = trunkAt(t, u, y0 + len * 0.5);
+    const [x2] = trunkAt(t, u, y0 + len);
+    let d = `M${x0.toFixed(1)},${y0.toFixed(1)} Q${(x1 + wob).toFixed(1)},${(y0 + len * 0.5).toFixed(1)} ${(x2 - wob * 0.4).toFixed(1)},${(y0 + len).toFixed(1)}`;
+    if (r(5) > 0.6) {
+      const fy = y0 + len * (0.3 + r(6) * 0.3);
+      const [fx] = trunkAt(t, u, fy);
+      d += ` M${(fx + wob * 0.5).toFixed(1)},${fy.toFixed(1)} q${((r(7) - 0.5) * 4).toFixed(1)},${(len * 0.2).toFixed(1)} ${((r(7) - 0.5) * 5).toFixed(1)},${(len * 0.38).toFixed(1)}`;
+    }
+    return [d, 0.3 + r(8) * 0.5, 0.035 + r(9) * 0.06];
+  });
+}
 function trunks(accent: string) {
   const id = gradId("hollow", accent);
   return (
@@ -330,19 +368,20 @@ function trunks(accent: string) {
             {trunkParts(t).map((d, k) => (
               <path key={k} d={d} />
             ))}
-            {/* 樹皮の縦の筋 */}
-            <path
-              d={range(5)
-                .map((k) => {
-                  const x = cx - w * 0.35 + (k * w * 0.7) / 4 + lean * 0.3;
-                  return `M${x.toFixed(1)},${(10 + rand(i * 9 + k, 60) * 20).toFixed(1)} C${(x - 2).toFixed(1)},70 ${(x + 2).toFixed(1)},120 ${(x - 1).toFixed(1)},${(160 + rand(i * 9 + k, 61) * 14).toFixed(1)}`;
-                })
-                .join(" ")}
-              fill="none"
-              stroke={accent}
-              strokeWidth={0.6}
-              opacity={0.07}
-            />
+            {/* 樹皮: 幹の曲がりに沿う、長さも濃さも違う短い裂け目と、ところどころの節 */}
+            {barkFissures(t, i).map(([d, width, opacity], k) => (
+              <path key={k} d={d} fill="none" stroke={accent} strokeWidth={width} strokeLinecap="round" opacity={opacity} />
+            ))}
+            {[[0.3, 0.42, 3.4], [0.62, 0.7, 2.6]].map(([u, v, r], k) => {
+              const y = v * 176;
+              const [x] = trunkAt(t, u, y);
+              return (
+                <g key={k}>
+                  <ellipse cx={x} cy={y} rx={r * 0.45} ry={r * 0.8} fill="#000000" opacity={0.3} />
+                  <path d={`M${x - r * 0.5},${y - r * 0.9} q${r * 0.5},${-r * 0.4} ${r},0`} fill="none" stroke={accent} strokeWidth={0.35} opacity={0.08} />
+                </g>
+              );
+            })}
             {/* 根と枝の上の苔 */}
             <path
               d={`M${cx - w / 2 - 40},198 C${cx - w / 2 - 30},192 ${cx - w / 2 - 16},188 ${cx - w / 2 - 6},180 M${cx + w / 2 + 6},180 C${cx + w / 2 + 16},188 ${cx + w / 2 + 30},192 ${cx + w / 2 + 40},198 M${cx + lean * 0.5 + 6},68 C${cx + 30},56 ${cx + 50},40 ${cx + 64},22`}
