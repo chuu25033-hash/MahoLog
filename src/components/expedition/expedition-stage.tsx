@@ -4,7 +4,7 @@ import { memo, useEffect, useRef, type CSSProperties } from "react";
 import { EXPEDITION_FLOOR, isHaze, type ExpeditionHaze, type ExpeditionLayer, type ExpeditionScene } from "@/lib/expedition";
 import { cn } from "@/lib/utils";
 import { BackdropTile, FLOOR_SURFACE, sourceAspect } from "./backdrop-art";
-import { SkyObject } from "./sky-objects";
+import { SkyObject, skyObjectLeft } from "./sky-objects";
 import { Wanderer } from "./wanderer";
 import "./expedition.css";
 
@@ -218,7 +218,7 @@ function FloorReflection({ scene }: { scene: ExpeditionScene }) {
     <div
       className="expedition-reflection pointer-events-none absolute bottom-0"
       style={{
-        left: `${source.x * 100}%`,
+        left: skyObjectLeft(source),
         width: `${Math.max(10, source.size * 40)}cqh`,
         height,
         transform: "translateX(-50%)",

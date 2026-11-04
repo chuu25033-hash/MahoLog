@@ -645,8 +645,17 @@ function Moon({ color }: { color: string }) {
   );
 }
 
+/**
+ * 空の物の横の位置。縦長の舞台（スマホ）でも画面からはみ出さないよう、物の半分の幅だけ内側に収める。
+ * 床への映り込み（expedition-stage.tsx）も同じ位置に置く
+ */
+export function skyObjectLeft({ kind, x, size }: ExpeditionCelestial) {
+  const half = kind === "spire" ? `min(${((size * 100) / 7).toFixed(2)}cqh, 15cqw)` : `min(${size * 50}cqh, ${size * 60}cqw)`;
+  return `clamp(${half}, ${x * 100}%, calc(100% - ${half}))`;
+}
+
 export function SkyObject({ object }: { object: ExpeditionCelestial }) {
-  const { kind, x, y, size, color } = object;
+  const { kind, y, size, color } = object;
   if (kind === "starsky") {
     return (
       <div className="pointer-events-none absolute inset-0">
@@ -660,9 +669,9 @@ export function SkyObject({ object }: { object: ExpeditionCelestial }) {
   const style: CSSProperties = wide
     ? { left: 0, right: 0, top: `${y * 100}%`, height: `${size * 100}%` }
     : tall
-      ? { left: `${x * 100}%`, bottom: `${y * 100}%`, height: `${size * 100}%`, aspectRatio: "2 / 7", maxWidth: "30cqw", transform: "translateX(-50%)" }
+      ? { left: skyObjectLeft(object), bottom: `${y * 100}%`, height: `${size * 100}%`, aspectRatio: "2 / 7", maxWidth: "30cqw", transform: "translateX(-50%)" }
       : {
-          left: `${x * 100}%`,
+          left: skyObjectLeft(object),
           top: `${y * 100}%`,
           width: `min(${size * 100}cqh, ${size * 120}cqw)`,
           height: `min(${size * 100}cqh, ${size * 120}cqw)`,
