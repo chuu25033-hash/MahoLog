@@ -15,7 +15,9 @@ export type ExpeditionArt =
   | "pines"
   | "trunks"
   | "undergrowth"
-  | "spires"
+  | "foundry"
+  | "foundryfar"
+  | "embers"
   | "crystals"
   | "icicles"
   | "forge"
@@ -190,17 +192,18 @@ export const EXPEDITION_SCENES = {
     sky: ["#030914", "#0a1a2e", "#173049"],
     glow: "#cfe9ff",
     motes: { kind: "fall", color: "#e6f4ff" },
-    celestial: [{ kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 9, density: 0.8 }, { kind: "aurora", x: 0, y: 0.0, size: 0.46, color: "#7af0d0" }],
+    celestial: [{ kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 9, density: 0.8 }, { kind: "aurora", x: 0, y: 0, size: 0.62, color: "#7af0d0" }],
     layers: [
-      { source: { art: "clocktower" }, height: 0.7, bottom: EXPEDITION_FLOOR, speed: 0.14, color: "#10233a", accent: "#bfe3ff", opacity: 0.9, rim: 0.18 },
+      { source: { art: "clocktower" }, height: 0.74, bottom: EXPEDITION_FLOOR, speed: 0.14, color: "#0e2034", accent: "#bfe3ff", opacity: 0.95, rim: 0.16 },
       haze("#3a6488", EXPEDITION_FLOOR, 0.34, 0.42),
-      { source: { art: "icepillars" }, height: 0.64, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.42, color: "#0a1828", accent: "#9be8f5", rim: 0.2 },
+      { source: { art: "icepillars" }, height: 0.72, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.42, color: "#0a1828", accent: "#9be8f5", rim: 0.2 },
       { source: { art: "crystals" }, height: 0.3, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.7, color: "#07131f", accent: "#71e2ef", rim: 0.2 },
       haze("#173049", EXPEDITION_FLOOR - 0.02, 0.08, 0.5),
       floor("#040b14", "#cfe9ff"),
     ],
   },
-  // STAGE 5 紅蓮の魔導炉（詠唱の儀式）: 落ちた星が炉心で燃え、ルーンの陣が巡る。錬金術の器具と熾火の床
+  // STAGE 5 紅蓮の魔導炉（詠唱の儀式）: 落ちた星が炉心で白く燃え、鉄の環が抱き、ルーンと七芒星の陣が巡る。
+  // 奥に煙を上げる煙突と炉の館・溶けた星の流れる水道橋・錬金炉の塔、手前に蒸留器と坩堝・銅の釜、足元に石炭の熾火
   forge: {
     id: "forge",
     dim: 0.3,
@@ -208,13 +211,16 @@ export const EXPEDITION_SCENES = {
     sky: ["#0c0303", "#200907", "#3a150c"],
     glow: "#f2a38d",
     motes: { kind: "rise", color: "#f2c27a" },
-    celestial: [{ kind: "core", x: 0.62, y: 0.38, size: 0.62, color: "#f2a35d" }],
-    rays: { color: "#f2a38d", opacity: 0.07, from: "left" },
+    celestial: [{ kind: "core", x: 0.64, y: 0.32, size: 0.56, color: "#f2a35d" }],
+    rays: { color: "#f2a38d", opacity: 0.06, from: "right" },
     layers: [
-      haze("#5a2412", EXPEDITION_FLOOR + 0.06, 0.4, 0.45),
-      { source: { art: "spires" }, height: 0.46, bottom: EXPEDITION_FLOOR + 0.01, speed: 0.12, color: "#240e0b", accent: "#f2a38d", opacity: 0.8, rim: 0.14 },
-      haze("#4a1c0e", EXPEDITION_FLOOR - 0.01, 0.24, 0.5),
+      { source: { art: "foundryfar" }, height: 0.5, bottom: EXPEDITION_FLOOR + 0.02, speed: 0.07, color: "#4a2218", accent: "#f0a070", opacity: 0.85, rim: 0.1 },
+      haze("#5a2412", EXPEDITION_FLOOR + 0.02, 0.3, 0.4),
+      { source: { art: "foundry" }, height: 0.82, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.16, color: "#220c09", accent: "#f0a070", opacity: 0.92, rim: 0.16 },
+      haze("#4a1c0e", EXPEDITION_FLOOR - 0.01, 0.22, 0.5),
       { source: { art: "alchemy" }, height: 0.56, bottom: ON_FLOOR, speed: 0.5, color: "#0e0505", accent: "#f2c27a", rim: 0.18 },
+      haze("#3a150c", EXPEDITION_FLOOR - 0.02, 0.08, 0.4),
+      { source: { art: "embers" }, height: 0.17, bottom: ON_FLOOR - 0.004, speed: 0.88, color: "#070202", accent: "#f2a35d", rim: 0.2 },
       floor("#0a0303", "#f2a35d", "magma"),
     ],
   },

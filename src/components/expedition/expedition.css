@@ -443,26 +443,40 @@
 .sky-astrolabe-turn { animation: sky-turn 240s linear infinite paused; }
 .sky-astrolabe-turn-back { animation: sky-turn-back 160s linear infinite paused; }
 .sky-core-ring { animation: sky-turn 120s linear infinite paused; }
+.sky-core-ring-back { animation: sky-turn-back 80s linear infinite paused; }
 .sky-crown-turn { animation: sky-turn 300s linear infinite paused; }
 
 .expedition[data-walking] .sky-astrolabe-turn,
 .expedition[data-walking] .sky-astrolabe-turn-back,
 .expedition[data-walking] .sky-core-ring,
+.expedition[data-walking] .sky-core-ring-back,
 .expedition[data-walking] .sky-crown-turn {
   animation-play-state: running;
 }
 
-/* オーロラの幕はゆっくり横へ揺れ、明るさを変える */
+/* オーロラはゆっくり揺らぎ、明るさが移ろう（描き直さず、canvas ごと動かす） */
 @keyframes sky-aurora {
-  0%, 100% { transform: translateX(0) scaleY(1); opacity: 0.55; }
-  50% { transform: translateX(-4%) scaleY(1.08); opacity: 0.95; }
+  0%, 100% { transform: translateX(0) scaleY(1); opacity: 0.7; }
+  35% { transform: translateX(-1.5%) scaleY(1.05); opacity: 1; }
+  70% { transform: translateX(1%) scaleY(0.97); opacity: 0.82; }
 }
 
 .sky-aurora {
-  animation: sky-aurora 18s ease-in-out infinite;
-  transform-box: fill-box;
-  transform-origin: top;
+  animation: sky-aurora 22s ease-in-out infinite;
+  transform-origin: bottom;
 }
+
+/* 柔らかな光の層は、筋の層と違う速さで揺らぎ、重なりがきらめく */
+@keyframes sky-aurora-glow {
+  0%, 100% { transform: translateX(1%) scaleY(1.02); opacity: 0.85; }
+  50% { transform: translateX(-2%) scaleY(0.96); opacity: 1; }
+}
+
+.sky-aurora-glow {
+  animation: sky-aurora-glow 31s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
 
 /* 炉心は脈打つように明るさを変える */
 @keyframes sky-core-pulse {
@@ -483,8 +497,10 @@
   .sky-astrolabe-turn,
   .sky-astrolabe-turn-back,
   .sky-core-ring,
+  .sky-core-ring-back,
   .sky-crown-turn,
   .sky-aurora,
+  .sky-aurora-glow,
   .sky-core-pulse,
   .sky-crown-pillar { animation: none; }
 }
@@ -492,8 +508,10 @@
 [data-lite] .sky-astrolabe-turn,
 [data-lite] .sky-astrolabe-turn-back,
 [data-lite] .sky-core-ring,
+[data-lite] .sky-core-ring-back,
 [data-lite] .sky-crown-turn,
 [data-lite] .sky-aurora,
+[data-lite] .sky-aurora-glow,
 [data-lite] .sky-core-pulse,
 [data-lite] .sky-crown-pillar {
   animation: none;

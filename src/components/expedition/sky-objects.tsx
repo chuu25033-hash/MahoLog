@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { ExpeditionCelestial } from "@/lib/expedition";
+import { AuroraSky } from "./aurora-sky";
 import { StarSky } from "./star-sky";
 
 /**
@@ -156,56 +157,178 @@ function Astrolabe({ color }: { color: string }) {
   );
 }
 
-/** 凍った星脈のオーロラ。縦に光が垂れる幕を三枚重ね、ゆっくり揺らす */
-const AURORA_CURTAINS = [
-  { d: "M0,40 C60,10 120,70 200,36 C280,4 340,60 400,30 L400,140 C340,170 280,120 200,150 C120,180 60,120 0,150 Z", hue: "#7af0d0", delay: 0 },
-  { d: "M0,70 C80,40 150,96 220,62 C300,28 350,84 400,58 L400,150 C340,176 300,130 220,160 C150,190 80,140 0,166 Z", hue: "#8db7f2", delay: -7 },
-  { d: "M0,20 C70,50 140,0 210,30 C290,64 350,14 400,40 L400,110 C350,90 290,140 210,104 C140,72 70,124 0,96 Z", hue: "#b9a2f7", delay: -13 },
-];
-
-function Aurora() {
-  return (
-    <svg viewBox="0 0 400 200" preserveAspectRatio="none" className="size-full">
-      <defs>
-        {AURORA_CURTAINS.map((c, i) => (
-          <linearGradient key={i} id={`expedition-aurora-${i}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor={c.hue} stopOpacity="0" />
-            <stop offset="0.3" stopColor={c.hue} stopOpacity="0.85" />
-            <stop offset="1" stopColor={c.hue} stopOpacity="0" />
-          </linearGradient>
-        ))}
-      </defs>
-      {AURORA_CURTAINS.map((c, i) => (
-        <path key={i} className="sky-aurora" d={c.d} fill={`url(#expedition-aurora-${i})`} style={{ animationDelay: `${c.delay}s` }} />
-      ))}
-    </svg>
-  );
-}
-
 const RUNES = "ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ";
 
-/** 魔導炉の炉心: 落ちた星が燃え、ルーンの魔法陣が巡る */
+/** コロナの吹き流し: 縁から外へ、細く長く、わずかに曲がりながら薄れる光の筋 */
+const CORONA_STREAMERS = range(14)
+  .map((i) => {
+    const deg = i * (360 / 14) + rand(i, 40) * 12;
+    const len = 44 + rand(i, 41) ** 1.5 * 26;
+    const bend = (rand(i, 42) - 0.5) * 10;
+    const w = 3 + rand(i, 43) * 4;
+    const [lx, ly] = pol(26, deg - w), [rx, ry] = pol(26, deg + w), [tx, ty] = pol(len, deg + bend);
+    const [c1x, c1y] = pol((26 + len) / 2, deg - w * 0.4 + bend * 0.4), [c2x, c2y] = pol((26 + len) / 2, deg + w * 0.4 + bend * 0.4);
+    return `M${lx},${ly} Q${c1x},${c1y} ${tx},${ty} Q${c2x},${c2y} ${rx},${ry} Z`;
+  })
+  .join(" ");
+/** 紅炎: 星の縁から立ち上がって弧を描き、また縁へ戻る炎の環 */
+const PROMINENCES = [
+  { deg: 52, span: 16, h: 13 },
+  { deg: 148, span: 10, h: 9 },
+  { deg: 236, span: 20, h: 16 },
+  { deg: 318, span: 8, h: 7 },
+].map(({ deg, span, h }) => {
+  const [ax, ay] = pol(27.5, deg - span / 2), [bx, by] = pol(27.5, deg + span / 2);
+  const [c1x, c1y] = pol(27.5 + h * 1.5, deg - span * 0.6), [c2x, c2y] = pol(27.5 + h * 1.5, deg + span * 0.6);
+  return `M${ax},${ay} C${c1x},${c1y} ${c2x},${c2y} ${bx},${by}`;
+});
+/** 陣の外周の目盛り */
+const CORE_TICKS = range(120)
+  .map((i) => {
+    const [x1, y1] = pol(i % 10 === 0 ? 89.5 : i % 2 === 0 ? 91 : 92, i * 3), [x2, y2] = pol(93, i * 3);
+    return `M${x1},${y1} L${x2},${y2}`;
+  })
+  .join(" ");
+/** 七芒星（{7/3}）: 内の陣に刻まれた錬成の印 */
+const HEPTAGRAM = `M${range(7)
+  .map((k) => pol(62, ((k * 3) % 7) * (360 / 7)).join(","))
+  .join(" L")} Z`;
+/** ルーンの帯の半径と、一周の長さ（文字をこの長さいっぱいに割り付け、一周を書き切る） */
+const RUNE_R = 80;
+const RUNE_CIRCUMFERENCE = +(2 * Math.PI * RUNE_R).toFixed(1);
+const RUNE_TEXT = RUNES.repeat(3);
+
+/**
+ * 星を抱く天球儀の環（真鍮）。傾けた赤道の環には度の目盛りが刻まれ、子午線の環が直交する。
+ * 奥の半分は星の後ろ（星に照らされて淡く）、手前の半分は星の前（暗い金属に、星の側の縁だけが光る）に描く
+ */
+const ARMILLARY = [
+  { rx: 50, ry: 11, tilt: -14, ticks: true },
+  { rx: 50, ry: 9, tilt: 74, ticks: false },
+];
+function armillary(half: "back" | "front", color: string) {
+  return ARMILLARY.map(({ rx, ry, tilt, ticks }, i) => {
+    const d = half === "back" ? `M${-rx},0 A${rx},${ry} 0 0,1 ${rx},0` : `M${rx},0 A${rx},${ry} 0 0,1 ${-rx},0`;
+    const tickD = ticks
+      ? range(25)
+          .map((k) => {
+            const t = (k / 24) * Math.PI * (half === "back" ? -1 : 1);
+            const x = rx * Math.cos(t), y = ry * Math.sin(t);
+            const len = k % 6 === 0 ? 2.6 : 1.4;
+            return `M${x.toFixed(2)},${y.toFixed(2)} L${x.toFixed(2)},${(y + (half === "back" ? len : -len) * 0.6).toFixed(2)}`;
+          })
+          .join(" ")
+      : "";
+    return (
+      <g key={i} transform={`rotate(${tilt})`}>
+        {half === "back" ? (
+          <path d={d} stroke={color} strokeWidth={1.6} opacity={0.28} />
+        ) : (
+          <>
+            <path d={d} stroke="#2a110a" strokeWidth={1.8} />
+            <path d={d} stroke={color} strokeWidth={0.55} opacity={0.9} transform="translate(0 -0.8)" />
+            <path d={d} stroke={color} strokeWidth={0.3} opacity={0.35} transform="translate(0 1)" />
+          </>
+        )}
+        {ticks && <path d={tickD} stroke={color} strokeWidth={0.35} opacity={half === "back" ? 0.25 : 0.6} />}
+      </g>
+    );
+  });
+}
+
+/**
+ * 魔導炉の炉心: 落ちた星が燃える。縁ほど暗く赤みを帯び（周縁減光）、面には細かな粒状の揺らぎ、
+ * 縁から紅炎が弧を描き、まわりに淡いコロナの筋が伸びる。真鍮の天球儀の環が星を抱き、
+ * 外ではルーンの帯と目盛りの陣が回り、内の七芒星の陣は逆へ回る（どちらも少女が歩いている間だけ）。後ろに熱の暈と陽炎
+ */
 function ForgeCore({ color }: { color: string }) {
   return (
     <div className="relative size-full">
+      <div className="absolute inset-[-30%] rounded-full" style={{ background: `radial-gradient(circle, ${color}3c, ${color}14 30%, transparent 62%)` }} />
       <div
-        className="sky-core-pulse absolute inset-[22%] rounded-full"
-        style={{
-          background: `radial-gradient(circle at 46% 44%, #fff4d8, ${color} 38%, color-mix(in srgb, ${color} 60%, #7a1d0c) 70%, transparent 72%)`,
-          boxShadow: `0 0 12cqh 3cqh ${color}55, 0 0 40cqh 10cqh ${color}22`,
-        }}
+        className="absolute bottom-1/2 left-1/2 h-[110%] w-[30%] -translate-x-1/2 rounded-t-full"
+        style={{ background: `linear-gradient(to top, ${color}22, transparent)`, filter: "blur(12px)" }}
       />
-      <svg viewBox="-100 -100 200 200" className="sky-core-ring absolute inset-0 size-full overflow-visible" fill="none" stroke={color}>
-        <circle r={88} strokeWidth={0.8} opacity={0.5} />
-        <circle r={78} strokeWidth={0.5} opacity={0.4} />
-        <path id="expedition-core-rune-path" d="M0,-83 A83,83 0 1,1 -0.01,-83" stroke="none" />
-        <text fontSize={7} fill={color} stroke="none" opacity={0.6} letterSpacing={3}>
-          <textPath href="#expedition-core-rune-path">{RUNES + RUNES}</textPath>
+      {/* 外の陣: 細い二重の輪と目盛り、ルーンの帯、四方の小さな菱形 */}
+      <svg viewBox="-112 -112 224 224" className="sky-core-ring absolute inset-0 size-full overflow-visible" fill="none" stroke={color}>
+        <circle r={96} strokeWidth={0.35} opacity={0.4} />
+        <circle r={93} strokeWidth={0.7} opacity={0.6} />
+        <path d={CORE_TICKS} strokeWidth={0.35} opacity={0.5} />
+        <circle r={86.5} strokeWidth={0.4} opacity={0.5} />
+        <circle r={74} strokeWidth={0.4} opacity={0.5} />
+        <circle r={72} strokeWidth={0.25} opacity={0.35} />
+        <path id="expedition-core-rune-path" d={`M0,${-RUNE_R} A${RUNE_R},${RUNE_R} 0 1,1 -0.01,${-RUNE_R}`} stroke="none" />
+        <text fontSize={6} fill={color} stroke="none" opacity={0.75} dominantBaseline="central">
+          <textPath href="#expedition-core-rune-path" textLength={RUNE_CIRCUMFERENCE - 3} lengthAdjust="spacing">
+            {RUNE_TEXT}
+          </textPath>
         </text>
-        {range(6).map((i) => {
-          const pts = range(3).map((k) => polar(88, i * 20 + k * 120));
-          return <path key={i} d={`M${pts.map(([x, y]) => `${x},${y}`).join(" L")} Z`} strokeWidth={0.4} opacity={0.22} />;
+        {range(4).map((i) => {
+          const [x, y] = pol(96, i * 90);
+          return <path key={i} d={`M${x},${y - 3.2} L${x + 2},${y} L${x},${y + 3.2} L${x - 2},${y} Z`} fill={color} stroke="none" opacity={0.75} transform={`rotate(${i * 90} ${x} ${y})`} />;
         })}
+      </svg>
+      {/* 内の陣: 七芒星が逆へ回る */}
+      <svg viewBox="-112 -112 224 224" className="sky-core-ring-back absolute inset-0 size-full overflow-visible" fill="none" stroke={color}>
+        <circle r={66} strokeWidth={0.5} opacity={0.4} />
+        <circle r={62} strokeWidth={0.25} opacity={0.3} strokeDasharray="1 1.8" />
+        <path d={HEPTAGRAM} strokeWidth={0.4} opacity={0.26} strokeLinejoin="round" />
+        {range(7).map((k) => {
+          const [x, y] = pol(66, k * (360 / 7));
+          return (
+            <g key={k}>
+              <circle cx={x} cy={y} r={2.6} strokeWidth={0.35} opacity={0.5} />
+              <circle cx={x} cy={y} r={1} fill={color} stroke="none" opacity={0.85} />
+            </g>
+          );
+        })}
+      </svg>
+      {/* 燃える星と、それを抱く天球儀の環 */}
+      <svg viewBox="-112 -112 224 224" className="absolute inset-0 size-full overflow-visible" fill="none">
+        <defs>
+          <radialGradient id="expedition-core-star">
+            <stop offset="0" stopColor="#fffdf4" />
+            <stop offset="0.45" stopColor="#fff0c8" />
+            <stop offset="0.75" stopColor="#ffd08a" />
+            <stop offset="0.92" stopColor={color} />
+            <stop offset="1" stopColor="#c4552a" />
+          </radialGradient>
+          <radialGradient id="expedition-core-corona">
+            <stop offset="0.3" stopColor="#ffe2b0" stopOpacity="0.55" />
+            <stop offset="0.45" stopColor={color} stopOpacity="0.28" />
+            <stop offset="0.7" stopColor={color} stopOpacity="0.08" />
+            <stop offset="1" stopColor={color} stopOpacity="0" />
+          </radialGradient>
+          <radialGradient id="expedition-core-streamer" r="0.5">
+            <stop offset="0.35" stopColor="#ffe2b0" stopOpacity="0.5" />
+            <stop offset="1" stopColor={color} stopOpacity="0" />
+          </radialGradient>
+          {/* 粒状の揺らぎ: 細かな雲の模様を、明るさだけの斑にする */}
+          <filter id="expedition-core-granules" x="-10%" y="-10%" width="120%" height="120%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="2" seed="4" />
+            <feColorMatrix values="0 0 0 0 0.95  0 0 0 0 0.5  0 0 0 0 0.12  0 0 0 -1.8 1.15" />
+          </filter>
+          <clipPath id="expedition-core-disc">
+            <circle r={28} />
+          </clipPath>
+        </defs>
+        <circle r={82} fill="url(#expedition-core-corona)" />
+        {armillary("back", color)}
+        <g className="sky-core-pulse">
+          <path d={CORONA_STREAMERS} fill="url(#expedition-core-streamer)" opacity={0.6} />
+          {PROMINENCES.map((d, k) => (
+            <g key={k}>
+              <path d={d} stroke={color} strokeWidth={3.2} opacity={0.25} strokeLinecap="round" />
+              <path d={d} stroke="#ffc890" strokeWidth={1.1} opacity={0.75} strokeLinecap="round" />
+            </g>
+          ))}
+        </g>
+        <circle r={28} fill="url(#expedition-core-star)" />
+        <g clipPath="url(#expedition-core-disc)" opacity={0.28}>
+          <rect x={-28} y={-28} width={56} height={56} filter="url(#expedition-core-granules)" />
+        </g>
+        <circle r={28} stroke="#ffe8c0" strokeWidth={0.5} opacity={0.4} />
+        {armillary("front", color)}
       </svg>
     </div>
   );
@@ -475,7 +598,7 @@ export function SkyObject({ object }: { object: ExpeditionCelestial }) {
     <div className="pointer-events-none absolute" style={style}>
       {kind === "moon" && <Moon color={color} />}
       {kind === "astrolabe" && <Astrolabe color={color} />}
-      {kind === "aurora" && <Aurora />}
+      {kind === "aurora" && <AuroraSky />}
       {kind === "core" && <ForgeCore color={color} />}
       {kind === "crown" && <StarCrown color={color} />}
       {kind === "twinkles" && <Twinkles />}
