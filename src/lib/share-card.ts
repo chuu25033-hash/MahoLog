@@ -3,7 +3,7 @@
 // SNS に載せる「探求の記録」の画像（1200×675）: 紋章・名前・階級と、七夜の魔法陣・学んだ時間
 import { GOLD, createCanvas, drawFrame, drawNightSky, drawStar, fontFamily, spacedText, toPng } from "./canvas-card";
 import { formatMinutes } from "./game";
-import type { ItemRarity, Skin } from "./items";
+import { DEFAULT_SKIN, type ItemRarity, type Skin } from "./items";
 import type { SubjectTotal } from "./types";
 
 const W = 1200;
@@ -170,10 +170,9 @@ function tone(hex: string, alpha: number, amount = 0) {
 function drawRadar(ctx: CanvasRenderingContext2D, totals: SubjectTotal[], serif: string, cx: number, cy: number, r: number, skin?: Skin | null) {
   const n = totals.length;
   if (n < 3) return;
-  const line = skin?.lineColor;
-  const palette = line
-    ? { grid: line, fill: tone(line, 0.22), glow: tone(line, 0.8), stroke: tone(line, 1, 0.3) }
-    : { grid: GOLD, fill: "rgba(226, 201, 116, 0.22)", glow: "rgba(226, 201, 116, 0.8)", stroke: "#f0dc9a" };
+  // 書庫の陣と同じ色にする（意匠をまとっていなければ、いつもの水色の線）
+  const line = (skin ?? DEFAULT_SKIN).lineColor;
+  const palette = { grid: line, fill: tone(line, 0.22), glow: tone(line, 0.8), stroke: tone(line, 1, 0.3) };
   const max = Math.max(1, ...totals.map((t) => t.minutes));
   const angle = (i: number) => (360 / n) * i;
 
