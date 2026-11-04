@@ -19,6 +19,23 @@ const SOLE_INSET = (100 - 96.6) / 100;
 /** 足裏が床の地面の線にちょうど着く位置 */
 const WANDERER_BOTTOM = EXPEDITION_FLOOR * (1 - FLOOR_SURFACE) - WANDERER_HEIGHT * SOLE_INSET;
 
+/** 杖先の灯の位置（舞台の高さを 1 とした、少女の左端からの横の距離と、床からの高さ。wanderer.tsx の viewBox 60×100 の 45.4, 21.6） */
+const ORB_X = WANDERER_HEIGHT * 0.6 * (45.4 / 60);
+const ORB_Y = WANDERER_BOTTOM + WANDERER_HEIGHT * (1 - 21.6 / 100);
+
+/**
+ * 目の前を漂う、ピントの合わない大きな光の粒（被写界深度）。景色の手前にあるように見せ、奥行きを出す。
+ * 少女の立つあたりは避けて置く
+ */
+const BOKEH = [
+  { left: 6, top: 18, size: 9, duration: 26, delay: 0, o: 0.16 },
+  { left: 48, top: 10, size: 5, duration: 31, delay: -9, o: 0.12 },
+  { left: 63, top: 62, size: 12, duration: 34, delay: -17, o: 0.1 },
+  { left: 84, top: 30, size: 7, duration: 24, delay: -5, o: 0.14 },
+  { left: 92, top: 74, size: 15, duration: 38, delay: -22, o: 0.08 },
+  { left: 36, top: 80, size: 6, duration: 29, delay: -13, o: 0.1 },
+];
+
 const MOTES = Array.from({ length: 14 }, (_, i) => ({
   left: (i * 7.3 + ((i * 53) % 11)) % 100,
   top: 8 + ((i * 37) % 70),
@@ -265,6 +282,20 @@ export const ExpeditionStage = memo(function ExpeditionStage({
       {scene.celestial?.map((object, i) => <SkyObject key={i} object={object} />)}
       {scene.rays && <LightRays rays={scene.rays} />}
       {scene.layers.map((layer, i) => (isHaze(layer) ? <HazeBand key={i} haze={layer} /> : <ParallaxLayer key={i} layer={layer} />))}
+      {/* 床の近くを、薄い靄がゆっくり流れる（二枚を違う速さで重ねる） */}
+      {[0, 1].map((k) => (
+        <div
+          key={k}
+          className="expedition-mist pointer-events-none absolute inset-x-0"
+          style={{
+            bottom: `${(EXPEDITION_FLOOR - 0.02 + k * 0.03) * 100}%`,
+            height: `${(0.12 + k * 0.06) * 100}%`,
+            opacity: k ? 0.07 : 0.1,
+            animationDuration: `${k ? 140 : 90}s`,
+            backgroundImage: `radial-gradient(ellipse 18% 50% at 20% 60%, ${scene.glow}, transparent 70%), radial-gradient(ellipse 24% 40% at 55% 50%, ${scene.glow}, transparent 70%), radial-gradient(ellipse 16% 45% at 85% 65%, ${scene.glow}, transparent 70%)`,
+          }}
+        />
+      ))}
       {MOTES.map((m, i) => (
         <span
           key={i}
@@ -283,11 +314,51 @@ export const ExpeditionStage = memo(function ExpeditionStage({
       ))}
       {/* 景色全体を沈め、どの舞台も書庫と同じ薄暗さにする（少女はこの上に描くので沈まない） */}
       {scene.dim ? <div className="pointer-events-none absolute inset-0" style={{ background: `rgba(4, 3, 10, ${scene.dim})` }} /> : null}
+      {/* 杖先の灯が、まわりの空気と足元の床をほのかに照らす（少女と一緒に動かない位置にあるので、景色が流れても灯はついてくる） */}
+      <div
+        className="expedition-staff-light pointer-events-none absolute rounded-full"
+        style={{
+          left: `calc(22% + ${ORB_X * 100}cqh)`,
+          bottom: `${ORB_Y * 100}%`,
+          width: "70cqh",
+          height: "70cqh",
+          transform: "translate(-50%, 50%)",
+          background: `radial-gradient(circle, ${glow}2e, ${glow}10 35%, transparent 70%)`,
+        }}
+      />
+      <div
+        className="expedition-staff-light pointer-events-none absolute rounded-[50%]"
+        style={{
+          left: `calc(22% + ${ORB_X * 60}cqh)`,
+          bottom: `${(WANDERER_BOTTOM + 0.01) * 100}%`,
+          width: "46cqh",
+          height: "7cqh",
+          transform: "translate(-50%, 50%)",
+          background: `radial-gradient(ellipse, ${glow}38, ${glow}12 45%, transparent 72%)`,
+        }}
+      />
       <Wanderer
         glow={glow}
         className="wanderer absolute aspect-[3/5]"
         style={{ left: "22%", height: `${WANDERER_HEIGHT * 100}%`, bottom: `${WANDERER_BOTTOM * 100}%` }}
       />
+      {/* 目の前を漂う、ピントの合わない光の粒 */}
+      {BOKEH.map((b, i) => (
+        <span
+          key={i}
+          className="expedition-bokeh pointer-events-none absolute rounded-full"
+          style={{
+            left: `${b.left}%`,
+            top: `${b.top}%`,
+            width: `${b.size}cqh`,
+            height: `${b.size}cqh`,
+            opacity: b.o,
+            background: `radial-gradient(circle, ${scene.motes.color} 0, ${scene.motes.color}aa 40%, ${scene.motes.color}22 62%, transparent 70%)`,
+            animationDuration: `${b.duration}s`,
+            animationDelay: `${b.delay}s`,
+          }}
+        />
+      ))}
       {/* 四隅を沈め、重ねる時計や札を読みやすくする */}
       <div className="absolute inset-0 shadow-[inset_0_0_80px_20px_rgba(3,4,10,0.75)]" />
     </div>

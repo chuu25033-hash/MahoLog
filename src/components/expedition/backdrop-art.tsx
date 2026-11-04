@@ -119,12 +119,14 @@ function shelfBooks(x0: number, x1: number, shelfY: number, seed: number, accent
     if (rand(seed + i, 6) > 0.9) {
       x += 6;
     } else if (rand(seed + i, 7) > 0.93) {
-      books.push(<rect key={`${seed}-${i}`} x={x} y={shelfY - h + 2} width={w} height={h} opacity={tone} transform={`rotate(-14 ${x + w} ${shelfY})`} />);
+      books.push(<rect key={`${seed}-${i}`} x={x} y={shelfY - h + 2} width={w} height={h} transform={`rotate(-14 ${x + w} ${shelfY})`} />);
       x += w + 6;
     } else {
       books.push(
         <g key={`${seed}-${i}`}>
-          <rect x={x} y={shelfY - h} width={w} height={h} opacity={tone} />
+          <rect x={x} y={shelfY - h} width={w} height={h} />
+          <rect x={x} y={shelfY - h} width={w} height={h} fill={accent} opacity={+((tone - 0.7) * 0.22).toFixed(3)} />
+          <rect x={x + w - 0.8} y={shelfY - h} width={0.8} height={h} fill="#000000" opacity={0.35} />
           {banded && (
             <path d={`M${x + 0.6},${shelfY - h * 0.82} h${w - 1.2} M${x + 0.6},${shelfY - h * 0.2} h${w - 1.2}`} stroke={accent} strokeWidth={0.6} opacity={0.32} />
           )}
@@ -161,14 +163,21 @@ function bookcase(x: number, key: number, accent: string) {
   return (
     <g key={key}>
       <defs>
+        <linearGradient id={`${id}-wash`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor={accent} stopOpacity="0.12" />
+          <stop offset="0.5" stopColor={accent} stopOpacity="0.03" />
+          <stop offset="1" stopColor={accent} stopOpacity="0" />
+        </linearGradient>
         <radialGradient id={id}>
           <stop offset="0" stopColor={accent} stopOpacity="0.45" />
           <stop offset="0.4" stopColor={accent} stopOpacity="0.12" />
           <stop offset="1" stopColor={accent} stopOpacity="0" />
         </radialGradient>
       </defs>
-      {/* 背板は淡く、奥がわずかに透ける */}
-      <rect x={x} y={22} width={width} height={178} opacity={0.4} />
+      {/* 背板: 奥の窓は透けず、棚の奥は深い陰に沈む。上の燭台の灯が、上の段ほど温かく照らす */}
+      <rect x={x} y={22} width={width} height={178} />
+      <rect x={x} y={22} width={width} height={178} fill="#000000" opacity={0.42} />
+      <rect x={x} y={22} width={width} height={178} fill={`url(#${id}-wash)`} />
       <rect x={x - 4} y={14} width={width + 8} height={9} />
       <rect x={x} y={20} width={6} height={180} />
       <rect x={x + width - 6} y={20} width={6} height={180} />
@@ -2116,25 +2125,45 @@ function sanctumFore(accent: string) {
 
 /* ---------- 星天の塔 ---------- */
 
-/** 星天の塔の床: 星空を淡く映す硝子の床。灯の照り返しと、映り込んだ星、流れる光の筋 */
+/** 硝子の床に映る星（並びは決まっている） */
+const GLASS_STARS = range(70).map((i) => ({
+  x: +(rand(i, 90) * 400).toFixed(1),
+  y: +(GROUND + 3 + rand(i, 91) ** 1.3 * 56).toFixed(1),
+  r: +(0.25 + rand(i, 92) ** 2 * 0.9).toFixed(2),
+  o: +(0.2 + rand(i, 93) * 0.5).toFixed(2),
+}));
+/**
+ * 星天の塔の床: 星空を映す硝子。地平のすぐ下に、空の天の川と星雲が淡く逆さに映り、映った星が瞬く。
+ * 硝子の継ぎ目と、灯を受けて流れる細い光の筋
+ */
 function starglass(accent: string) {
   const id = gradId("starglass", accent);
   return (
     <>
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor={accent} stopOpacity="0.28" />
-          <stop offset="0.35" stopColor={accent} stopOpacity="0.08" />
+          <stop offset="0" stopColor={accent} stopOpacity="0.3" />
+          <stop offset="0.35" stopColor={accent} stopOpacity="0.1" />
           <stop offset="1" stopColor={accent} stopOpacity="0" />
         </linearGradient>
+        <radialGradient id={`${id}-milky`}>
+          <stop offset="0" stopColor="#cfc4ff" stopOpacity="0.16" />
+          <stop offset="0.5" stopColor="#8a6ad8" stopOpacity="0.07" />
+          <stop offset="1" stopColor="#8a6ad8" stopOpacity="0" />
+        </radialGradient>
       </defs>
       <rect x={0} y={GROUND} width={400} height={64 - GROUND} />
       <rect x={0} y={GROUND} width={400} height={64 - GROUND} fill={`url(#${id})`} />
-      <rect x={0} y={GROUND} width={400} height={0.7} fill="#ffffff" opacity={0.35} />
-      {range(24).map((i) => (
-        <circle key={i} cx={rand(i, 90) * 400} cy={GROUND + 4 + rand(i, 91) * 50} r={0.3 + rand(i, 92) * 0.6} fill="#e8e0ff" opacity={0.25 + rand(i, 93) * 0.35} />
+      {/* 逆さに映る天の川と星雲 */}
+      <ellipse cx={120} cy={24} rx={150} ry={12} fill={`url(#${id}-milky)`} />
+      <ellipse cx={330} cy={30} rx={110} ry={10} fill={`url(#${id}-milky)`} />
+      {GLASS_STARS.map((s, i) => (
+        <circle key={i} cx={s.x} cy={s.y} r={s.r} fill="#ece6ff" opacity={s.o} />
       ))}
-      <path d="M40,24 L120,24 M210,40 L260,40 M300,18 L380,18" stroke="#ffffff" strokeWidth={0.4} opacity={0.12} />
+      {/* 硝子の継ぎ目 */}
+      <path d="M0,30 H400 M0,50 H400 M80,6 V30 M240,6 V30 M160,30 V50 M320,30 V50" stroke="#d8ccff" strokeWidth={0.35} opacity={0.12} fill="none" />
+      <rect x={0} y={GROUND} width={400} height={0.7} fill="#ffffff" opacity={0.4} />
+      <path d="M30,14 H150 M200,22 H250 M290,12 H390 M60,40 H110 M180,46 H300" stroke="#ffffff" strokeWidth={0.35} opacity={0.12} />
     </>
   );
 }
@@ -2249,19 +2278,136 @@ function isleDefs(accent: string) {
     </defs>
   );
 }
-/** 手前の浮島: 大きな島に残骸と結晶、宙に浮かぶ階段の欠片 */
+/**
+ * 道の名残: 星天の塔の空には、これまで辿った道の名残が、それぞれ浮島に載って漂う。
+ * 灯の机の書架（琥珀）、樹海の若木（翠）、観測塔の天文盤（金）、大回廊の凍った刻（氷の青）、魔導炉の火皿（紅）、大聖堂の鈴（白金）。
+ * どれもその章の灯の色でほのかに光る（世界が失った順に拾い直してきたもの）
+ */
+const RELIC_GLOW = { book: "#f2c27a", tree: "#a8e6c8", astrolabe: "#e2c974", frost: "#9be8f5", forge: "#f2a35d", bell: "#fbe8b0" } as const;
+type RelicKind = keyof typeof RELIC_GLOW;
+/** 名残のまわりの柔らかな灯（fragments の defs に色ごとの放射グラデーションを置く） */
+function relicHalo(cx: number, cy: number, r: number, color: string) {
+  return <circle cx={cx} cy={cy} r={r * 1.6} fill={`url(#${gradId("relic", color)})`} />;
+}
+function relic(kind: RelicKind, cx: number, y: number) {
+  const c = RELIC_GLOW[kind];
+  switch (kind) {
+    case "book":
+      // 小さな書架: 枠と三段の棚、背表紙、上に灯る蝋燭
+      return (
+        <g>
+          {relicHalo(cx, y - 16, 16, c)}
+          <rect x={cx - 10} y={y - 30} width={20} height={30} />
+          <path d={range(3).map((k) => range(5).map((j) => `M${cx - 8 + j * 3.4 + (k % 2) * 0.8},${y - 4 - k * 9} v-${5 + ((j + k) % 3)}`).join(" ")).join(" ")} stroke={c} strokeWidth={1.2} opacity={0.45} />
+          <path d={`M${cx - 10},${y - 21} H${cx + 10} M${cx - 10},${y - 12} H${cx + 10}`} stroke="currentColor" strokeWidth={1.2} />
+          <rect x={cx + 3} y={y - 36} width={2} height={6} fill="#efe6d6" opacity={0.8} />
+          <path d={`M${cx + 4},${y - 41} q1.4,2.6 0,4.4 q-1.4,-1.8 0,-4.4 Z`} fill="#ffe2a8" className="expedition-flame" />
+          <circle cx={cx + 4} cy={y - 38} r={4} fill={c} opacity={0.3} />
+        </g>
+      );
+    case "tree":
+      // 若木: 細い幹と、葉の茂み。まわりに蛍
+      return (
+        <g>
+          {relicHalo(cx, y - 22, 18, c)}
+          <path d={`M${cx - 1.4},${y} C${cx - 1},${y - 10} ${cx - 3},${y - 16} ${cx - 1},${y - 22} L${cx + 1},${y - 22} C${cx + 1},${y - 14} ${cx + 2},${y - 8} ${cx + 1.6},${y} Z`} />
+          <path d={`M${cx - 14},${y - 22} C${cx - 18},${y - 32} ${cx - 8},${y - 42} ${cx},${y - 40} C${cx + 8},${y - 44} ${cx + 18},${y - 34} ${cx + 13},${y - 24} C${cx + 10},${y - 18} ${cx - 10},${y - 16} ${cx - 14},${y - 22} Z`} />
+          <path d={`M${cx},${y - 40} C${cx + 8},${y - 44} ${cx + 18},${y - 34} ${cx + 13},${y - 24}`} fill="none" stroke={c} strokeWidth={0.6} opacity={0.5} />
+          {[[-9, -34], [6, -38], [12, -28], [-4, -26], [16, -40]].map(([dx, dy], k) => (
+            <circle key={k} cx={cx + dx} cy={y + dy} r={0.8} fill={c} opacity={0.9} />
+          ))}
+        </g>
+      );
+    case "astrolabe":
+      // 天文盤: 台に立つ輪。目盛りと十字の定規
+      return (
+        <g>
+          {relicHalo(cx, y - 22, 18, c)}
+          <path d={`M${cx - 6},${y} L${cx - 2},${y - 8} H${cx + 2} L${cx + 6},${y} Z`} />
+          <circle cx={cx} cy={y - 22} r={13} fill="none" stroke="currentColor" strokeWidth={2.4} />
+          <circle cx={cx} cy={y - 22} r={13} fill="none" stroke={c} strokeWidth={0.6} opacity={0.75} />
+          <circle cx={cx} cy={y - 22} r={9} fill="none" stroke={c} strokeWidth={0.35} opacity={0.5} />
+          <path d={range(24).map((k) => { const a = (k * Math.PI) / 12; return `M${(cx + Math.cos(a) * 11).toFixed(2)},${(y - 22 + Math.sin(a) * 11).toFixed(2)} L${(cx + Math.cos(a) * 12.4).toFixed(2)},${(y - 22 + Math.sin(a) * 12.4).toFixed(2)}`; }).join(" ")} stroke={c} strokeWidth={0.3} opacity={0.7} />
+          <path d={`M${cx - 12},${y - 25} L${cx + 12},${y - 19}`} stroke={c} strokeWidth={0.8} opacity={0.8} />
+          <circle cx={cx} cy={y - 22} r={1.2} fill={c} />
+          <circle cx={cx} cy={y - 37} r={1.8} fill="none" stroke="currentColor" strokeWidth={1} />
+        </g>
+      );
+    case "frost":
+      // 凍った刻: 氷の柱の中に、面取りした結晶が灯る
+      return (
+        <g>
+          {relicHalo(cx, y - 20, 18, c)}
+          <path d={`M${cx - 8},${y} L${cx - 9},${y - 30} L${cx - 4},${y - 38} L${cx + 5},${y - 36} L${cx + 9},${y - 28} L${cx + 8},${y} Z`} fill={c} opacity={0.18} />
+          <path d={`M${cx - 8},${y} L${cx - 9},${y - 30} L${cx - 4},${y - 38} L${cx + 5},${y - 36} L${cx + 9},${y - 28} L${cx + 8},${y}`} fill="none" stroke="#e8f8ff" strokeWidth={0.5} opacity={0.6} />
+          <path d={`M${cx},${y - 28} L${cx + 4},${y - 22} L${cx},${y - 12} L${cx - 4},${y - 22} Z`} fill={c} opacity={0.75} />
+          <path d={`M${cx},${y - 28} L${cx + 4},${y - 22} L${cx},${y - 12} Z`} fill="#ffffff" opacity={0.35} />
+          <path d={`M${cx + 5},${y - 32} L${cx + 6},${y - 6}`} stroke="#ffffff" strokeWidth={0.4} opacity={0.4} />
+        </g>
+      );
+    case "forge":
+      // 熾火の火皿: 三本脚の皿に、揺らぐ炎
+      return (
+        <g>
+          {relicHalo(cx, y - 18, 16, c)}
+          <path d={`M${cx - 8},${y} L${cx - 3},${y - 10} M${cx + 8},${y} L${cx + 3},${y - 10} M${cx},${y} V${y - 10}`} stroke="currentColor" strokeWidth={1.4} />
+          <path d={`M${cx - 11},${y - 12} H${cx + 11} C${cx + 9},${y - 6} ${cx - 9},${y - 6} ${cx - 11},${y - 12} Z`} />
+          <path d={`M${cx},${y - 32} C${cx + 6},${y - 24} ${cx + 8},${y - 16} ${cx + 5},${y - 12} H${cx - 5} C${cx - 8},${y - 17} ${cx - 4},${y - 22} ${cx - 2},${y - 24} C${cx - 1},${y - 20} ${cx + 1},${y - 20} ${cx},${y - 32} Z`} fill={c} opacity={0.75} className="expedition-flame" />
+          <path d={`M${cx},${y - 24} C${cx + 3},${y - 19} ${cx + 3},${y - 15} ${cx + 2},${y - 12} H${cx - 2} C${cx - 3},${y - 15} ${cx - 2},${y - 19} ${cx},${y - 24} Z`} fill="#fff2c8" opacity={0.9} />
+          <ellipse cx={cx} cy={y - 12} rx={11} ry={1.2} fill={c} opacity={0.6} />
+        </g>
+      );
+    case "bell":
+      // 鈴: 小さな尖頭のアーチに下がる鈴。舌が光る
+      return (
+        <g>
+          {relicHalo(cx, y - 18, 16, c)}
+          <path d={`M${cx - 12},${y} V${y - 22} Q${cx - 12},${y - 36} ${cx},${y - 40} Q${cx + 12},${y - 36} ${cx + 12},${y - 22} V${y} H${cx + 9} V${y - 22} Q${cx + 9},${y - 33} ${cx},${y - 36} Q${cx - 9},${y - 33} ${cx - 9},${y - 22} V${y} Z`} />
+          <path d={`M${cx},${y - 36} V${y - 30}`} stroke="currentColor" strokeWidth={1} />
+          <path d={bellPath(cx, y - 30, 0.55)} />
+          <path d={bellPath(cx, y - 30, 0.55)} fill="none" stroke={c} strokeWidth={0.5} opacity={0.7} />
+          <circle cx={cx} cy={y - 14.6} r={1.3} fill={c} />
+          <path d={`M${cx},${y - 40} Q${cx + 12},${y - 36} ${cx + 12},${y - 22} V${y}`} fill="none" stroke={c} strokeWidth={0.5} opacity={0.45} />
+        </g>
+      );
+  }
+}
+const RELIC_ISLES: { x: number; y: number; w: number; kind: RelicKind }[] = [
+  { x: 14, y: 132, w: 74, kind: "book" },
+  { x: 120, y: 86, w: 60, kind: "tree" },
+  { x: 214, y: 150, w: 82, kind: "astrolabe" },
+  { x: 330, y: 100, w: 58, kind: "frost" },
+  { x: 420, y: 160, w: 70, kind: "forge" },
+  { x: 526, y: 112, w: 76, kind: "bell" },
+];
+/** 手前の浮島: 道の名残を載せた島と、宙に浮かぶ階段の欠片 */
 function fragments(accent: string) {
   return (
     <>
       {isleDefs(accent)}
-      {floatingIsle(16, 108, 96, 0, accent, 2)}
-      {floatingIsle(176, 64, 58, 1, accent, 1)}
-      {floatingIsle(290, 128, 104, 2, accent, 2)}
+      <defs>
+        {Object.values(RELIC_GLOW).map((c) => (
+          <radialGradient key={c} id={gradId("relic", c)}>
+            <stop offset="0" stopColor={c} stopOpacity="0.32" />
+            <stop offset="0.4" stopColor={c} stopOpacity="0.12" />
+            <stop offset="1" stopColor={c} stopOpacity="0" />
+          </radialGradient>
+        ))}
+      </defs>
+      {RELIC_ISLES.map(({ x, y, w, kind }, i) => {
+        const cx = x + w * 0.42;
+        return (
+          <g key={i}>
+            {floatingIsle(x, y, w, 20 + i, accent, 1)}
+            <g transform={`translate(${cx} ${y - 1}) scale(1.25) translate(${-cx} ${-(y - 1)})`}>{relic(kind, cx, y - 1)}</g>
+          </g>
+        );
+      })}
       {/* 宙に浮かぶ階段の欠片（段の下にも岩が残る） */}
-      {range(5).map((i) => (
+      {range(4).map((i) => (
         <g key={i}>
-          <path d={`M${238 + i * 12},${150 - i * 12} h13 v3.4 l-3.4,5.6 h-6.4 l-3.2,-5.6 Z`} />
-          <path d={`M${238 + i * 12},${150 - i * 12} h13`} stroke={accent} strokeWidth={0.5} opacity={0.45} />
+          <path d={`M${300 + i * 11},${200 - i * 11} h12 v3.2 l-3,5 h-6 l-3,-5 Z`} />
+          <path d={`M${300 + i * 11},${200 - i * 11} h12`} stroke={accent} strokeWidth={0.5} opacity={0.45} />
         </g>
       ))}
     </>
@@ -2293,7 +2439,7 @@ export const ART: Record<ExpeditionArt, Art> = {
   belfry: { width: 360, height: 220, render: belfry },
   cloudsea: { width: 500, height: 120, render: cloudSea },
   sanctumfore: { width: 600, height: 100, render: sanctumFore },
-  fragments: { width: 420, height: 220, render: fragments },
+  fragments: { width: 640, height: 220, render: fragments },
   farisles: { width: 500, height: 200, render: farIsles },
   starglass: {
     width: 400,

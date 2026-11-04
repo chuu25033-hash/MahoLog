@@ -547,15 +547,15 @@ function SpiralTower({ color }: { color: string }) {
       <defs>
         {/* 左は陰、右は灯を受ける */}
         <linearGradient id="expedition-tower-shade" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#0c0722" />
-          <stop offset="0.55" stopColor="#1a1240" />
-          <stop offset="0.9" stopColor="#2b2060" />
-          <stop offset="1" stopColor="#3b2d7a" />
+          <stop offset="0" stopColor="#100a2c" />
+          <stop offset="0.55" stopColor="#21184e" />
+          <stop offset="0.9" stopColor="#3a2c7c" />
+          <stop offset="1" stopColor="#5544a4" />
         </linearGradient>
         {/* 上へ行くほど空に霞む */}
         <linearGradient id="expedition-tower-air" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#1b1140" stopOpacity="0.92" />
-          <stop offset="0.45" stopColor="#1b1140" stopOpacity="0.45" />
+          <stop offset="0" stopColor="#1b1140" stopOpacity="0.8" />
+          <stop offset="0.45" stopColor="#1b1140" stopOpacity="0.25" />
           <stop offset="1" stopColor="#1b1140" stopOpacity="0" />
         </linearGradient>
         <linearGradient id="expedition-tower-beam" x1="0" y1="1" x2="0" y2="0">

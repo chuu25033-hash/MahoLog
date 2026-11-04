@@ -47,6 +47,43 @@
   animation: expedition-flame 2.6s ease-in-out infinite;
 }
 
+/* 杖先の灯の照り返しは、灯の揺らぎに合わせてかすかに明滅する */
+@keyframes expedition-staff-light {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+.expedition-staff-light {
+  mix-blend-mode: screen;
+  animation: expedition-staff-light 3s ease-in-out infinite;
+}
+
+/* 床の近くを流れる靄: 横に二枚並べた模様を、一枚分だけ流して戻す */
+@keyframes expedition-mist {
+  from { background-position: 0 0; }
+  to { background-position: -100cqw 0; }
+}
+
+.expedition-mist {
+  background-size: 100cqw 100%;
+  background-repeat: repeat-x;
+  filter: blur(6px);
+  animation: expedition-mist linear infinite;
+}
+
+/* 目の前を漂うピンぼけの光の粒: ぼかして、ゆっくり大きく漂う */
+@keyframes expedition-bokeh {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-2.5cqw, -3cqh) scale(1.06); }
+  66% { transform: translate(1.5cqw, -5cqh) scale(0.96); }
+}
+
+.expedition-bokeh {
+  filter: blur(3px);
+  mix-blend-mode: screen;
+  animation: expedition-bokeh ease-in-out infinite;
+}
+
 /* 差し込む光の筋は、ぼかしてゆっくり明滅させる */
 @keyframes expedition-ray {
   0%, 100% { opacity: 0.55; }
@@ -402,6 +439,9 @@
 @media (prefers-reduced-motion: reduce) {
   .expedition .expedition-strip { animation-play-state: paused; }
   .expedition .expedition-mote,
+  .expedition .expedition-bokeh,
+  .expedition .expedition-mist,
+  .expedition .expedition-staff-light,
   .expedition .expedition-ray,
   .expedition .expedition-flame,
   .expedition .wander-orb,
@@ -425,6 +465,9 @@
 }
 
 [data-lite] .expedition-flame,
+[data-lite] .expedition-bokeh,
+[data-lite] .expedition-mist,
+[data-lite] .expedition-staff-light,
 [data-lite] .expedition-ray,
 [data-lite] .wander-orb {
   animation: none;

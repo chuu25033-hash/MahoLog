@@ -195,10 +195,10 @@ export const EXPEDITION_SCENES = {
     sky: ["#030914", "#0a1a2e", "#173049"],
     glow: "#cfe9ff",
     motes: { kind: "fall", color: "#e6f4ff" },
-    celestial: [{ kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 9, density: 0.8 }, { kind: "aurora", x: 0, y: 0, size: 0.62, color: "#7af0d0" }],
+    celestial: [{ kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 9, density: 0.8 }, { kind: "aurora", x: 0, y: 0, size: 0.96, color: "#7af0d0" }],
     layers: [
       { source: { art: "clocktower" }, height: 0.74, bottom: EXPEDITION_FLOOR, speed: 0.14, color: "#0e2034", accent: "#bfe3ff", opacity: 0.95, rim: 0.16 },
-      haze("#3a6488", EXPEDITION_FLOOR, 0.34, 0.42),
+      haze("#3a6488", EXPEDITION_FLOOR, 0.46, 0.42),
       { source: { art: "icepillars" }, height: 0.72, bottom: EXPEDITION_FLOOR - 0.02, speed: 0.42, color: "#0a1828", accent: "#9be8f5", rim: 0.2 },
       { source: { art: "crystals" }, height: 0.3, bottom: EXPEDITION_FLOOR - 0.01, speed: 0.7, color: "#07131f", accent: "#71e2ef", rim: 0.2 },
       haze("#173049", EXPEDITION_FLOOR - 0.02, 0.08, 0.5),
@@ -271,7 +271,7 @@ export const EXPEDITION_SCENES = {
     layers: [
       { source: { art: "farisles" }, height: 0.36, bottom: 0.36, speed: 0.07, color: "#241a4c", accent: "#b9a2f7", opacity: 0.75 },
       haze("#3a2a6a", 0.08, 0.36, 0.42),
-      { source: { art: "clouds" }, height: 0.24, bottom: 0.06, speed: 0.12, color: "#4a3a80", opacity: 0.55 },
+      { source: { art: "cloudsea" }, height: 0.24, bottom: 0.04, speed: 0.12, color: "#3e3070", accent: "#cfe2ff", opacity: 0.85, rim: 0.3 },
       { source: { art: "fragments" }, height: 0.52, bottom: EXPEDITION_FLOOR + 0.06, speed: 0.22, color: "#130b2e", accent: "#9fd8ff" },
       haze("#1a0f3e", EXPEDITION_FLOOR - 0.02, 0.12, 0.5),
       floor("#07041a", "#b9a2f7", "starglass"),
