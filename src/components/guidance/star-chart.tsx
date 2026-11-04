@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { GUIDANCE_CYCLE } from "@/lib/celestial-guidance";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +32,8 @@ const HEPTAGRAM = Array.from({ length: GUIDANCE_CYCLE }, (_, i) => STARS[(i * 3)
  */
 export function StarChart({ night, className }: { night: number; className?: string }) {
   const lit = STARS.slice(0, night);
+  const tracePoints = lit.map((s) => `${s.x},${s.y}`).join(" ");
+  const traceMaskId = `${useId()}-trace`;
 
   return (
     <div className={cn("relative", className)} aria-hidden>
@@ -66,15 +69,23 @@ export function StarChart({ night, className }: { night: number; className?: str
         <polygon points={STARS.map((s) => `${s.x},${s.y}`).join(" ")} stroke={DIM} strokeOpacity="0.3" {...hairline} />
 
         {/* これまでに辿った星座 */}
+        {/* non-scaling-stroke の 1px 線は dash で伸ばすと途中で途切れるので、同じ線を太く描いたマスクを伸ばして露わにする */}
         {lit.length > 1 && (
-          <polyline
-            className="guidance-trace"
-            points={lit.map((s) => `${s.x},${s.y}`).join(" ")}
-            stroke={GOLD}
-            strokeOpacity="0.7"
-            pathLength={1}
-            {...hairline}
-          />
+          <>
+            <mask id={traceMaskId} maskUnits="userSpaceOnUse" x="-100" y="-100" width="200" height="200">
+              <polyline
+                className="guidance-trace"
+                points={tracePoints}
+                stroke="#fff"
+                strokeWidth={4}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+                pathLength={1}
+              />
+            </mask>
+            <polyline points={tracePoints} stroke={GOLD} strokeOpacity="0.7" mask={`url(#${traceMaskId})`} {...hairline} />
+          </>
         )}
 
         {STARS.map((s, i) => {
