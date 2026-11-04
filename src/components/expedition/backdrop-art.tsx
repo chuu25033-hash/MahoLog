@@ -240,44 +240,229 @@ const TREES = [
   { cx: 336, top: 78, r: 28 },
 ];
 
-/** 針葉樹: 幹と、裾の広がるぎざぎざの枝の段 [中心, 高さ, 幅] */
+/** 多角形を時計回りにそろえる（向きの違う輪郭を一つの path に重ねると、重なった所に穴が開くため） */
+function clockwise(points: number[][]) {
+  let area = 0;
+  for (let i = 0; i < points.length; i++) {
+    const [x1, y1] = points[i], [x2, y2] = points[(i + 1) % points.length];
+    area += x1 * y2 - x2 * y1;
+  }
+  return area < 0 ? [...points].reverse() : points;
+}
+const polygonD = (points: number[][]) => `M${clockwise(points).map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" L")} Z`;
+
+/**
+ * 針葉樹: 細い幹から、段ごとに左右へ不揃いに枝が伸びる。枝は先へ行くほど垂れ、下の縁は細かな葉の房でぎざぎざになる。
+ * 下の段ほど長く、ところどころ枝の短い段や隙間がある [中心, 高さ, 幅]
+ */
 const PINES: [number, number, number][] = [
-  [30, 150, 44], [78, 190, 56], [124, 120, 36], [170, 170, 50], [222, 200, 60], [270, 140, 42], [318, 180, 54], [366, 130, 40],
+  [30, 150, 46], [78, 190, 58], [124, 120, 38], [170, 172, 52], [222, 198, 62], [270, 140, 44], [318, 182, 56], [366, 132, 42],
 ];
 function pinePath([cx, h, w]: (typeof PINES)[number], seed: number) {
   const top = 200 - h;
-  const tiers = 6;
-  let d = `M${cx - 2},200 L${cx - 2},${200 - h * 0.12} L${cx + 2},${200 - h * 0.12} L${cx + 2},200 Z `;
+  const tiers = Math.round(h / 12);
+  const polys: number[][][] = [
+    [[cx - 1.8, 200], [cx - 1.1, top + h * 0.25], [cx + 1.1, top + h * 0.25], [cx + 1.8, 200]],
+    [[cx, top - 5], [cx + 2.6, top + 9], [cx - 2.6, top + 9]],
+  ];
   for (let t = 0; t < tiers; t++) {
-    const y0 = top + (h * 0.88 * t) / tiers;
-    const y1 = top + (h * 0.88 * (t + 1.5)) / tiers;
-    const half = (w / 2) * ((t + 1.4) / (tiers + 0.4));
-    const j = (k: number) => (rand(seed * 13 + t * 5 + k, 22) - 0.5) * 3;
-    d += `M${cx},${y0} L${cx + half * 0.45 + j(1)},${y0 + (y1 - y0) * 0.55} L${cx + half * 0.3},${y0 + (y1 - y0) * 0.5} L${cx + half + j(2)},${y1} L${cx + half * 0.55},${y1 - 2} L${cx},${y1 + 1} L${cx - half * 0.55},${y1 - 2} L${cx - half + j(3)},${y1} L${cx - half * 0.3},${y0 + (y1 - y0) * 0.5} L${cx - half * 0.45 + j(4)},${y0 + (y1 - y0) * 0.55} Z `;
+    const f = (t + 1) / tiers;
+    const y = top + h * 0.86 * f;
+    for (const side of [-1, 1]) {
+      const r = (k: number) => rand(seed * 37 + t * 4 + (side > 0 ? 2 : 0) + k, 40);
+      const len = (w / 2) * (0.16 + 0.84 * f ** 0.85) * (0.68 + r(0) * 0.5);
+      const droop = len * (0.28 + r(1) * 0.18);
+      const thick = 2.6 + f * 4;
+      const tipX = cx + side * len, tipY = y + droop;
+      const pts = [
+        [cx, y - thick * 0.6],
+        [cx + side * len * 0.35, y - 0.6],
+        [cx + side * len * 0.72, y + droop * 0.5],
+        [tipX, tipY],
+      ];
+      // 下の縁: 葉の房でぎざぎざに戻る
+      const teeth = 6;
+      for (let k = 1; k <= teeth; k++) {
+        const u = k / (teeth + 1);
+        pts.push([tipX - side * len * u, y + droop * (1 - u) * 0.95 + thick * u + (k % 2 ? 2 + r(3 + k) * 1.6 : 0)]);
+      }
+      pts.push([cx, y + thick]);
+      polys.push(pts);
+    }
   }
-  return d;
+  return polys.map(polygonD).join(" ");
 }
 const PINE_D = PINES.map((p, i) => pinePath(p, i)).join(" ");
 
-/** 手前の太い幹: 上は枠の外まで伸び、根を張り、枝を少し伸ばす */
+/**
+ * 手前の古い幹: 上は枠の外まで伸び、根を張り、枝を伸ばす。樹皮には縦の筋、根と枝の上には苔、枝先からは苔の房が垂れる。
+ * 大きな幹の洞には小さな書架があり、ランタンの灯が本を照らす（樹海の図書室）
+ */
 const TRUNKS = [
-  { cx: 70, w: 26, lean: -4 },
-  { cx: 290, w: 34, lean: 5 },
+  { cx: 70, w: 26, lean: -4, hollow: false },
+  { cx: 290, w: 36, lean: 5, hollow: true },
 ];
-function trunkPath({ cx, w, lean }: (typeof TRUNKS)[number]) {
+function trunkParts({ cx, w, lean }: (typeof TRUNKS)[number]) {
   const l = cx - w / 2, r = cx + w / 2;
   return [
-    // 幹（上ほど少し細く）と根
-    `M${l + lean - 2},-4 C${l + lean * 0.6},60 ${l + 2},130 ${l - 4},178 C${l - 14},188 ${l - 26},194 ${l - 34},200 L${r + 34},200 C${r + 24},194 ${r + 12},188 ${r + 4},178 C${r - 2},130 ${r + lean * 0.6},60 ${r + lean + 2},-4 Z`,
+    // 幹（上ほど少し細く）と、うねる根
+    `M${l + lean - 2},-4 C${l + lean * 0.6},60 ${l + 2},130 ${l - 4},176 C${l - 10},184 ${l - 22},188 ${l - 30},192 C${l - 38},196 ${l - 44},198 ${l - 48},200 L${r + 46},200 C${r + 40},197 ${r + 32},194 ${r + 24},190 C${r + 14},186 ${r + 6},182 ${r + 4},176 C${r - 2},130 ${r + lean * 0.6},60 ${r + lean + 2},-4 Z`,
     // 枝
     `M${cx + lean * 0.5},70 C${cx + 30},58 ${cx + 52},40 ${cx + 66},20 L${cx + 70},24 C${cx + 56},46 ${cx + 34},66 ${cx + lean * 0.5},82 Z`,
     `M${cx + lean * 0.5},40 C${cx - 26},30 ${cx - 44},16 ${cx - 54},-2 L${cx - 48},-4 C${cx - 38},12 ${cx - 22},24 ${cx + lean * 0.5},28 Z`,
-    // 苔むした茂み
-    `M${cx - 120},200 C${cx - 116},186 ${cx - 100},182 ${cx - 90},190 C${cx - 84},180 ${cx - 66},182 ${cx - 62},200 Z`,
   ];
 }
-/** 部位ごとに分けた幹の輪郭（向きの違う輪郭が重なると穴が開くので、別々の path で塗る） */
-const TRUNK_PARTS = TRUNKS.flatMap(trunkPath);
+function trunks(accent: string) {
+  const id = gradId("hollow", accent);
+  return (
+    <>
+      <defs>
+        <radialGradient id={id} cx="0.5" cy="0.6" r="0.6">
+          <stop offset="0" stopColor="#f2c27a" stopOpacity="0.85" />
+          <stop offset="0.5" stopColor="#c8823a" stopOpacity="0.35" />
+          <stop offset="1" stopColor="#c8823a" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {TRUNKS.map((t, i) => {
+        const { cx, w, lean, hollow } = t;
+        return (
+          <g key={i}>
+            {trunkParts(t).map((d, k) => (
+              <path key={k} d={d} />
+            ))}
+            {/* 樹皮の縦の筋 */}
+            <path
+              d={range(5)
+                .map((k) => {
+                  const x = cx - w * 0.35 + (k * w * 0.7) / 4 + lean * 0.3;
+                  return `M${x.toFixed(1)},${(10 + rand(i * 9 + k, 60) * 20).toFixed(1)} C${(x - 2).toFixed(1)},70 ${(x + 2).toFixed(1)},120 ${(x - 1).toFixed(1)},${(160 + rand(i * 9 + k, 61) * 14).toFixed(1)}`;
+                })
+                .join(" ")}
+              fill="none"
+              stroke={accent}
+              strokeWidth={0.6}
+              opacity={0.07}
+            />
+            {/* 根と枝の上の苔 */}
+            <path
+              d={`M${cx - w / 2 - 40},198 C${cx - w / 2 - 30},192 ${cx - w / 2 - 16},188 ${cx - w / 2 - 6},180 M${cx + w / 2 + 6},180 C${cx + w / 2 + 16},188 ${cx + w / 2 + 30},192 ${cx + w / 2 + 40},198 M${cx + lean * 0.5 + 6},68 C${cx + 30},56 ${cx + 50},40 ${cx + 64},22`}
+              fill="none"
+              stroke={accent}
+              strokeWidth={1.6}
+              strokeLinecap="round"
+              opacity={0.16}
+            />
+            {/* 枝先から垂れる苔の房 */}
+            {[[cx + 58, 30, 26], [cx + 40, 50, 18], [cx - 40, 10, 22], [cx - 24, 22, 14]].map(([x, y, len], k) => (
+              <path key={k} d={`M${x},${y} c-2,${len * 0.3} 2,${len * 0.6} -1,${len} M${x + 3},${y + 1} c2,${len * 0.25} -2,${len * 0.5} 1,${len * 0.8}`} fill="none" stroke="currentColor" strokeWidth={0.9} />
+            ))}
+            {/* 洞の書架とランタンの灯 */}
+            {hollow && (
+              <g>
+                <path d={`M${cx - 10},140 V112 Q${cx - 10},96 ${cx + 1},92 Q${cx + 12},96 ${cx + 12},112 V140 Z`} fill={`url(#${id})`} />
+                <path d={`M${cx - 10},140 V112 Q${cx - 10},96 ${cx + 1},92 Q${cx + 12},96 ${cx + 12},112 V140`} fill="none" stroke="currentColor" strokeWidth={1.6} />
+                <rect x={cx - 10} y={120} width={22} height={1.6} />
+                <rect x={cx - 10} y={138} width={22} height={2} />
+                {[[-8, 109, 2.4, 11], [-5.2, 111, 2, 9], [-2.8, 108, 2.6, 12], [4, 110, 2.2, 10], [6.6, 112, 2, 8], [-7, 128, 2.6, 10], [-4, 130, 2, 8], [2, 127, 3, 11]].map(([dx, y, bw, bh], k) => (
+                  <rect key={k} x={cx + dx} y={y + (k < 5 ? 11 - bh : 10 - bh)} width={bw} height={bh} />
+                ))}
+                <path d={`M${cx + 7},126 h3 v-4 h-3 Z`} />
+                <circle cx={cx + 8.5} cy={124} r={1.1} fill="#fff2cc" className="expedition-flame" />
+              </g>
+            )}
+          </g>
+        );
+      })}
+    </>
+  );
+}
+
+/** 草の葉: 根元から反りながら伸びる細い葉 */
+const blade = (x: number, base: number, h: number, lean: number, w = 1.6) =>
+  `M${(x - w / 2).toFixed(1)},${base} Q${(x + lean * 0.35).toFixed(1)},${(base - h * 0.62).toFixed(1)} ${(x + lean).toFixed(1)},${(base - h).toFixed(1)} Q${(x + lean * 0.3 + w * 0.3).toFixed(1)},${(base - h * 0.55).toFixed(1)} ${(x + w / 2).toFixed(1)},${base} Z`;
+/** 草むら: 長さと傾きの違う葉を束ねる */
+function grassClump(x: number, base: number, size: number, seed: number) {
+  return range(9)
+    .map((k) => {
+      const r = (s: number) => rand(seed * 19 + k, s);
+      return blade(x + (r(1) - 0.5) * size * 0.6, base, size * (0.5 + r(2) * 0.7), (r(3) - 0.5) * size * 0.9, 1.2 + r(4) * 0.8);
+    })
+    .join(" ");
+}
+/** シダ: 根元から弧を描く葉軸に、小葉が並ぶ */
+function fern(x: number, base: number, size: number, seed: number) {
+  const fronds = [-62, -38, -14, 12, 36, 60];
+  return fronds
+    .map((deg, k) => {
+      const a = ((deg + (rand(seed + k, 50) - 0.5) * 14) * Math.PI) / 180;
+      const len = size * (0.7 + rand(seed + k, 51) * 0.4) * (1 - Math.abs(deg) / 200);
+      const pts: string[] = [];
+      for (let j = 1; j <= 8; j++) {
+        const t = j / 9;
+        // 弧を描く葉軸（先ほど垂れる）
+        const px = x + Math.sin(a) * len * t;
+        const py = base - Math.cos(a) * len * t + len * t * t * 0.35;
+        const leaf = size * 0.16 * (1 - t * 0.7);
+        const nx = Math.cos(a), ny = Math.sin(a);
+        pts.push(`M${px.toFixed(1)},${py.toFixed(1)} l${(nx * leaf - ny * leaf * 0.3).toFixed(1)},${(ny * leaf + nx * leaf * 0.3 - leaf * 0.4).toFixed(1)} l${(ny * leaf * 0.6).toFixed(1)},${(-nx * leaf * 0.6 + leaf * 0.3).toFixed(1)} Z`);
+        pts.push(`M${px.toFixed(1)},${py.toFixed(1)} l${(-nx * leaf - ny * leaf * 0.3).toFixed(1)},${(-ny * leaf + nx * leaf * 0.3 - leaf * 0.4).toFixed(1)} l${(ny * leaf * 0.6).toFixed(1)},${(-nx * leaf * 0.6 + leaf * 0.3).toFixed(1)} Z`);
+      }
+      const ex = x + Math.sin(a) * len, ey = base - Math.cos(a) * len + len * 0.35;
+      return `M${x},${base} Q${(x + Math.sin(a) * len * 0.5).toFixed(1)},${(base - Math.cos(a) * len * 0.6).toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)} L${(ex + 0.6).toFixed(1)},${(ey + 0.6).toFixed(1)} Q${(x + Math.sin(a) * len * 0.5 + 0.8).toFixed(1)},${(base - Math.cos(a) * len * 0.6 + 0.8).toFixed(1)} ${x + 0.9},${base} Z ${pts.join(" ")}`;
+    })
+    .join(" ");
+}
+/**
+ * 下草: 少女のすぐ後ろの、シダ・反った草むら・苔むした岩・倒木。淡く光るキノコと小さな花がところどころに灯る
+ */
+function undergrowth(accent: string) {
+  const id = gradId("glowcap", accent);
+  const base = 120;
+  return (
+    <>
+      <defs>
+        <radialGradient id={id}>
+          <stop offset="0" stopColor="#9ff5e0" stopOpacity="0.6" />
+          <stop offset="1" stopColor="#9ff5e0" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      {/* 苔むした倒木 */}
+      <path d={`M300,${base} C300,${base - 14} 306,${base - 18} 316,${base - 18} L420,${base - 14} C430,${base - 13} 432,${base - 4} 428,${base} Z`} />
+      <ellipse cx={426} cy={base - 7} rx={4} ry={7} fill="none" stroke={accent} strokeWidth={0.5} opacity={0.2} />
+      <path d={`M312,${base - 17} C340,${base - 20} 380,${base - 18} 418,${base - 14}`} fill="none" stroke={accent} strokeWidth={1.4} strokeLinecap="round" opacity={0.18} />
+      {/* 苔むした岩 */}
+      <path d={`M120,${base} C118,${base - 16} 132,${base - 26} 148,${base - 24} C164,${base - 22} 172,${base - 12} 170,${base} Z`} />
+      <path d={`M124,${base - 14} C132,${base - 25} 150,${base - 27} 162,${base - 18}`} fill="none" stroke={accent} strokeWidth={1.6} strokeLinecap="round" opacity={0.2} />
+      {/* シダと草むら */}
+      <path d={fern(40, base, 46, 1)} />
+      <path d={fern(236, base, 38, 2)} />
+      <path d={fern(520, base, 50, 3)} />
+      <path d={grassClump(90, base, 30, 4)} />
+      <path d={grassClump(190, base, 22, 5)} />
+      <path d={grassClump(280, base, 26, 6)} />
+      <path d={grassClump(460, base, 32, 7)} />
+      <path d={grassClump(580, base, 24, 8)} />
+      {/* 淡く光るキノコ */}
+      {[[176, 0.9], [184, 0.6], [446, 1], [454, 0.7], [462, 0.5]].map(([x, s], k) => (
+        <g key={k}>
+          <circle cx={x} cy={base - 10 * s} r={12 * s} fill={`url(#${id})`} />
+          <rect x={x - 0.7 * s} y={base - 9 * s} width={1.4 * s} height={9 * s} />
+          <path d={`M${x - 5 * s},${base - 8.6 * s} Q${x},${base - 15 * s} ${x + 5 * s},${base - 8.6 * s} Z`} />
+          <path d={`M${x - 4.6 * s},${base - 8.8 * s} Q${x},${base - 7.4 * s} ${x + 4.6 * s},${base - 8.8 * s}`} fill="none" stroke="#9ff5e0" strokeWidth={0.8} opacity={0.85} />
+        </g>
+      ))}
+      {/* 小さな花 */}
+      {[[60, 18], [112, 22], [214, 16], [352, 24], [500, 20], [560, 14]].map(([x, h], k) => (
+        <g key={k}>
+          <path d={`M${x},${base} Q${x + 1.5},${base - h * 0.6} ${x + 0.5},${base - h}`} fill="none" stroke="currentColor" strokeWidth={0.6} />
+          <circle cx={x + 0.5} cy={base - h} r={1.2} fill={accent} opacity={0.8} />
+          <circle cx={x + 0.5} cy={base - h} r={3.2} fill={accent} opacity={0.12} />
+        </g>
+      ))}
+    </>
+  );
+}
+
 
 const TOWERS = [
   { x: 40, w: 24, top: 90 },
@@ -302,11 +487,14 @@ const GROUND = 6;
 /** 床の層の上端から地面の線までの割合。少女の足裏をここに合わせる */
 export const FLOOR_SURFACE = GROUND / 64;
 
-const GRASS = range(70).map((i) => {
-  const x = 3 + i * 5.6 + rand(i, 14) * 2;
-  const h = 3 + rand(i, 15) * 4;
-  return `M${x - 1.6},${GROUND + 1} L${x + rand(i, 16) * 2 - 1},${GROUND + 1 - h} L${x + 1.6},${GROUND + 1} Z`;
-}).join(" ");
+/** 床の草: 地面の線から、長さと傾きの違う葉が反りながら伸びる */
+const GRASS = range(110)
+  .map((i) => {
+    const x = 2 + i * 3.6 + rand(i, 14) * 2.4;
+    const h = 2.5 + rand(i, 15) ** 1.5 * 5.5;
+    return blade(x, GROUND + 1, Math.min(h, GROUND + 0.5), (rand(i, 16) - 0.5) * 4, 1 + rand(i, 17) * 0.8);
+  })
+  .join(" ");
 
 /* ---------- STAGE 3 星空の観測塔 ---------- */
 
@@ -928,7 +1116,8 @@ export const ART: Record<ExpeditionArt, Art> = {
     render: starglass,
   },
   pines: { width: 400, height: 200, render: () => <path d={PINE_D} /> },
-  trunks: { width: 400, height: 200, render: () => TRUNK_PARTS.map((d, i) => <path key={i} d={d} />) },
+  trunks: { width: 400, height: 200, render: trunks },
+  undergrowth: { width: 600, height: 120, render: undergrowth },
   cathedral: { width: 360, height: 240, render: cathedral },
   desk: { width: 900, height: 120, render: readingDesk },
   stars: {

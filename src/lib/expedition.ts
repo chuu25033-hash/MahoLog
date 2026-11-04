@@ -14,6 +14,7 @@ export type ExpeditionArt =
   | "trees"
   | "pines"
   | "trunks"
+  | "undergrowth"
   | "spires"
   | "crystals"
   | "icicles"
@@ -158,6 +159,8 @@ export const EXPEDITION_SCENES = {
       { source: { art: "pines" }, height: 0.66, bottom: EXPEDITION_FLOOR + 0.01, speed: 0.25, color: "#0f241e", opacity: 0.95, accent: "#a8e6c8", rim: 0.14 },
       haze("#1d4034", EXPEDITION_FLOOR, 0.22, 0.55),
       { source: { art: "trunks" }, height: 1.02, bottom: EXPEDITION_FLOOR - 0.03, speed: 0.6, color: "#040a08", accent: "#d7f5a8", rim: 0.16 },
+      haze("#1d4034", EXPEDITION_FLOOR - 0.02, 0.1, 0.35),
+      { source: { art: "undergrowth" }, height: 0.28, bottom: ON_FLOOR - 0.004, speed: 0.88, color: "#030806", accent: "#d7f5a8", rim: 0.18 },
       floor("#030806", "#d7f5a8", "grass"),
     ],
   },
