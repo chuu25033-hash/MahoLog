@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { BookMarked, CalendarDays, Crown, Moon, Orbit, Settings, Sparkles, Sun, Swords, Wand2 } from "lucide-react";
 import { AreaAmbience } from "@/components/area-ambience";
+import { ExpeditionStage } from "@/components/expedition/expedition-stage";
+import { resolveArea } from "@/lib/areas";
+import { expeditionSceneOf } from "@/lib/expedition";
 import { BoundWorldlinesDialog } from "@/components/bound-worldlines-dialog";
 import { WORLDLINES_OPEN } from "@/lib/worldline-store";
 import { CycleRings } from "@/components/cycle/cycle-rings";
@@ -29,7 +32,7 @@ import { sessionElapsedMs, useChantSession, type ChantSession } from "@/lib/chan
 import { radarAxesOf, withCustomNames } from "@/lib/subjects";
 import { usePortraitPhone } from "@/lib/use-portrait-phone";
 import type { Subject } from "@/lib/types";
-import { equippedTitle, localProfile, localStudyLogs, useStoredUserData, userActions, useUserData } from "@/lib/user-store";
+import { cycleMp, equippedTitle, isZenithOpen, localProfile, localStudyLogs, useStoredUserData, userActions, useUserData } from "@/lib/user-store";
 import { GLYPHS, type Glyph } from "@/lib/glyphs";
 import { cn } from "@/lib/utils";
 
@@ -186,7 +189,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
     </Card>
   );
 
-  const chantButton = <ChantButton />;
+  const chantButton = <ChantButton totalMp={profile.total_study_time} className="min-h-44" />;
 
   const codexButton = (
     <Link
@@ -284,7 +287,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
           {/* 右: 詠唱開始 & 詠唱の記憶 */}
           <section className="col-span-3 flex min-h-0 flex-col gap-3 short:gap-2">
             {/* 詠唱の扉は大きく取りつつ上限を設け、残りの高さに記憶を収まるだけ並べる */}
-            <ChantButton className="max-h-[36dvh] min-h-32 flex-[1.4] text-lg short:min-h-0 short:flex-none short:text-base" />
+            <ChantButton totalMp={profile.total_study_time} className="max-h-[36dvh] min-h-32 flex-[1.4] text-lg short:min-h-0 short:flex-none short:text-base" />
 
             {codexButton}
 
@@ -392,61 +395,60 @@ function chantStatus(session: ChantSession, now: number) {
   return left > 0 ? `残り ${formatClock(left)}` : "詠唱完了 — 戻って刻む";
 }
 
-/** 詠唱を始める扉。詠唱の途中で書庫に来ていれば、詠唱の間へ戻る扉として様子を映す */
-function ChantButton({ className }: { className?: string }) {
+/**
+ * 詠唱を始める扉。滞在中のエリアの景色を映す窓になっていて、魔術師がその中に立っている。
+ * 扉に触れると歩き出し（詠唱の間で歩む姿の予告）、詠唱の途中で書庫に来ていれば、歩み続ける姿と様子を映して詠唱の間へ戻る扉になる
+ */
+function ChantButton({ totalMp, className }: { totalMp: number; className?: string }) {
+  const data = useUserData();
   const session = useChantSession();
   const ticking = session !== null && session.clock.startedAt !== null;
   const [now, setNow] = useState(() => Date.now());
+  const [hover, setHover] = useState(false);
   useEffect(() => {
     if (!ticking) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [ticking]);
+  const area = resolveArea(data.userProfile.currentStageId, cycleMp(data, totalMp), isZenithOpen(data, totalMp));
+  const scene = useMemo(() => expeditionSceneOf(area), [area]);
+  // 詠唱の途中なら、時計が動いている詠唱の間だけ歩む（止めている間や静息中は、触れても歩かない）。
+  // 詠唱していないときは、扉に触れると歩き出す
+  const walking = session ? ticking && session.phase === "focus" : hover;
 
   return (
-    <Link
-      href="/timer"
-      data-tour="chant"
-      className={cn(
-        buttonVariants({ size: "lg" }),
-        "group relative h-auto shrink-0 flex-col gap-1.5 overflow-hidden rounded-2xl py-5 text-base tracking-[0.3em] compact:py-3 short:py-2",
-        session && "shadow-[0_0_18px_-4px_rgba(226,201,116,0.6)]",
-        className,
-      )}
-    >
-      {/* 背後でゆっくり巡る魔法陣の輪 */}
-      <ChantRings />
-      <Wand2 className="relative size-6! transition-transform duration-500 group-hover:-rotate-12 lg:size-8!" strokeWidth={1.25} />
-      <span className="relative">{session ? "詠唱の間へ戻る" : "詠唱を開始する"}</span>
-      <span className="relative font-display text-[10px] tracking-[0.3em] text-starlight/70">
-        {session ? "RETURN TO THE CHANT" : "BEGIN THE CHANT"}
-      </span>
-      {session && <span className="relative text-[11px] tracking-[0.2em] text-aqua/90 glimmer">{chantStatus(session, now)}</span>}
-    </Link>
-  );
-}
-
-/** 詠唱の扉の背後で巡る、淡い魔法陣の輪（ルーンの刻みと六芒星） */
-function ChantRings() {
-  return (
-    <svg
-      viewBox="-100 -100 200 200"
-      // ボタンの「中の SVG を小さく揃える」指定から外すため、大きさは size-auto と style で決める
-      style={{ width: "118%", height: "auto" }}
-      className="pointer-events-none absolute top-1/2 left-1/2 size-auto max-w-none -translate-x-1/2 -translate-y-1/2 animate-spin-slow text-starlight opacity-[0.13] transition-opacity duration-700 group-hover:opacity-25 short:hidden"
-      fill="none"
-      stroke="currentColor"
-      aria-hidden
-    >
-      <circle r="92" vectorEffect="non-scaling-stroke" />
-      <circle r="84" strokeDasharray="1 5" vectorEffect="non-scaling-stroke" />
-      <circle r="58" vectorEffect="non-scaling-stroke" />
-      <polygon points="0,-58 50.2,29 -50.2,29" vectorEffect="non-scaling-stroke" />
-      <polygon points="0,58 50.2,-29 -50.2,-29" vectorEffect="non-scaling-stroke" />
-      {Array.from({ length: 24 }, (_, i) => (
-        <line key={i} y1="-92" y2="-86" transform={`rotate(${i * 15})`} vectorEffect="non-scaling-stroke" />
-      ))}
-    </svg>
+    // 景色は扉（ボタン）の外に敷く。ボタンの中だと「中の SVG を小さくそろえる」指定が景色の絵にも掛かってしまう
+    <div className={cn("group relative flex shrink-0 overflow-hidden rounded-2xl", className)}>
+      {/* 滞在中のエリアの景色。文字の載る上の方は夜に沈め、足元の魔術師と景色を見せる */}
+      <ExpeditionStage
+        scene={scene}
+        walking={walking}
+        glow="#e2c974"
+        className="absolute inset-0 brightness-[0.85] transition-[filter] duration-700 group-hover:brightness-100"
+      />
+      <span className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(5,7,12,0.82),rgba(5,7,12,0.4)_40%,transparent_62%)]" />
+      <Link
+        href="/timer"
+        data-tour="chant"
+        onPointerEnter={() => setHover(true)}
+        onPointerLeave={() => setHover(false)}
+        onFocus={() => setHover(true)}
+        onBlur={() => setHover(false)}
+        className={cn(
+          buttonVariants({ size: "lg" }),
+          // 景色を透かすので、硝子の地とぼかしは外して縁取りだけ残す
+          "relative h-auto flex-1 flex-col justify-start gap-1.5 rounded-2xl bg-none py-5 text-[length:inherit] tracking-[0.3em] [backdrop-filter:none]! compact:py-3 short:py-2",
+          session && "shadow-[0_0_18px_-4px_rgba(226,201,116,0.6)]",
+        )}
+      >
+        <Wand2 className="relative size-6! transition-transform duration-500 group-hover:-rotate-12 lg:size-8!" strokeWidth={1.25} />
+        <span className="relative text-glow-gold">{session ? "詠唱の間へ戻る" : "詠唱を開始する"}</span>
+        <span className="relative font-display text-[10px] tracking-[0.3em] text-starlight/70">
+          {session ? "RETURN TO THE CHANT" : "BEGIN THE CHANT"}
+        </span>
+        {session && <span className="relative text-[11px] tracking-[0.2em] text-aqua/90 glimmer">{chantStatus(session, now)}</span>}
+      </Link>
+    </div>
   );
 }
 
