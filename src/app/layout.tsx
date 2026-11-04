@@ -52,6 +52,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // iOS Safari は 16px 未満の入力欄に触れると画面を拡大し、戻すのに一手間かかる。拡大の上限を等倍に留めてそれを止める（iOS ではピンチでの拡大はそのまま使える）
+  maximumScale: 1,
   viewportFit: "cover",
   themeColor: "#080c16",
 };
