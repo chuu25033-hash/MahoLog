@@ -116,44 +116,20 @@ function CelestialBackdrop({ count, line, gold }: { count: number; line: string;
   const id = useId().replace(/:/g, "");
   const ticks = Array.from({ length: 72 }, (_, i) => i * 5);
   const runeR = 91;
+  // 回る部分は SVG の中で回さず、それぞれ独立に合成される外側の層ごと回す。
+  // SVG の中で回すと毎フレーム陣ごと描き直され、明滅と重なったときに細い線が画素へ吸い付く位置が揺れて震える
   return (
-    <svg viewBox="-100 -100 200 200" className="absolute h-[min(84cqw,84cqh)] w-[min(84cqw,84cqh)] overflow-visible" aria-hidden>
+    <div className="absolute h-[min(84cqw,84cqh)] w-[min(84cqw,84cqh)]" aria-hidden>
+    <svg viewBox="-100 -100 200 200" className="absolute inset-0 size-full overflow-visible">
       <defs>
         <radialGradient id={`aura-${id}`}>
           <stop offset="0%" stopColor="#a882fb" stopOpacity="0.16" />
           <stop offset="45%" stopColor={line} stopOpacity="0.06" />
           <stop offset="100%" stopColor={line} stopOpacity="0" />
         </radialGradient>
-        <path id={`runes-${id}`} d={`M0,${-runeR} A${runeR},${runeR} 0 1,1 -0.01,${-runeR}`} />
       </defs>
       {/* 中心からにじむ光 */}
       <circle r="96" fill={`url(#aura-${id})`} />
-
-      {/* 外周: ルーンの帯（SVG 要素の transform-origin は viewBox 基準なので、中心 (0,0) を明示する） */}
-      <g className="animate-spin-slower" style={{ transformBox: "view-box", transformOrigin: "0 0" }}>
-        <circle r="98" stroke={gold} strokeOpacity="0.32" strokeWidth="0.5" {...hairline} />
-        <circle r="87.5" stroke={gold} strokeOpacity="0.22" strokeWidth="0.4" {...hairline} />
-        <text className="glimmer-slow" fill={gold} fillOpacity="0.5" fontSize="5.2">
-          <textPath href={`#runes-${id}`} textLength={2 * Math.PI * runeR - 4} lengthAdjust="spacing">
-            {RUNES + RUNES}
-          </textPath>
-        </text>
-      </g>
-      {/* 刻みの輪: ルーンと逆向きに巡る */}
-      <g className="animate-spin-slow" style={{ transformBox: "view-box", transformOrigin: "0 0", animationDirection: "reverse" }}>
-        <circle r="95" stroke={gold} strokeOpacity="0.14" strokeWidth="0.4" strokeDasharray="0.6 2.4" {...hairline} />
-        {ticks.map((deg) => (
-          <line
-            key={deg}
-            y1={deg % 30 === 0 ? -87.5 : -86}
-            y2="-84"
-            stroke={gold}
-            strokeOpacity={deg % 30 === 0 ? 0.5 : 0.22}
-            strokeWidth="0.4"
-            transform={`rotate(${deg})`}
-          />
-        ))}
-      </g>
 
       <g className="glimmer-slow">
         {/* 傾いた天体軌道 */}
@@ -185,12 +161,49 @@ function CelestialBackdrop({ count, line, gold }: { count: number; line: string;
       })}
 
       {/* 中心の印 */}
-      <g className="animate-spin-slow" style={{ transformBox: "view-box", transformOrigin: "0 0" }}>
-        <circle r="13" stroke={gold} strokeOpacity="0.28" strokeWidth="0.4" strokeDasharray="1 2" {...hairline} />
-      </g>
       <circle r="7" stroke={gold} strokeOpacity="0.3" strokeWidth="0.5" {...hairline} />
       <path d="M0,-5 L1,-1 L5,0 L1,1 L0,5 L-1,1 L-5,0 L-1,-1 Z" fill="#f6f1dc" fillOpacity="0.35" />
     </svg>
+
+    {/* 外周: ルーンの帯 */}
+    <div className="spin-layer absolute inset-0 animate-spin-slower">
+      <svg viewBox="-100 -100 200 200" className="size-full overflow-visible">
+        <defs>
+          <path id={`runes-${id}`} d={`M0,${-runeR} A${runeR},${runeR} 0 1,1 -0.01,${-runeR}`} />
+        </defs>
+        <circle r="98" stroke={gold} strokeOpacity="0.32" strokeWidth="0.5" {...hairline} />
+        <circle r="87.5" stroke={gold} strokeOpacity="0.22" strokeWidth="0.4" {...hairline} />
+        <text className="glimmer-slow" fill={gold} fillOpacity="0.5" fontSize="5.2">
+          <textPath href={`#runes-${id}`} textLength={2 * Math.PI * runeR - 4} lengthAdjust="spacing">
+            {RUNES + RUNES}
+          </textPath>
+        </text>
+      </svg>
+    </div>
+    {/* 刻みの輪: ルーンと逆向きに巡る */}
+    <div className="spin-layer absolute inset-0 animate-spin-slow" style={{ animationDirection: "reverse" }}>
+      <svg viewBox="-100 -100 200 200" className="size-full overflow-visible">
+        <circle r="95" stroke={gold} strokeOpacity="0.14" strokeWidth="0.4" strokeDasharray="0.6 2.4" {...hairline} />
+        {ticks.map((deg) => (
+          <line
+            key={deg}
+            y1={deg % 30 === 0 ? -87.5 : -86}
+            y2="-84"
+            stroke={gold}
+            strokeOpacity={deg % 30 === 0 ? 0.5 : 0.22}
+            strokeWidth="0.4"
+            transform={`rotate(${deg})`}
+          />
+        ))}
+      </svg>
+    </div>
+    {/* 中心の印の点線の輪 */}
+    <div className="spin-layer absolute inset-0 animate-spin-slow">
+      <svg viewBox="-100 -100 200 200" className="size-full overflow-visible">
+        <circle r="13" stroke={gold} strokeOpacity="0.28" strokeWidth="0.4" strokeDasharray="1 2" {...hairline} />
+      </svg>
+    </div>
+    </div>
   );
 }
 
