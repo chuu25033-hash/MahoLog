@@ -180,7 +180,7 @@ export const EXPEDITION_SCENES = {
     sky: ["#02031a", "#0a1036", "#1b1e4e"],
     glow: "#8db7f2",
     motes: { kind: "float", color: "#e2c974" },
-    celestial: [{ kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 3, density: 1, milkyWay: 28, milkyGlow: 0.45 }, { kind: "astrolabe", x: 0.68, y: 0.34, size: 0.78, color: "#e2c974" }],
+    celestial: [{ kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 3, density: 1, milkyWay: 28, milkyGlow: 0.45 }, { kind: "astrolabe", x: 0.68, y: 0.34, size: 0.78, color: "#e2c974" }, { kind: "meteor", x: 0, y: 0, size: 0.5, color: "#ffffff" }],
     layers: [
       { source: { art: "constellations" }, height: 0.78, bottom: 0.22, speed: 0.05, color: "#e6eeff", accent: "#e2c974" },
       haze("#2a3270", 0.1, 0.36, 0.55),
@@ -199,7 +199,7 @@ export const EXPEDITION_SCENES = {
     sky: ["#030914", "#0a1a2e", "#173049"],
     glow: "#cfe9ff",
     motes: { kind: "fall", color: "#e6f4ff" },
-    celestial: [{ kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 9, density: 0.8 }, { kind: "aurora", x: 0, y: 0, size: 0.96, color: "#7af0d0" }],
+    celestial: [{ kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 9, density: 0.8 }, { kind: "aurora", x: 0, y: 0, size: 0.96, color: "#7af0d0" }, { kind: "meteor", x: 0, y: 0, size: 0.4, color: "#ffffff" }],
     layers: [
       { source: { art: "clocktower" }, height: 0.74, bottom: EXPEDITION_FLOOR, speed: 0.14, color: "#0e2034", accent: "#bfe3ff", opacity: 0.95, rim: 0.16 },
       haze("#3a6488", EXPEDITION_FLOOR, 0.46, 0.42),
@@ -244,6 +244,7 @@ export const EXPEDITION_SCENES = {
     celestial: [
       { kind: "starsky", x: 0, y: 0, size: 1, color: "#ffffff", seed: 13, density: 0.4 },
       { kind: "crown", x: 0.66, y: 0.2, size: 0.3, color: "#fbe8b0" },
+      { kind: "meteor", x: 0, y: 0, size: 0.35, color: "#ffffff" },
     ],
     rays: { color: "#fff3c8", opacity: 0.12, from: "right" },
     layers: [

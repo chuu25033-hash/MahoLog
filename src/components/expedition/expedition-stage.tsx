@@ -197,6 +197,39 @@ function useWalkTransition(walking: boolean) {
   return ref;
 }
 
+/** 床に映り込む空の光（磨いた床・硝子の床だけ。草の床には映さない） */
+const REFLECTED = new Set(["moon", "crown", "core", "astrolabe", "spire", "aurora"]);
+function FloorReflection({ scene }: { scene: ExpeditionScene }) {
+  const source = scene.celestial?.find((c) => REFLECTED.has(c.kind));
+  const floorLayer = scene.layers[scene.layers.length - 1];
+  if (!source || isHaze(floorLayer) || ("art" in floorLayer.source && floorLayer.source.art === "grass")) return null;
+  const height = `${EXPEDITION_FLOOR * (1 - FLOOR_SURFACE) * 100}%`;
+  const ripple = "repeating-linear-gradient(to bottom, #000 0 2px, rgba(0,0,0,0.45) 2px 5px)";
+  if (source.kind === "aurora") {
+    // 空いっぱいの光は、床全体にうっすら映る
+    return (
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0"
+        style={{ height, mixBlendMode: "screen", background: `linear-gradient(to bottom, ${source.color}1c, transparent 80%)`, maskImage: ripple }}
+      />
+    );
+  }
+  return (
+    <div
+      className="expedition-reflection pointer-events-none absolute bottom-0"
+      style={{
+        left: `${source.x * 100}%`,
+        width: `${Math.max(10, source.size * 40)}cqh`,
+        height,
+        transform: "translateX(-50%)",
+        mixBlendMode: "screen",
+        background: `radial-gradient(ellipse 50% 100% at 50% 0, ${source.color}55, ${source.color}1a 45%, transparent 75%)`,
+        maskImage: ripple,
+      }}
+    />
+  );
+}
+
 /** 層の間に漂う霞の帯（上下へ淡く溶ける） */
 function HazeBand({ haze }: { haze: ExpeditionHaze }) {
   return (
@@ -282,6 +315,7 @@ export const ExpeditionStage = memo(function ExpeditionStage({
       {scene.celestial?.map((object, i) => <SkyObject key={i} object={object} />)}
       {scene.rays && <LightRays rays={scene.rays} />}
       {scene.layers.map((layer, i) => (isHaze(layer) ? <HazeBand key={i} haze={layer} /> : <ParallaxLayer key={i} layer={layer} />))}
+      <FloorReflection scene={scene} />
       {/* 床の近くを、薄い靄がゆっくり流れる（二枚を違う速さで重ねる） */}
       {[0, 1].map((k) => (
         <div

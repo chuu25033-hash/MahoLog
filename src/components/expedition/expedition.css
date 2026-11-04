@@ -71,6 +71,16 @@
   animation: expedition-mist linear infinite;
 }
 
+/* 床に映る光は、水面のようにかすかに揺らぐ */
+@keyframes expedition-reflection {
+  0%, 100% { opacity: 0.8; transform: translateX(-50%) scaleX(1); }
+  50% { opacity: 1; transform: translateX(-50%) scaleX(1.06); }
+}
+
+.expedition-reflection {
+  animation: expedition-reflection 6s ease-in-out infinite;
+}
+
 /* 目の前を漂うピンぼけの光の粒: ぼかして、ゆっくり大きく漂う */
 @keyframes expedition-bokeh {
   0%, 100% { transform: translate(0, 0) scale(1); }
@@ -441,6 +451,7 @@
   .expedition .expedition-mote,
   .expedition .expedition-bokeh,
   .expedition .expedition-mist,
+  .expedition .expedition-reflection,
   .expedition .expedition-staff-light,
   .expedition .expedition-ray,
   .expedition .expedition-flame,
@@ -467,6 +478,7 @@
 [data-lite] .expedition-flame,
 [data-lite] .expedition-bokeh,
 [data-lite] .expedition-mist,
+[data-lite] .expedition-reflection,
 [data-lite] .expedition-staff-light,
 [data-lite] .expedition-ray,
 [data-lite] .wander-orb {
