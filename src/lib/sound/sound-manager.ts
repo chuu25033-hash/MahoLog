@@ -46,6 +46,8 @@ class SoundManager {
   private volumes: SoundVolumes = { master: 1, bgm: 0.5, se: 0.7 };
   private ducked = false;
   private silenced = false;
+  /** ページを離れるときに音を消して止めた後か（pagehide） */
+  private hushed = false;
   /** 一度でも音を起こせたか。起こせた後は、ブラウザに止められても操作を待たずに起こし直せる */
   private unlocked = false;
   private ambienceKey: AmbienceKey | null = null;
@@ -208,18 +210,24 @@ class SoundManager {
     // 別のタブへ移っても環境音は流し続ける（単語帳や資料を見ながらでも途切れない）。
     // 隠れた・戻った・履歴から戻った・窓に戻ったときに、ブラウザが止めていれば起こし直す
     const keepAlive = () => void this.keepAlive();
+    // 閉じる・別のページへ移るときは、音を消してから止める。
+    // スマホでは鳴らしたまま画面が凍ると、最後の一瞬の音が繰り返されて「ビー」と鳴り続けることがある
+    const hush = () => this.hush();
+    const onShow = () => void this.keepAlive(true);
     window.addEventListener("pointerdown", unlock, true);
     window.addEventListener("keydown", unlock, true);
     document.addEventListener("click", onClick, true);
     document.addEventListener("visibilitychange", keepAlive);
-    window.addEventListener("pageshow", keepAlive);
+    window.addEventListener("pageshow", onShow);
+    window.addEventListener("pagehide", hush);
     window.addEventListener("focus", keepAlive);
     return () => {
       window.removeEventListener("pointerdown", unlock, true);
       window.removeEventListener("keydown", unlock, true);
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("visibilitychange", keepAlive);
-      window.removeEventListener("pageshow", keepAlive);
+      window.removeEventListener("pageshow", onShow);
+      window.removeEventListener("pagehide", hush);
       window.removeEventListener("focus", keepAlive);
     };
   }
@@ -229,13 +237,29 @@ class SoundManager {
    * suspended: 省電力などでブラウザが止めた / interrupted: iOS Safari で電話・他のアプリの音に割り込まれた。
    * 音を起こせたことのある場合だけ試す（自動再生の制限が解けていない間は、最初の操作を待つ）
    */
-  private async keepAlive() {
+  private async keepAlive(returned = false) {
     const bus = this.bus;
     if (!bus || !this.unlocked || !this.enabled) return;
+    // 画面が隠れている間にブラウザが止めたのなら、起こし直さない（パソコンのブラウザは隠れても止めないので、
+    // 止めるのはスマホが裏へ回したとき。そこで起こすと止める・起こすがぶつかり、音が途切れて雑音になる）。戻ったときに起こす
+    if (typeof document !== "undefined" && document.hidden) return;
+    // 離れるときに止めたものは、ページに戻ってきた（pageshow）ときだけ起こす
+    if (this.hushed && !returned) return;
     if (bus.ctx.state !== "running" && bus.ctx.state !== "closed") {
       await bus.ctx.resume().catch(() => undefined);
     }
     void this.syncAmbience();
+  }
+
+  /** 音をすぐに消して止める（閉じる・ページを離れるとき）。戻ってきたら keepAlive で音量を戻す */
+  private hush() {
+    const bus = this.bus;
+    if (!bus || bus.ctx.state === "closed") return;
+    this.hushed = true;
+    const gain = bus.master.gain;
+    gain.cancelScheduledValues(bus.ctx.currentTime);
+    gain.setTargetAtTime(0, bus.ctx.currentTime, 0.005);
+    void bus.ctx.suspend().catch(() => undefined);
   }
 
   private ensureBus(): Bus | null {
@@ -243,8 +267,16 @@ class SoundManager {
     if (this.bus) return this.bus;
     if (typeof window === "undefined" || typeof AudioContext === "undefined") return null;
     try {
-      const ctx = new AudioContext();
+      // 音を作る区切りを大きめにとる（曲の切り替わりで2曲ぶんの残響が重なっても、描き遅れて「ザザッ」と途切れないように）
+      const ctx = new AudioContext({ latencyHint: "playback" });
       const master = ctx.createGain();
+      // 最後の守り: 曲の重なりや効果音が重なって 0dB を超え、音割れするのを抑える
+      const limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -3;
+      limiter.knee.value = 0;
+      limiter.ratio.value = 20;
+      limiter.attack.value = 0.003;
+      limiter.release.value = 0.25;
       const bgm = ctx.createGain();
       const se = ctx.createGain();
       const cue = ctx.createGain();
@@ -257,11 +289,17 @@ class SoundManager {
       duck.gain.value = this.ducked ? DUCK_GAIN : 1;
       duck.connect(duckFilter).connect(bgm).connect(master);
       se.connect(master);
-      master.connect(ctx.destination);
+      master.connect(limiter).connect(ctx.destination);
       // 動き出したら起こせた印を付け、ブラウザに止められたら（割り込みが明けたときも含めて）起こし直す
       ctx.addEventListener("statechange", () => {
-        if (ctx.state === "running") this.unlocked = true;
-        else void this.keepAlive();
+        if (ctx.state === "running") {
+          this.unlocked = true;
+          // 離れるときに消した音量を戻す（戻ってきた・タップしたなど、どの道で起きても）
+          if (this.hushed) {
+            this.hushed = false;
+            this.applyVolumes();
+          }
+        } else void this.keepAlive();
       });
       if (ctx.state === "running") this.unlocked = true;
       this.bus = { ctx, master, bgm, se, cue, duck, duckFilter };
