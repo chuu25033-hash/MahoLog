@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useRef, type CSSProperties } from "react";
+import { memo, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { EXPEDITION_FLOOR, isHaze, type ExpeditionHaze, type ExpeditionLayer, type ExpeditionScene } from "@/lib/expedition";
 import { cn } from "@/lib/utils";
 import { BackdropTile, FLOOR_SURFACE, sourceAspect } from "./backdrop-art";
@@ -10,8 +10,32 @@ import "./expedition.css";
 
 /** 少女の歩む速さ（舞台の高さ / 秒）。足元の床がこの速さで流れる。地面に着いた足の送り（expedition.css の歩みのキーフレーム）と同じ速さにし、足が床を滑らないようにする */
 const WALK_SPEED = 0.0253;
-/** 層を敷き詰めるときに見込む、舞台の横長さ（幅 ÷ 高さ）の上限 */
+/**
+ * 舞台の横長さ（幅 ÷ 高さ）を測る前に見込む値。測ったあとは、実際の横長さに合わせて層の絵を並べる枚数を決める。
+ * いつもこの上限に合わせて並べると、縦長のスマホでは見える幅の何倍もの帯を層の数だけ合成することになり、
+ * iPhone の Safari がメモリの上限から帯の一部の描画を捨て、流れて画面に入るところで描き直す間、景色が欠けてちかちかする
+ */
 const MAX_STAGE_ASPECT = 3;
+/** 測った横長さは、この刻みで切り上げる（大きさが少し変わるたびに並べ直さない） */
+const ASPECT_STEP = 0.25;
+
+/** 舞台の横長さ（幅 ÷ 高さ。ASPECT_STEP の刻みで切り上げる）。描く前に測るので、並べた絵が足りずに隙間が出ることはない */
+function useStageAspect(ref: RefObject<HTMLDivElement | null>) {
+  const [aspect, setAspect] = useState(MAX_STAGE_ASPECT);
+  useLayoutEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    const measure = () => {
+      const { offsetWidth: width, offsetHeight: height } = root;
+      if (width > 0 && height > 0) setAspect(Math.ceil(width / height / ASPECT_STEP) * ASPECT_STEP);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, [ref]);
+  return aspect;
+}
 /** 少女の背丈（舞台の高さに対する割合） */
 const WANDERER_HEIGHT = 0.26;
 /** 少女の絵の下端から足裏までの割合（wanderer.tsx の viewBox は高さ 100、足裏は 96.6） */
@@ -48,9 +72,10 @@ const MOTES = Array.from({ length: 14 }, (_, i) => ({
  * 層の絵を横に並べ、1枚分の幅だけ左へ流してから戻すのを繰り返す（継ぎ目なく流れ続けて見える）。
  * transform だけを動かすので、描き直しは起きない
  */
-function ParallaxLayer({ layer }: { layer: ExpeditionLayer }) {
+function ParallaxLayer({ layer, aspect }: { layer: ExpeditionLayer; aspect: number }) {
   const tileWidth = sourceAspect(layer.source) * layer.height; // 舞台の高さを 1 とした1枚の幅
-  const copies = Math.ceil(MAX_STAGE_ASPECT / tileWidth) + 1;
+  // 見える幅を覆い、さらに1枚分流しても途切れない枚数だけ並べる
+  const copies = Math.ceil(aspect / tileWidth) + 1;
   return (
     <div
       className="absolute inset-x-0"
@@ -315,6 +340,7 @@ export const ExpeditionStage = memo(function ExpeditionStage({
   const [top, middle, horizon] = scene.sky;
   // 歩いているかどうか（data-walking）は、歩き出し・立ち止まりをなめらかにするためにここで付け外しする
   const ref = useWalkTransition(walking);
+  const aspect = useStageAspect(ref);
   return (
     <div
       ref={ref}
@@ -334,7 +360,7 @@ export const ExpeditionStage = memo(function ExpeditionStage({
       {/* 空に掛かる、流れない大きな物（月・天文盤・オーロラ・炉心・星冠・銀河・塔） */}
       {scene.celestial?.map((object, i) => <SkyObject key={i} object={object} />)}
       {scene.rays && <LightRays rays={scene.rays} />}
-      {scene.layers.map((layer, i) => (isHaze(layer) ? <HazeBand key={i} haze={layer} /> : <ParallaxLayer key={i} layer={layer} />))}
+      {scene.layers.map((layer, i) => (isHaze(layer) ? <HazeBand key={i} haze={layer} /> : <ParallaxLayer key={i} layer={layer} aspect={aspect} />))}
       <FloorReflection scene={scene} />
       {/* 床の近くを、薄い靄がゆっくり流れる（二枚を違う速さで重ねる） */}
       {[0, 1].map((k) => (
