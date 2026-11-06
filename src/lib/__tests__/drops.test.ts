@@ -15,6 +15,7 @@ describe("流れ星の区切り", () => {
     [0, 0],
     [24, 0],
     [25, 1],
+    [30, 1],
     [49, 1],
     [50, 2],
     [74, 2],
@@ -195,5 +196,15 @@ describe("星の救い", () => {
   it("救いでなければ、いつもの確率のまま", () => {
     const fall = calculateItemDrops(25, { area, random: () => 0 });
     expect(fall.items[0].rarity).toBe("C");
+  });
+});
+
+describe("30分の区切り", () => {
+  it("30分からは、25分より稀品が降りやすい（流れ星の数は同じ1つ）", () => {
+    expect(dropTierOf(29)?.minMinutes).toBe(25);
+    expect(dropTierOf(30)?.minMinutes).toBe(30);
+    expect(dropTierOf(49)?.minMinutes).toBe(30);
+    expect(dropTierOf(30)!.rates.B).toBeGreaterThan(dropTierOf(25)!.rates.B);
+    expect(dropTierOf(30)!.rates.A).toBe(dropTierOf(25)!.rates.A);
   });
 });

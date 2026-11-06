@@ -60,12 +60,15 @@ export type StoryLimit = { left: number; isNew: (item: Item) => boolean };
 /**
  * 100分以降は、どれだけ続けても最後の区切り（4枠）のまま。
  * 至宝（S）は極めて稀にする（100分の詠唱でも、流星群の引き上げを合わせて1回あたり4%ほど）。下げた分は秘宝（A）へ回す。
- * 25分でも稀品以上が4回に1回は降るようにする（2回の25分より1回の50分の方が、まだ稀品以上が降りやすい）
+ * 25分でも稀品以上が4回に1回は降るようにする（2回の25分より1回の50分の方が、まだ稀品以上が降りやすい）。
+ * 30分（流星群が近づき始める長さ）からは稀品を上げ、30分台は 31%、50分台・75分台は 32% にする（流星群が稀品を秘宝へ引き上げる分を見込む）。
+ * どの長さで区切っても、勉強1時間あたりの稀品が25分より減らないようにする
  */
 export const DROP_TIERS: DropTier[] = [
   { minMinutes: 25, slots: 1, rates: { C: 75, B: 22, A: 2.98, S: 0.02 }, guaranteed: 0, ore: 0 },
-  { minMinutes: 50, slots: 2, rates: { C: 70, B: 20, A: 9.9, S: 0.1 }, guaranteed: 0, ore: 0 },
-  { minMinutes: 75, slots: 3, rates: { C: 55, B: 25, A: 19.7, S: 0.3 }, guaranteed: 0, ore: 1 },
+  { minMinutes: 30, slots: 1, rates: { C: 66, B: 31, A: 2.98, S: 0.02 }, guaranteed: 0, ore: 0 },
+  { minMinutes: 50, slots: 2, rates: { C: 58, B: 32, A: 9.9, S: 0.1 }, guaranteed: 0, ore: 0 },
+  { minMinutes: 75, slots: 3, rates: { C: 48, B: 32, A: 19.7, S: 0.3 }, guaranteed: 0, ore: 1 },
   { minMinutes: 100, slots: 4, rates: { C: 40, B: 30, A: 29.5, S: 0.5 }, guaranteed: 1, ore: 3 },
 ];
 
@@ -131,7 +134,7 @@ function rollRarity(rates: RarityRates, available: Rarity[], random: () => numbe
 
 /**
  * 詠唱時間（分）から、降る流れ星を決める。
- * 1. 詠唱時間の区切り（25/50/75/100分）で確率・確定枠・原石の数を決める
+ * 1. 詠唱時間の区切り（25/30/50/75/100分）で確率・確定枠・原石の数を決める
  * 2. 詠唱時間に星の余韻を足し、25分ごとに1枠（最大4枠）。届かなかった端数は次の余韻になる
  * 3. 枠ごとにレア度を引く。確定枠は常品（C）を除いて引く
  * 4. そのレア度の品をエリアのプールから選ぶ
