@@ -35,7 +35,7 @@ import { soundManager } from "@/lib/sound/sound-manager";
 import { setChantPresence } from "@/lib/worldline-store";
 import { COMBO_GRACE_MINUTES, COMBO_MIN_MINUTES, restEndNotice } from "@/lib/combo";
 import { CATALYSTS, GUIDANCE_CATALYSTS, STARDUST_ORE, blessingMultiplier, blessingRawRate, dropMultiplier } from "@/lib/items";
-import { PITY_MISSES, STORY_FRAGMENTS_PER_DAY, isPityRarity } from "@/lib/drops";
+import { PITY_MISSES, RARE_PITY_MISSES, STORY_FRAGMENTS_PER_DAY, isPityRarity, isRarePityRarity } from "@/lib/drops";
 import { calculateFinalReward } from "@/lib/reward";
 import {
   FOCUS_MINUTE_OPTIONS,
@@ -258,12 +258,17 @@ export function TimerPanel({
           story: storyLimitOf(getUserData()),
           // 星の救い: 秘宝以上が降らないまま8回続いたら、この詠唱で秘宝が必ず降る
           pity: getUserData().pityMisses >= PITY_MISSES,
+          // 稀品の救い: 稀品以上が降らないまま3回続いたら、この詠唱で稀品以上が必ず降る
+          rarePity: getUserData().rarePityMisses >= RARE_PITY_MISSES,
         });
         const { fall } = reward;
         const gainedMp = reward.mp;
         userActions.setStarEcho(fall.echo);
         const drops = fall.items.map((item) => ({ item, isNew: userActions.addItem(item) }));
-        if (fall.tier) userActions.countPity(fall.items.some((item) => isPityRarity(item.rarity)));
+        if (fall.tier) userActions.countPity(
+            fall.items.some((item) => isPityRarity(item.rarity)),
+            fall.items.some((item) => isRarePityRarity(item.rarity)),
+          );
         userActions.countStoryFragments(drops.filter((d) => d.isNew && d.item.kind === "fragment").length);
         if (reward.ore > 0) userActions.addItem(STARDUST_ORE, reward.ore);
         // 星天の塔では、詠唱した時間で階層を昇る
@@ -573,6 +578,12 @@ export function TimerPanel({
       <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
         詠唱を終えたら「静息に入る」で静息を始める（無窮の詠唱は{COMBO_MIN_MINUTES}分以上のとき）。{COMBO_MIN_MINUTES}分以上の詠唱を、静息明けから{COMBO_GRACE_MINUTES}分のうちに次へつなげば、<ComboGuide />が高まる
       </p>
+      {/* 稀品の救いは、次の詠唱で確定するときだけ報せる（秘宝の救いが先に確定していれば、そちらだけ） */}
+      {data.rarePityMisses >= RARE_PITY_MISSES && data.pityMisses < PITY_MISSES && (
+        <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
+          次の{COMBO_MIN_MINUTES}分以上の詠唱で、稀品以上の流れ星が必ず降る
+        </p>
+      )}
       {data.pityMisses > 0 && (
         <p className="text-[11px] leading-relaxed tracking-wider text-muted-foreground [word-break:auto-phrase]">
           {data.pityMisses >= PITY_MISSES ? (

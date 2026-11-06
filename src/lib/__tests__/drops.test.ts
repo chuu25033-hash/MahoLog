@@ -166,6 +166,23 @@ describe("物語の断片の1日の上限", () => {
   });
 });
 
+describe("稀品の救い", () => {
+  it("救いの詠唱では、25分でも流れ星が稀品以上になる", () => {
+    for (let n = 0; n < 300; n++) {
+      const fall = calculateItemDrops(25, { area, rarePity: true });
+      expect(fall.items).toHaveLength(1);
+      expect(["B", "A", "S"]).toContain(fall.items[0].rarity);
+    }
+  });
+
+  it("秘宝の救いと重なれば、秘宝以上を優先する", () => {
+    for (let n = 0; n < 300; n++) {
+      const fall = calculateItemDrops(25, { area, pity: true, rarePity: true });
+      expect(["A", "S"]).toContain(fall.items[0].rarity);
+    }
+  });
+});
+
 describe("星の救い", () => {
   it("救いの詠唱では、25分でも流れ星が秘宝以上になる", () => {
     for (let n = 0; n < 300; n++) {

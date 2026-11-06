@@ -96,6 +96,8 @@ export type RewardInput = {
   story?: StoryLimit;
   /** 星の救い: 流れ星の1つを必ず秘宝以上にする */
   pity?: boolean;
+  /** 稀品の救い: 流れ星の1つを必ず稀品以上にする */
+  rarePity?: boolean;
   random?: () => number;
 };
 
@@ -143,11 +145,12 @@ export function calculateFinalReward({
   echo = 0,
   story,
   pity,
+  rarePity,
   random = Math.random,
 }: RewardInput): FinalReward {
   const comboDrop = comboDropBoost(combo);
   const boost = blessingDrop * comboDrop;
-  let fall = calculateItemDrops(minutes, { area, cycle, boost, echo, story, pity, random });
+  let fall = calculateItemDrops(minutes, { area, cycle, boost, echo, story, pity, rarePity, random });
 
   let meteor: MeteorShower | null = null;
   const approached = minutes >= METEOR_SHOWER_MINUTES;

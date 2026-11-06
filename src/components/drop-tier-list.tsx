@@ -1,5 +1,5 @@
 import type { Rarity } from "@/lib/areas";
-import { DROP_SLOT_MINUTES, DROP_TIERS, PITY_MISSES } from "@/lib/drops";
+import { DROP_SLOT_MINUTES, DROP_TIERS, PITY_MISSES, RARE_PITY_MISSES } from "@/lib/drops";
 import { RARITY_LABEL } from "@/lib/items";
 import { METEOR_SHOWER_MINUTES, METEOR_UPGRADE_S_CHANCE } from "@/lib/reward";
 
@@ -42,7 +42,7 @@ export function DropTierList() {
         確率は流れ星1つごと（至宝は「星空の観測塔」から降り始める）。長く続けた詠唱ほど稀な品が降りやすく、{DROP_TIERS[DROP_TIERS.length - 1].minMinutes}分を越えると稀品以上が1つ確定する。{DROP_SLOT_MINUTES}分に届かない端数は、次の詠唱へ持ち越される
       </p>
       <p className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground [word-break:auto-phrase]">
-        {METEOR_SHOWER_MINUTES}分を越えると流星群が近づき、流れ星の1つを秘宝へ引き上げることがある（至宝になるのは{METEOR_UPGRADE_S_CHANCE}%）。秘宝以上が{PITY_MISSES}回続けて降らなければ、次の詠唱で秘宝が必ず降る。遺物の加護と星脈との同調で、稀品以上が降りやすくなる
+        {METEOR_SHOWER_MINUTES}分を越えると流星群が近づき、流れ星の1つを秘宝へ引き上げることがある（至宝になるのは{METEOR_UPGRADE_S_CHANCE}%）。稀品以上が{RARE_PITY_MISSES}回続けて降らなければ、次の詠唱で稀品以上が必ず降る。秘宝以上が{PITY_MISSES}回続けて降らなければ、次の詠唱で秘宝が必ず降る。遺物の加護と星脈との同調で、稀品以上が降りやすくなる
       </p>
     </>
   );

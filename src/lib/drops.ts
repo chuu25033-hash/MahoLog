@@ -45,15 +45,25 @@ export const PITY_MISSES = 8;
 /** 秘宝以上（星の救いを数え直す格） */
 export const isPityRarity = (rarity: string) => rarity === "A" || rarity === "S" || rarity === "SS";
 
+/**
+ * 稀品の救い: 稀品以上の流れ星が降らないまま、25分以上の詠唱がこの回数続いたら、
+ * 次の詠唱では流れ星の1つが必ず稀品以上になる（25分の詠唱でも、運が悪いまま何度も続かないように）
+ */
+export const RARE_PITY_MISSES = 3;
+
+/** 稀品以上（稀品の救いを数え直す格） */
+export const isRarePityRarity = (rarity: string) => rarity === "B" || isPityRarity(rarity);
+
 /** 物語の断片の上限: 今日あと何葉授かれるかと、その品がまだ見ぬ断片か */
 export type StoryLimit = { left: number; isNew: (item: Item) => boolean };
 
 /**
  * 100分以降は、どれだけ続けても最後の区切り（4枠）のまま。
- * 至宝（S）は極めて稀にする（100分の詠唱でも、流星群の引き上げを合わせて1回あたり4%ほど）。下げた分は秘宝（A）へ回す
+ * 至宝（S）は極めて稀にする（100分の詠唱でも、流星群の引き上げを合わせて1回あたり4%ほど）。下げた分は秘宝（A）へ回す。
+ * 25分でも稀品以上が4回に1回は降るようにする（2回の25分より1回の50分の方が、まだ稀品以上が降りやすい）
  */
 export const DROP_TIERS: DropTier[] = [
-  { minMinutes: 25, slots: 1, rates: { C: 85, B: 12, A: 2.98, S: 0.02 }, guaranteed: 0, ore: 0 },
+  { minMinutes: 25, slots: 1, rates: { C: 75, B: 22, A: 2.98, S: 0.02 }, guaranteed: 0, ore: 0 },
   { minMinutes: 50, slots: 2, rates: { C: 70, B: 20, A: 9.9, S: 0.1 }, guaranteed: 0, ore: 0 },
   { minMinutes: 75, slots: 3, rates: { C: 55, B: 25, A: 19.7, S: 0.3 }, guaranteed: 0, ore: 1 },
   { minMinutes: 100, slots: 4, rates: { C: 40, B: 30, A: 29.5, S: 0.5 }, guaranteed: 1, ore: 3 },
@@ -88,6 +98,8 @@ export type DropOptions = {
   story?: StoryLimit;
   /** 星の救い: 最後の枠を必ず秘宝にする */
   pity?: boolean;
+  /** 稀品の救い: 最後の枠を必ず稀品以上にする */
+  rarePity?: boolean;
   random?: () => number;
 };
 
@@ -126,7 +138,7 @@ function rollRarity(rates: RarityRates, available: Rarity[], random: () => numbe
  */
 export function calculateItemDrops(
   durationMinutes: number,
-  { area, cycle = 1, boost = 1, echo = 0, story, pity = false, random = Math.random }: DropOptions,
+  { area, cycle = 1, boost = 1, echo = 0, story, pity = false, rarePity = false, random = Math.random }: DropOptions,
 ): DropResult {
   const byRarity: RarityRates = { C: 0, B: 0, A: 0, S: 0 };
   const carried = Math.min(DROP_SLOT_MINUTES - 1, Math.max(0, Math.floor(echo)));
@@ -148,7 +160,8 @@ export function calculateItemDrops(
   const storyIds = new Set<string>();
   const isStory = (item: Item) => item.kind === "fragment" && !storyIds.has(item.id) && !!story?.isNew(item);
   for (let i = 0; i < slots; i++) {
-    const guaranteed = i >= slots - tier.guaranteed;
+    // 確定枠と稀品の救いの枠は、常品を除いて引く（秘宝の救いが重なれば、そちらを優先する）
+    const guaranteed = i >= slots - tier.guaranteed || (rarePity && i === slots - 1);
     const saved = pity && i === slots - 1 && treasure.length > 0;
     let rarity = rollRarity(rates, saved ? treasure : guaranteed && upper.length > 0 ? upper : available, random);
     if (!rarity) continue;
