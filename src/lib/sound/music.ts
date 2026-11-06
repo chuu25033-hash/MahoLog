@@ -18,6 +18,9 @@
 //    打楽器の種類（ブラシ・ローファイ・重いキック・なし）、速さ、星の瞬きの多さを変える
 //  - サビだけ、低い支えと打楽器を薄く足す。打楽器は一度だけ描いた音を鳴らし分け、スウィングでわずかに揺らす
 //  - 旋律の素は曲ごとの種（seed）から決まる。1巡目はいつも同じ曲になり、2巡目からは少しずつ変える
+//  - 曲ごとの独自性（雰囲気は揃えたまま、聴き分けられるように）: 和音の進行、拍子（大聖堂だけ3拍子）、
+//    左手の弾き方（開いた和音・分散・足どり・鼓動・空洞の8度・保続音・聖歌）、右手の和音の置き方と高さ、
+//    旋律の跳び方、曲だけの仕掛け（観測塔は呼びかけが夜空に返るこだま、氷は8度の旋律、星天の塔は昇り続ける分散音）
 import type { AmbienceKey } from "./sound-files";
 
 const SILENT = 0.0001;
@@ -64,9 +67,9 @@ function chord(name: string): Chord {
 
 /** 1小節の和音: "Esus4 E" のように空白で区切ると、前半と後半で替わる */
 type BarChords = { chord: Chord; from: number }[];
-const barChords = (entry: string): BarChords => {
+const barChords = (entry: string, steps = 16): BarChords => {
   const names = entry.split(" ");
-  return names.map((name, i) => ({ chord: chord(name), from: (i * 16) / names.length }));
+  return names.map((name, i) => ({ chord: chord(name), from: (i * steps) / names.length }));
 };
 const chordIn = (bar: BarChords, step: number) => [...bar].reverse().find((c) => step >= c.from)!.chord;
 
@@ -102,9 +105,33 @@ type Song = {
   stars: number;
   /** 旋律の素 */
   seed: number;
-  /** A メロの右手の和音の置き方（16分の位置と長さ）。無ければ1拍目と3拍目の裏に置く */
-  verseComp?: [at: number, len: number][];
+  /** 1小節の16分の数（16 なら4拍子、12 なら3拍子）。無ければ 16 */
+  steps?: 12 | 16;
+  /** 左手の弾き方。無ければ open */
+  left?: LeftStyle;
+  /** 右手の和音の置き方（16分の位置と長さ）。calm は前奏と間奏。無い段はいつもの置き方 */
+  comp?: Partial<Record<"verse" | "pre" | "chorus" | "calm", Rhythm>>;
+  /** 右手の和音を置く高さの下限（MIDI）。無ければ 60 */
+  chordFrom?: number;
+  /** 右手の和音を下から崩す間隔（秒）。無ければ 0.022 */
+  roll?: number;
+  /** 旋律の跳びやすさ（1 がふつう。大きいほど跳び、小さいほど隣の音へ） */
+  leap?: number;
+  /** 旋律にいつも1オクターブ下を重ねる（氷の、空洞のような冷たさ） */
+  octaves?: boolean;
+  /** 旋律のこだま（付点8分おきに返ってくる量。0〜0.4 ほど） */
+  echo?: number;
+  /** 高い音域で8分の分散和音を絶えず回す（昇り続ける塔） */
+  ostinato?: boolean;
 };
+
+/**
+ * 左手の弾き方。
+ * open: 根音と、少し遅れて5度か10度 / roll: 根音から9度・10度へ8分で昇る分散 / stride: 根音と、小節の後半に5度と10度 /
+ * walk: 4分で根音・5度・8度を歩く / pulse: 3・3・2 で刻む鼓動 / hollow: 根音と8度だけ（3度を抜いた空洞） /
+ * pedal: 主音を保ち続け、上で和音の根音を替える / hymn: 8度で支える聖歌の低音
+ */
+type LeftStyle = "open" | "roll" | "stride" | "walk" | "pulse" | "hollow" | "pedal" | "hymn";
 
 export type SongKey = AmbienceKey;
 
@@ -131,14 +158,15 @@ export const SONGS: Record<SongKey, Song> = {
     seed: 1207,
   },
   // 旅立ちの前（星天の導き）: ニ長調。まだ見ぬ星へ向かう、少しだけ明るい孤独
+  // 左手が4分で歩き、右手の和音は拍の裏で前へ押す。旅の足どり
   prelude: {
-    bpm: 78,
+    bpm: 82,
     tonic: 2,
     minor: false,
-    verse: ["Dmaj7", "Bm9", "Gmaj7", "Asus4"],
-    pre: ["Em9", "F#m7", "Gmaj7", "Asus4"],
-    chorus: ["Gmaj7", "A6", "F#m7", "Bm9"],
-    interlude: ["Gmaj7", "Gmaj7", "Dmaj7", "Dmaj7"],
+    verse: ["Dadd9", "Asus4", "Bm7", "Gmaj7"],
+    pre: ["Em7", "Gmaj7", "Bm7", "Asus4 A"],
+    chorus: ["Gmaj7", "Dadd9", "Asus4", "Bm7"],
+    interlude: ["Gmaj7", "Gmaj7", "Dadd9", "Dadd9"],
     swing: 0.15,
     center: 74,
     kit: "lofi",
@@ -147,16 +175,19 @@ export const SONGS: Record<SongKey, Song> = {
     felt: 1.05,
     stars: 0.7,
     seed: 311,
+    left: "walk",
+    comp: { verse: [[6, 6], [14, 2]], pre: [[6, 6], [14, 2]] },
+    leap: 1.2,
   },
   // 静息: 変ニ長調。詠唱を終えて、星空の下でひと息つく。ゆっくり、柔らかく、打楽器は鳴らさない
   rest: {
     bpm: 58,
     tonic: 1,
     minor: false,
-    verse: ["Dbmaj7", "Bbm9", "Gbmaj7", "Abadd9"],
-    pre: ["Ebm9", "Fm7", "Gbmaj7", "Absus4"],
-    chorus: ["Gbmaj7", "Ab6", "Fm7", "Bbm9"],
-    interlude: ["Gbmaj7", "Gbmaj7", "Dbmaj7", "Dbmaj7"],
+    verse: ["Dbmaj9", "Gbmaj7", "Dbmaj9", "Gbmaj7"],
+    pre: ["Bbm9", "Abadd9", "Gbmaj7", "Ebm9"],
+    chorus: ["Gbmaj7", "Dbmaj9", "Ebm9", "Absus4"],
+    interlude: ["Gbmaj7", "Gbmaj7", "Dbmaj9", "Dbmaj9"],
     swing: 0.1,
     center: 73,
     kit: null,
@@ -165,6 +196,10 @@ export const SONGS: Record<SongKey, Song> = {
     felt: 0.7,
     stars: 0.9,
     seed: 5055,
+    // 和音は小節いっぱいに、ハープのようにゆっくり崩して置く。旋律は隣の音へ、つぶやくように
+    comp: { verse: [[0, 16]], pre: [[0, 16]], chorus: [[0, 8], [8, 8]], calm: [[0, 16]] },
+    roll: 0.07,
+    leap: 0.8,
   },
   // 小屋: 変ホ長調。暖炉の残り火のそばで、ひとり静かに
   hearth: {
@@ -184,7 +219,11 @@ export const SONGS: Record<SongKey, Song> = {
     stars: 0.4,
     seed: 4021,
     // 乾いた小さな部屋では裏に和音が重なると拍がずれて聞こえるので、2拍目に置いて頭を立て、3拍目の裏で少し前へ押す
-    verseComp: [[4, 6], [10, 6]],
+    comp: { verse: [[4, 6], [10, 6]] },
+    // 左手は1拍目の根音と3拍目の5度・10度で、ゆったり揺れる。和音は少し低く、暖かく
+    left: "stride",
+    chordFrom: 57,
+    roll: 0.03,
   },
   // 樹海・図書室: イ短調のドリア。i → IV が揺れ続ける、深い森と古い本の静けさ
   forest: {
@@ -203,6 +242,9 @@ export const SONGS: Record<SongKey, Song> = {
     felt: 0.85,
     stars: 0.5,
     seed: 777,
+    // 左手は根音から9度・10度へ昇る分散で、木々のあいだを流れるように。右手は2拍目と4拍目にそっと
+    left: "roll",
+    comp: { verse: [[4, 4], [12, 4]] },
   },
   // 観測塔・星空: ホ長調。いちばん星に近い場所。瞬きをいちばん多くする
   stars: {
@@ -221,16 +263,19 @@ export const SONGS: Record<SongKey, Song> = {
     felt: 1.05,
     stars: 1.3,
     seed: 2468,
+    // 呼びかけが夜空に返ってくる（付点8分のこだま）
+    echo: 0.32,
   },
   // 氷の回廊: ロ短調。凍った空気の中で、音がどこまでも遠く響く
   frost: {
     bpm: 64,
     tonic: 11,
     minor: true,
-    verse: ["Bm9", "Gmaj7", "Em9", "F#m7"],
-    pre: ["Em9", "F#m7", "Gmaj7", "Asus4"],
-    chorus: ["Em9", "Asus4", "Dmaj7", "Gmaj7"],
-    interlude: ["Bm9", "Bm9", "Gmaj7", "Gmaj7"],
+    // 低音が B → A → G → F# と一段ずつ降りていく
+    verse: ["Bm9", "Asus2", "Gmaj7", "F#m7"],
+    pre: ["Em9", "Gmaj7", "Dmaj7", "F#sus4"],
+    chorus: ["Gmaj7", "Dmaj7", "Asus2", "Bm9"],
+    interlude: ["Bm9", "Bm9", "Asus2", "Asus2"],
     swing: 0.12,
     center: 77,
     kit: null,
@@ -239,6 +284,12 @@ export const SONGS: Record<SongKey, Song> = {
     felt: 1.25,
     stars: 1,
     seed: 5150,
+    // 左手は3度を抜いた8度だけ、右手は高い音域で長く置く。旋律には1オクターブ下を重ねて、空洞のように冷たく
+    left: "hollow",
+    comp: { verse: [[0, 16]], pre: [[0, 8], [8, 8]], chorus: [[0, 8], [8, 8]], calm: [[0, 16]] },
+    chordFrom: 69,
+    roll: 0.012,
+    octaves: true,
   },
   // 魔導炉: ハ短調。いちばん前へ進むが、それでもひとり
   forge: {
@@ -257,15 +308,18 @@ export const SONGS: Record<SongKey, Song> = {
     felt: 0.8,
     stars: 0.3,
     seed: 9001,
+    // 左手は 3・3・2 で炉の鼓動を刻み、A メロの和音は拍の裏で突く
+    left: "pulse",
+    comp: { verse: [[3, 3], [11, 5]] },
   },
-  // 大聖堂: ヘ長調。高い天井の下で、祈るように。打楽器は鳴らさない
+  // 大聖堂: ヘ長調の3拍子。高い天井の下で、聖歌のように祈る。IV → I の柔らかな運び。打楽器は鳴らさない
   sanctum: {
-    bpm: 62,
+    bpm: 72,
     tonic: 5,
     minor: false,
-    verse: ["Fmaj7", "Dm9", "Bbmaj7", "Csus4"],
-    pre: ["Gm9", "Am7", "Bbmaj7", "C6"],
-    chorus: ["Bbmaj7", "C6", "Am7", "Dm9"],
+    verse: ["Fmaj7", "Bbmaj7", "Fmaj7", "Csus4 C"],
+    pre: ["Dm9", "Bbmaj7", "Gm9", "Csus4"],
+    chorus: ["Dm9", "Bbmaj7", "Fmaj7", "Csus4"],
     interlude: ["Fmaj7", "Bbmaj7", "Fmaj7", "Bbmaj7"],
     swing: 0.1,
     center: 74,
@@ -275,6 +329,11 @@ export const SONGS: Record<SongKey, Song> = {
     felt: 0.95,
     stars: 0.8,
     seed: 8086,
+    steps: 12,
+    left: "hymn",
+    comp: { verse: [[0, 12]], pre: [[0, 4], [4, 8]], chorus: [[0, 4], [4, 4], [8, 4]], calm: [[0, 12]] },
+    roll: 0.008,
+    leap: 0.75,
   },
   // 星天の塔: ロ長調。果てのない塔を、ひとりで昇り続ける。サビの呼びかけは観測者の主題そのもの
   zenith: {
@@ -293,6 +352,11 @@ export const SONGS: Record<SongKey, Song> = {
     felt: 1.1,
     stars: 1.6,
     seed: 1010,
+    // 主音の B を保ち続け、その上で8分の分散和音が昇り続ける。旋律は大きく跳ぶ
+    left: "pedal",
+    comp: { verse: [[0, 16]], pre: [[0, 16]], chorus: [[0, 8], [8, 8]] },
+    leap: 1.6,
+    ostinato: true,
   },
 };
 
@@ -330,6 +394,8 @@ const wobble = () => 0.88 + Math.random() * 0.24;
 type Mix = {
   ctx: BaseAudioContext;
   piano: AudioNode;
+  /** 右手の旋律（こだまのある曲は、ここから返す） */
+  lead: AudioNode;
   /** 星の瞬き（響きへ多めに送る） */
   far: AudioNode;
   bass: AudioNode;
@@ -423,9 +489,31 @@ function createMix(ctx: BaseAudioContext, out: AudioNode, song: Song): Mix {
 
   // 古い録音のようなヒス（ザーという砂嵐の音）は、耳につくので敷かない
 
+  const piano = lane(0.42 * song.room.wet);
+  // 旋律のこだま: 付点8分おきに、少しずつ暗く遠くなって返る。少し右へ寄せて、夜空の広さに
+  const lead = ctx.createGain();
+  lead.connect(piano);
+  if (song.echo) {
+    const send = ctx.createGain();
+    send.gain.value = song.echo;
+    const delay = ctx.createDelay(2);
+    delay.delayTime.value = (15 / song.bpm) * 3;
+    const feedback = ctx.createGain();
+    feedback.gain.value = 0.38;
+    const dark = filter("lowpass", 2600);
+    const side = ctx.createStereoPanner();
+    side.pan.value = 0.35;
+    lead.connect(send).connect(delay).connect(dark).connect(feedback).connect(delay);
+    dark.connect(side).connect(sum);
+    const toHall = ctx.createGain();
+    toHall.gain.value = 0.6 * song.room.wet;
+    side.connect(toHall).connect(preDelay);
+  }
+
   return {
     ctx,
-    piano: lane(0.42 * song.room.wet),
+    piano,
+    lead,
     far: lane(1.1 * song.room.wet, filter("lowpass", 5000)),
     bass: lane(0, filter("lowpass", 240)),
     drums: lane(0.18 * song.room.wet, filter("highpass", 35), filter("lowpass", 7500)),
@@ -736,25 +824,53 @@ const ANSWERS: Rhythm[] = [
 const ENDINGS: Rhythm[] = [[[0, 16]], [[0, 2], [2, 14]], [[0, 3], [3, 3], [6, 10]]];
 
 /** 次の音への動き: ほとんどが隣の音か一つ飛ばし。跳ぶのはまれ */
-function step(rng: Rng, dir: number) {
+function step(rng: Rng, dir: number, leap = 1) {
   const r = rng();
   if (r < 0.14) return 0;
-  const size = r < 0.62 ? 1 : r < 0.92 ? 2 : 3;
+  const size = r < 0.62 - 0.2 * (leap - 1) ? 1 : r < 0.92 - 0.1 * (leap - 1) ? 2 : 3;
   return size * (rng() < 0.7 ? dir : -dir);
 }
 
-const makeBar = (rng: Rng, rhythm: Rhythm, dir: number): Bar => rhythm.map(([at, len]) => ({ at, len, step: step(rng, dir) }));
-const vary = (rng: Rng, bar: Bar, rate: number): Bar => bar.map((n) => (rng() < rate ? { ...n, step: step(rng, Math.sign(n.step) || 1) } : n));
+/** 3拍子の呼びかけ・応答・結び（1小節が16分12個） */
+const CALLS_3: Rhythm[] = [
+  [[0, 4], [4, 2], [6, 6]],
+  [[0, 2], [2, 2], [4, 8]],
+  [[0, 6], [6, 2], [8, 4]],
+  [[2, 2], [4, 2], [6, 6]],
+];
+const ANSWERS_3: Rhythm[] = [
+  [[0, 8], [8, 4]],
+  [[0, 4], [4, 8]],
+  [[0, 2], [2, 10]],
+];
+const ENDINGS_3: Rhythm[] = [[[0, 12]], [[0, 4], [4, 8]]];
+
+const makeBar = (rng: Rng, rhythm: Rhythm, dir: number, leap?: number): Bar => rhythm.map(([at, len]) => ({ at, len, step: step(rng, dir, leap) }));
+const vary = (rng: Rng, bar: Bar, rate: number, leap?: number): Bar =>
+  bar.map((n) => (rng() < rate ? { ...n, step: step(rng, Math.sign(n.step) || 1, leap) } : n));
 
 type Hook = { call: Bar; answers: [Bar, Bar, Bar]; ending: Bar };
 
-function makeHook(rng: Rng): Hook {
+function makeHook(rng: Rng, song: Song): Hook {
   const dir = rng() < 0.5 ? 1 : -1;
+  const [calls, answers, endings] = song.steps === 12 ? [CALLS_3, ANSWERS_3, ENDINGS_3] : [CALLS, ANSWERS, ENDINGS];
+  const bar = (list: Rhythm[], d: number) => makeBar(rng, pickFrom(rng, list), d, song.leap);
   return {
-    call: makeBar(rng, pickFrom(rng, CALLS), dir),
-    answers: [makeBar(rng, pickFrom(rng, ANSWERS), -dir), makeBar(rng, pickFrom(rng, ANSWERS), -dir), makeBar(rng, pickFrom(rng, ANSWERS), dir)],
-    ending: makeBar(rng, pickFrom(rng, ENDINGS), -dir),
+    call: bar(calls, dir),
+    answers: [bar(answers, -dir), bar(answers, -dir), bar(answers, dir)],
+    ending: bar(endings, -dir),
   };
+}
+
+/** 4拍子の旋律を短い小節へ収める: 頭の休みを詰め、はみ出す音を切る */
+function fit(cell: Bar, steps: number): Bar {
+  const last = cell[cell.length - 1];
+  if (last.at + last.len <= steps) return cell;
+  const shift = Math.min(cell[0].at, last.at + last.len - steps);
+  return cell
+    .map((n) => ({ ...n, at: n.at - shift }))
+    .filter((n) => n.at < steps)
+    .map((n) => ({ ...n, len: Math.min(n.len, steps - n.at) }));
 }
 
 /** 8小節の並び: 呼びかけ → 応答を4回。呼びかけはいつも同じ形で戻り、最後だけ結ぶ */
@@ -815,7 +931,7 @@ const SECTION_LABEL: Record<SectionName, string> = {
 
 /** 曲の並び（再生バーに段の区切りを描くため）: 1小節の秒数と、1巡目の長さ、段ごとの始まりの小節 */
 export function songLayout(key: SongKey) {
-  const barSec = 240 / SONGS[key].bpm;
+  const barSec = (15 / SONGS[key].bpm) * (SONGS[key].steps ?? 16);
   const sections = (["intro", ...CYCLE] as SectionName[]).map((name, i) => ({
     label: SECTION_LABEL[name],
     from: i === 0 ? 0 : INTRO_BARS + (i - 1) * SECTION_BARS,
@@ -836,20 +952,22 @@ const OPEN = 16000;
 export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, options: Options = {}): SongVoice {
   const song = SONGS[key];
   const sixteenth = 15 / song.bpm;
-  const barSec = sixteenth * 16;
+  const steps = song.steps ?? 16;
+  const barSec = sixteenth * steps;
   const output = ctx.createGain();
   output.connect(out);
   const mix = createMix(ctx, output, song);
   const penta = (song.minor ? MINOR_PENTA : MAJOR_PENTA).map((n) => (n + song.tonic) % 12);
+  const bars = (list: string[]) => list.map((entry) => barChords(entry, steps));
   const loops = {
-    verse: song.verse.map(barChords),
-    pre: song.pre.map(barChords),
-    chorus: song.chorus.map(barChords),
-    interlude: song.interlude.map(barChords),
+    verse: bars(song.verse),
+    pre: bars(song.pre),
+    chorus: bars(song.chorus),
+    interlude: bars(song.interlude),
   };
   const hooks = new Map<number, Hook>();
-  const motif = makeHook(seeded(SONGS[MOTIF_SONG].seed)).call;
-  const ownHook = makeHook(seeded(song.seed));
+  const motif = fit(makeHook(seeded(SONGS[MOTIF_SONG].seed), SONGS[MOTIF_SONG]).call, steps);
+  const ownHook = makeHook(seeded(song.seed), song);
   // タイトルと星天の塔の曲は、観測者の主題をそのままサビの呼びかけにする
   const baseHook = key === "title" || key === "zenith" ? { ...ownHook, call: motif } : ownHook;
   // 巡るたびに応答を少しだけ変える（1巡目はそのまま。呼びかけの形は保つ）
@@ -857,7 +975,7 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
     let h = hooks.get(cycle);
     if (!h) {
       const rng = seeded(song.seed * 7919 + cycle * 104729);
-      h = cycle === 0 ? baseHook : { ...baseHook, answers: baseHook.answers.map((a) => vary(rng, a, 0.35)) as Hook["answers"] };
+      h = cycle === 0 ? baseHook : { ...baseHook, answers: baseHook.answers.map((a) => vary(rng, a, 0.35, song.leap)) as Hook["answers"] };
       hooks.set(cycle, h);
       hooks.delete(cycle - 2);
     }
@@ -922,32 +1040,88 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
       tone.exponentialRampToValueAtTime(OPEN, t + barSec * 2);
     }
 
-    // ---- 左手: 低い根音を置いて響かせ、5度か10度を少し遅れて重ねる（間を大きく空けた開いた和音）
+    // ---- 左手: 低い根音を置いて響かせる。重ね方は曲ごと（既定は5度か10度を少し遅れて重ねる、間を大きく空けた開いた和音）
     for (const { chord: c, from } of chords) {
-      const length = ((chords.find((x) => x.from > from)?.from ?? 16) - from) * sixteenth;
+      const end = chords.find((x) => x.from > from)?.from ?? steps;
+      const span = end - from;
+      const length = span * sixteenth;
       const root = lowRoot(c);
       const lv = section === "intro" || section === "interlude" ? 0.42 : chorusLike ? 0.55 : 0.48;
-      strike("left", root, at16(from), lv * wobble(), length + 0.4);
       const third = c.pcs.includes((c.root + 4) % 12) ? 4 : c.pcs.includes((c.root + 3) % 12) ? 3 : null;
-      const second = third !== null && Math.random() < 0.5 ? root + 12 + third : root + 7;
-      strike("left", second, at16(from + 2), lv * 0.6 * wobble(), length);
+      const tenth = root + 12 + (third ?? 7);
+      /** s の位置で鳴らす。hold を省くと和音の替わり目まで押さえる */
+      const play = (note: number, s: number, v: number, hold?: number) => {
+        if (s < end) strike("left", note, at16(s), v * wobble(), hold ?? (end - s) * sixteenth + 0.4);
+      };
+      switch (song.left ?? "open") {
+        case "open": {
+          strike("left", root, at16(from), lv * wobble(), length + 0.4);
+          const second = third !== null && Math.random() < 0.5 ? tenth : root + 7;
+          strike("left", second, at16(from + 2), lv * 0.6 * wobble(), length);
+          break;
+        }
+        case "roll":
+          [root, root + 7, root + 14, tenth].forEach((note, i) => play(note, from + i * 2, lv * (i === 0 ? 1 : 0.5)));
+          break;
+        case "stride":
+          play(root, from, lv);
+          if (span >= 8) [root + 7, tenth].forEach((note) => play(note, from + span / 2, lv * 0.45));
+          else play(root + 7, from + 2, lv * 0.55);
+          break;
+        case "walk":
+          for (let s = from; s < end; s += 4) {
+            const i = (s - from) / 4;
+            play([root, root + 7, root + 12, root + 7][i % 4], s, lv * (i === 0 ? 1 : 0.55), 4 * sixteenth + 0.15);
+          }
+          break;
+        case "pulse":
+          for (let b = from; b < end; b += 8)
+            [0, 3, 6].forEach((o, i) => play(i === 2 ? root + 12 : root, b + o, lv * [1, 0.6, 0.7][i], 2.5 * sixteenth));
+          break;
+        case "hollow":
+          play(root, from, lv);
+          play(root + 12, from, lv * 0.55);
+          break;
+        case "pedal": {
+          // 主音は小節の頭で一度だけ。上の声は和音の根音（主音と同じなら5度）
+          const tonicLow = 36 + song.tonic;
+          if (from === 0) strike("left", tonicLow, at16(0), lv * wobble(), barSec + 0.4);
+          play(c.root === song.tonic ? tonicLow + 19 : root + 12, from + (span >= 8 ? 4 : 0), lv * 0.5);
+          break;
+        }
+        case "hymn":
+          play(root, from, lv);
+          play(root + 12, from, lv * 0.6);
+          break;
+      }
     }
 
     // ---- 右手の和音: 根音を抜いた配置を、そっと崩して置く
     const comp: Rhythm =
       section === "intro" || section === "interlude"
-        ? [[4, 12]]
+        ? (song.comp?.calm ?? [[4, 12]])
         : chorusLike
-          ? [[0, 6], [6, 4], [10, 6]]
+          ? (song.comp?.chorus ?? [[0, 6], [6, 4], [10, 6]])
           : section === "pre"
-            ? [[0, 8], [8, 8]]
-            : (song.verseComp ?? [[2, 8], [10, 6]]);
+            ? (song.comp?.pre ?? [[0, 8], [8, 8]])
+            : (song.comp?.verse ?? [[2, 8], [10, 6]]);
     for (const [s, len] of comp) {
       const c = chordIn(chords, s);
-      rightHand = voiceChord(c.color, rightHand, 60);
+      rightHand = voiceChord(c.color, rightHand, song.chordFrom ?? 60);
       const v = (s % 8 === 0 ? 0.36 : 0.3) * (chorusLike ? 0.85 : 1);
       // 下から上へ、わずかにずらして（ばらして）鳴らす
-      rightHand.forEach((note, i) => strike("chord", note, at16(s) + i * 0.022, v * wobble(), len * sixteenth + 0.3));
+      rightHand.forEach((note, i) => strike("chord", note, at16(s) + i * (song.roll ?? 0.022), v * wobble(), len * sixteenth + 0.3));
+    }
+
+    // ---- 昇り続ける分散和音（星天の塔）: 高い音域で8分を絶えず回す。前奏の後半から入り、前奏と間奏では弱く
+    if (song.ostinato && !(section === "intro" && inSection < 2)) {
+      const ov = section === "intro" || section === "interlude" ? 0.12 : chorusLike ? 0.2 : 0.16;
+      let voicing: number[] = [];
+      for (let s = 0; s < steps; s += 2) {
+        voicing = voiceChord(chordIn(chords, s).color, voicing, 76);
+        const note = voicing[[0, 2, 1, 2][(s / 2) % 4] % voicing.length];
+        strike("chord", note, at16(s), ov * (s % 4 === 0 ? 1 : 0.8) * wobble(), 2 * sixteenth + 0.15);
+      }
     }
 
     // ---- 低い支え（サビだけ）
@@ -961,7 +1135,7 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
     // ---- 打楽器（B メロの後半とサビだけ。遠くで、柔らかく）
     const d = song.drums * (chorusLike ? 1 : section === "pre" && inSection >= 4 ? 0.6 : 0);
     if (song.kit && d > 0) {
-      const stopAfter = section === "chorus2" && inSection === 7 ? 1 : 16;
+      const stopAfter = section === "chorus2" && inSection === 7 ? 1 : steps;
       const hit = (sound: DrumSound, s: number, v: number) => {
         if (s >= stopAfter) return;
         const [at, velocity] = [at16(s), v * d * wobble()];
@@ -1004,7 +1178,7 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
     const twinkles = song.stars * (chorusLike ? 0.6 : section === "intro" || section === "interlude" ? 1.6 : 1);
     let count = Math.floor(twinkles) + (Math.random() < twinkles % 1 ? 1 : 0);
     while (count-- > 0) {
-      const s = Math.floor(Math.random() * 16);
+      const s = Math.floor(Math.random() * steps);
       const c = chordIn(chords, s);
       const sky = melodyNotes(penta, c, 86, 98).filter((n) => c.pcs.includes(n % 12) || penta.includes(n % 12));
       const note = sky[Math.floor(Math.random() * sky.length)];
@@ -1056,9 +1230,10 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
       prevNote = note;
       const when = at16(n.at);
       const v = level * (n.at % 4 === 0 ? 1 : 0.88) * wobble();
-      strike("melody", note, when, v, n.len * sixteenth + 0.6);
-      // 2回目のサビの後半は、1オクターブ下を重ねて厚くする
-      if (section === "chorus2" && inSection >= 4) strike("double", note - 12, when + 0.006, v * 0.5, n.len * sixteenth + 0.6);
+      strike("melody", note, when, v, n.len * sixteenth + 0.6, mix.lead);
+      // 2回目のサビの後半は、1オクターブ下を重ねて厚くする（氷の曲はいつも重ねる）
+      if (song.octaves || (section === "chorus2" && inSection >= 4))
+        strike("double", note - 12, when + 0.006, v * (song.octaves ? 0.55 : 0.5), n.len * sixteenth + 0.6);
     });
   };
 

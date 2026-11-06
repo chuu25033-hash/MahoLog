@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ArcaneLogo } from "@/components/arcane-icons";
 import { soundManager } from "@/lib/sound/sound-manager";
-import { loadPiano, SONGS, startSong, type NoteEvent, type NotePart, type SongKey, type SongSection } from "@/lib/sound/music";
+import { loadPiano, songLayout, startSong, type NoteEvent, type NotePart, type SongKey, type SongSection } from "@/lib/sound/music";
 import { TRACKS } from "./music-player";
 import { ease, ShortPlayer, veil } from "./trailer";
 
@@ -75,7 +75,7 @@ async function renderScore(key: SongKey, from: "intro" | "chorus", seconds: numb
   let peak = 0;
   for (let c = 0; c < 2; c++) for (const v of buffer.getChannelData(c)) peak = Math.max(peak, Math.abs(v));
   notes.sort((a, b) => a.at - b.at);
-  return { buffer, gain: peak > 0 ? 0.89 / peak : 1, notes, bars, barSec: 240 / SONGS[key].bpm };
+  return { buffer, gain: peak > 0 ? 0.89 / peak : 1, notes, bars, barSec: songLayout(key).barSec };
 }
 
 /** 背景の星（位置は毎回同じ） */
