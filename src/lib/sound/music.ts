@@ -128,7 +128,7 @@ type Song = {
 /**
  * 左手の弾き方。
  * open: 根音と、少し遅れて5度か10度 / roll: 根音から9度・10度へ8分で昇る分散 / stride: 根音と、小節の後半に5度と10度 /
- * walk: 4分で根音・5度・8度を歩く / pulse: 3・3・2 で刻む鼓動 / hollow: 根音と8度だけ（3度を抜いた空洞） /
+ * walk: 4分で根音・5度・8度を歩く / pulse: 魔導炉のキックと同じ位置で刻む鼓動 / hollow: 根音と8度だけ（3度を抜いた空洞） /
  * pedal: 主音を保ち続け、上で和音の根音を替える / hymn: 8度で支える聖歌の低音
  */
 type LeftStyle = "open" | "roll" | "stride" | "walk" | "pulse" | "hollow" | "pedal" | "hymn";
@@ -308,9 +308,10 @@ export const SONGS: Record<SongKey, Song> = {
     felt: 0.8,
     stars: 0.3,
     seed: 9001,
-    // 左手は 3・3・2 で炉の鼓動を刻み、A メロの和音は拍の裏で突く
+    // 左手はキックと同じ位置（1拍目の頭・2拍目の終わりの16分・3拍目の裏）で炉の鼓動を刻む。
+    // 和音は鼓動と重ならない2拍目と4拍目に置き、サビでは鼓動と揃えて突く（16分ひとつずれると、もたついて聞こえる）
     left: "pulse",
-    comp: { verse: [[3, 3], [11, 5]] },
+    comp: { verse: [[4, 3], [12, 4]], chorus: [[0, 7], [7, 3], [10, 6]] },
   },
   // 大聖堂: ヘ長調の3拍子。高い天井の下で、聖歌のように祈る。IV → I の柔らかな運び。打楽器は鳴らさない
   sanctum: {
@@ -1075,8 +1076,8 @@ export function startSong(ctx: BaseAudioContext, out: AudioNode, key: SongKey, o
           }
           break;
         case "pulse":
-          for (let b = from; b < end; b += 8)
-            [0, 3, 6].forEach((o, i) => play(i === 2 ? root + 12 : root, b + o, lv * [1, 0.6, 0.7][i], 2.5 * sixteenth));
+          // 魔導炉のキック（0・7・10）と同じ位置で刻む
+          [0, 7, 10].forEach((o, i) => play(i === 2 ? root + 12 : root, from + o, lv * [1, 0.65, 0.75][i], 2.5 * sixteenth));
           break;
         case "hollow":
           play(root, from, lv);
