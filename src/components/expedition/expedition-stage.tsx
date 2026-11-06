@@ -69,13 +69,16 @@ const MOTES = Array.from({ length: 14 }, (_, i) => ({
 }));
 
 /**
- * 層の絵を横に並べ、1枚分の幅だけ左へ流してから戻すのを繰り返す（継ぎ目なく流れ続けて見える）。
+ * 層の絵を横に並べて左へ流し、左の端の外へ出た絵は画面の外で右の端へ戻す（継ぎ目なく流れ続けて見える）。
+ * 絵は1枚ずつ別々に流す（expedition.css の expedition-scroll）。並べた帯ごと流して1枚分戻すと、戻った瞬間に
+ * 画面に映る部分がそっくり入れ替わり、iPhone の Safari では描き直しが間に合わず層が一瞬消えるため。
  * transform だけを動かすので、描き直しは起きない
  */
 function ParallaxLayer({ layer, aspect, ground = false }: { layer: ExpeditionLayer; aspect: number; ground?: boolean }) {
   const tileWidth = sourceAspect(layer.source) * layer.height; // 舞台の高さを 1 とした1枚の幅
-  // 見える幅を覆い、さらに1枚分流しても途切れない枚数だけ並べる
-  const copies = Math.ceil(aspect / tileWidth) + 1;
+  // 右の端に戻った絵が見える幅の外にあり（隣と 1px ずつ重ねて詰める分も見込む）、左の端の外へ流れきるまで途切れない枚数だけ並べる
+  const copies = Math.ceil((aspect + 0.05) / tileWidth) + 1;
+  const duration = (copies * tileWidth) / (WALK_SPEED * layer.speed);
   return (
     <div
       className="absolute inset-x-0"
@@ -86,14 +89,24 @@ function ParallaxLayer({ layer, aspect, ground = false }: { layer: ExpeditionLay
         その一瞬は床が抜けて後ろの地平の明るい光が見え、床全体が白っぽく瞬くので、抜けても下地の色が見えるだけにする
       */}
       {ground && <div className="absolute inset-x-0 bottom-0" style={{ height: `${(1 - FLOOR_SURFACE) * 100}%`, background: layer.color }} />}
-      <div
-        className="expedition-strip flex h-full w-max"
-        style={{ "--copies": copies, animationDuration: `${(tileWidth / (WALK_SPEED * layer.speed)).toFixed(2)}s` } as CSSProperties}
-      >
-        {Array.from({ length: copies }, (_, i) => (
-          <BackdropTile key={i} source={layer.source} accent={layer.accent ?? layer.color} rim={layer.rim} />
-        ))}
-      </div>
+      {Array.from({ length: copies }, (_, i) => (
+        <div
+          // 枚数が変わったら全部を並べ直し、どの絵も同じ時刻から流す（途中から足した絵だけ位相がずれないように）
+          key={`${copies}-${i}`}
+          className="expedition-tile absolute top-0 left-0 h-full"
+          style={
+            {
+              "--copies": copies,
+              aspectRatio: sourceAspect(layer.source),
+              animationDuration: `${duration.toFixed(2)}s`,
+              // 流し始めは左の端から i 枚目の位置に置く
+              animationDelay: `${(-((copies - 1 - i) / copies) * duration).toFixed(2)}s`,
+            } as CSSProperties
+          }
+        >
+          <BackdropTile source={layer.source} accent={layer.accent ?? layer.color} rim={layer.rim} />
+        </div>
+      ))}
     </div>
   );
 }

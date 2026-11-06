@@ -1,15 +1,21 @@
 /* 探索の景色（expedition-stage.tsx で読み込む）: 魔法使いの少女が歩む横スクロール */
-/* 層は1枚分の幅だけ左へ流れて戻る。歩みを止めると、その位置で止まる */
+/*
+ * 層の絵は1枚ずつ別々に流す。右の端（並べた枚数 - 1 枚分の先）から左の端の外（1枚分の手前）まで流れ、画面の外で右の端へ戻る。
+ * 隣の絵とは 1px 重ねて継ぎ目を見せない（--step が1枚ごとの間隔）。歩みを止めると、その位置で止まる。
+ * 並べた帯ごと流して戻すと、戻った瞬間に画面に映る部分がそっくり入れ替わり、iPhone の Safari では描き直しが間に合わず層が一瞬消える
+ */
 @keyframes expedition-scroll {
-  to { transform: translateX(calc(-100% / var(--copies))); }
+  from { transform: translateX(calc((var(--copies) - 1) * var(--step))); }
+  to { transform: translateX(calc(-1 * var(--step))); }
 }
 
-.expedition-strip {
+.expedition-tile {
+  --step: calc(100% - 1px);
   animation: expedition-scroll linear infinite paused;
   will-change: transform;
 }
 
-.expedition[data-walking] .expedition-strip {
+.expedition[data-walking] .expedition-tile {
   animation-play-state: running;
 }
 
@@ -521,7 +527,7 @@
 
 /* 動きを抑える設定では、景色を止めて少女を立ち止まらせる */
 @media (prefers-reduced-motion: reduce) {
-  .expedition .expedition-strip { animation-play-state: paused; }
+  .expedition .expedition-tile { animation-play-state: paused; }
   .expedition .expedition-mote,
   .expedition .expedition-bokeh,
   .expedition .expedition-mist,
