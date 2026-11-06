@@ -14,11 +14,24 @@ export function useClock(initial?: ClockSnapshot) {
   const [state, setState] = useState<ClockSnapshot>(initial ?? { accMs: 0, startedAt: null });
   const [now, setNow] = useState(() => (initial?.startedAt != null ? Date.now() : 0));
 
+  // 表示する秒が変わる瞬間にだけ時刻を進める。細かく刻むと詠唱の間ごと何度も描き直され、
+  // スマホでは探索の景色の少女の足取りなど、毎フレーム描く動きがかくつく。
+  // 満了や放置確認は read() で正確な時刻を測るので、ここを間引いても遅れない
   useEffect(() => {
-    if (state.startedAt === null) return;
-    const id = setInterval(() => setNow(Date.now()), 250);
-    return () => clearInterval(id);
-  }, [state.startedAt]);
+    const { accMs, startedAt } = state;
+    if (startedAt === null) return;
+    let id = 0;
+    const schedule = () => {
+      const elapsed = accMs + Date.now() - startedAt;
+      // 秒の境目を確かに越えてから進める（少し早く起きて同じ秒を描き直さないように）
+      id = window.setTimeout(() => {
+        setNow(Date.now());
+        schedule();
+      }, 1000 - (elapsed % 1000) + 10);
+    };
+    schedule();
+    return () => clearTimeout(id);
+  }, [state]);
 
   const running = state.startedAt !== null;
   const elapsedMs = state.accMs + (running ? Math.max(0, now - state.startedAt!) : 0);
