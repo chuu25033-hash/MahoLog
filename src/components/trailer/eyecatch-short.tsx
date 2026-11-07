@@ -3,17 +3,18 @@
 import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { ease, ShortPlayer } from "./trailer";
 
-// YouTube（横長 16:9）のブロックの合間に差し込むアイキャッチ「星見の湖」。約5秒・「少女勉強中」（?text=rest で「少女休憩中」）。
+// YouTube（横長 16:9）のブロックの合間に差し込むアイキャッチ「星見の湖」。約5秒・「少女勉強中」（?text=rest で「少女休憩中」、?text=prepare で「少女準備中」）。
 // 写真のような夜空を canvas に描く: ノイズで雲と暗黒帯を作った天の川、数万の微光星、色温度の違う明るい星、
 // 地平の大気光、陰影と雪をまとう山並みと灯のともる観測塔、そして星空を映す凪いだ湖。空は北の空を軸にごくわずかに巡る。
 // 時刻 t（ms）だけで画面が決まるように組み、video/capture.mjs --size 960x540 で撮る（フェードなし、頭から終わりまで絵が出ている）
 
 /** 素材の長さ（ms） */
 export const EYECATCH_MS = 5000;
-/** 載せる文字（?text=rest で休憩中にする） */
+/** 載せる文字（?text=rest で休憩中、?text=prepare で準備中にする） */
 const TITLES = {
   study: { ja: "少女勉強中", en: "NOW STUDYING" },
   rest: { ja: "少女休憩中", en: "NOW RESTING" },
+  prepare: { ja: "少女準備中", en: "NOW PREPARING" },
 } as const;
 type TitleKey = keyof typeof TITLES;
 
@@ -788,7 +789,10 @@ export function EyecatchShort() {
   }, []);
   const title = useSyncExternalStore(
     () => () => {},
-    (): TitleKey => (new URLSearchParams(location.search).get("text") === "rest" ? "rest" : "study"),
+    (): TitleKey => {
+      const key = new URLSearchParams(location.search).get("text");
+      return key && Object.hasOwn(TITLES, key) ? (key as TitleKey) : "study";
+    },
     (): TitleKey => "study",
   );
   return <ShortPlayer landscape duration={EYECATCH_MS} frame={(t) => <Frame t={t} title={title} />} play={playSoundtrack} />;
