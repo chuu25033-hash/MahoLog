@@ -543,8 +543,11 @@ export function ShortPlayer({
   duration,
   frame,
   play,
+  landscape = false,
 }: {
   duration: number;
+  /** 横長（16:9、YouTube 用）の枠で描く */
+  landscape?: boolean;
   /** 時刻 t（ms）の画面 */
   frame: (t: number) => ReactNode;
   /** 音を鳴らし始め、止める関数を返す（モジュールの外で定義した関数を渡す） */
@@ -558,6 +561,12 @@ export function ShortPlayer({
     () => () => {},
     () => new URLSearchParams(location.search).has("capture"),
     () => true,
+  );
+  // 透過で撮るとき（?alpha）は、枠の外の黒も透かす
+  const alpha = useSyncExternalStore(
+    () => () => {},
+    () => new URLSearchParams(location.search).has("alpha"),
+    () => false,
   );
 
   useEffect(() => {
@@ -617,8 +626,12 @@ export function ShortPlayer({
   }, [playing, duration, play]);
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black">
-      <div className="relative aspect-[9/16] h-full max-h-dvh max-w-full overflow-hidden">{frame(t)}</div>
+    <div data-short-player className={`fixed inset-0 z-[90] flex items-center justify-center ${alpha ? "bg-transparent" : "bg-black"}`}>
+      <div
+        className={`relative overflow-hidden ${landscape ? "aspect-[16/9] max-h-dvh w-full max-w-full" : "aspect-[9/16] h-full max-h-dvh max-w-full"}`}
+      >
+        {frame(t)}
+      </div>
       {!playing && !capture && (
         <button
           onClick={() => setPlaying(true)}

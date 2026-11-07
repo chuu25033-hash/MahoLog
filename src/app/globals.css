@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* 撮影ツール（video/）の書き出した動画を、Tailwind がクラスを探す対象から外す（大きな .mov を読もうとして止まるため） */
+@source not "../../video";
 
 @custom-variant dark (&:is(.dark *));
 /* スマホ横画面など高さが低い画面 */

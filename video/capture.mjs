@@ -7,6 +7,8 @@
 //   node capture.mjs --video-only         映像だけ撮り直し、前回の音と合わせる
 //   node capture.mjs --stills 2.5,36,60   指定した秒の静止画だけを out/stills/ に撮る（確認用）
 //   共通: [--url http://localhost:3000/trailer] [--out out/maholog-trailer.mp4] [--fps 30]
+//   横長: --size 960x540  撮る画面の大きさ（2倍の密度で撮るので 1920×1080 になる。既定は 540x960）
+//   透過: --alpha         背景を透かして ProRes 4444（.mov、アルファ付き）で書き出し、クロマキー用のグリーンバック MP4 も作る
 //
 // 1. 音: ページ内でアプリと同じ合成の曲・効果音を実時間で鳴らして録る
 // 2. 映像: ページの時刻を 1/fps 秒ずつ進め、CSS アニメーションも同じ時刻に止めて撮る
@@ -30,16 +32,21 @@ const { values } = parseArgs({
     "audio-only": { type: "boolean", default: false },
     "video-only": { type: "boolean", default: false },
     stills: { type: "string" },
+    size: { type: "string", default: "540x960" },
+    alpha: { type: "boolean", default: false },
   },
 });
 const fps = Number(values.fps);
-const out = resolve(values.out);
+const [viewWidth, viewHeight] = values.size.split("x").map(Number);
+const alpha = values.alpha;
+const out = resolve(alpha ? values.out.replace(/\.mp4$/, ".mov") : values.out);
 mkdirSync(dirname(out), { recursive: true });
-const silent = out.replace(/\.mp4$/, ".video.mp4");
-const audioFile = out.replace(/\.mp4$/, ".audio.webm");
+const silent = out.replace(/\.(mp4|mov)$/, alpha ? ".video.mov" : ".video.mp4");
+const audioFile = out.replace(/\.(mp4|mov)$/, ".audio.webm");
 const ranged = values.from !== undefined || values.to !== undefined;
 
-const ENCODE = ["-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", "-movflags", "+faststart"];
+const H264 = ["-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", "-movflags", "+faststart"];
+const ENCODE = alpha ? ["-c:v", "prores_ks", "-profile:v", "4444", "-pix_fmt", "yuva444p10le", "-alpha_bits", "16", "-vendor", "apl0"] : H264;
 
 function ffmpeg(args, input) {
   return new Promise((ok, fail) => {
@@ -63,14 +70,16 @@ async function openTrailer(scale) {
     executablePath: values.chrome,
     args: ["--autoplay-policy=no-user-gesture-required", "--hide-scrollbars"],
   });
-  // 540×960 の画面を2倍の密度で描き、1080×1920 で撮る
-  const page = await browser.newPage({ viewport: { width: 540, height: 960 }, deviceScaleFactor: scale });
-  await page.goto(`${values.url}${values.url.includes("?") ? "&" : "?"}capture`, { waitUntil: "networkidle" });
+  // 540×960 の画面を2倍の密度で描き、1080×1920 で撮る（--size で横長にもできる）
+  const page = await browser.newPage({ viewport: { width: viewWidth, height: viewHeight }, deviceScaleFactor: scale });
+  await page.goto(`${values.url}${values.url.includes("?") ? "&" : "?"}capture${alpha ? "&alpha" : ""}`, { waitUntil: "networkidle" });
   // 曲を描き出してから撮影の準備が整うページ（/trailer/score）もあるので、長めに待つ
   await page.waitForFunction(() => window.__trailer !== undefined, null, { timeout: 180_000 });
   await page.evaluate(() => document.fonts.ready);
   // 開発サーバーの表示（左下の Next.js のバッジなど）を映さない
   await page.addStyleTag({ content: "nextjs-portal { display: none !important; }" });
+  // 透過で撮るときは、背面の星空などアプリ共通の層も隠す
+  if (alpha) await page.addStyleTag({ content: "html, body { background: transparent !important; } body > :not([data-short-player]):not(:has([data-short-player])) { display: none !important; }" });
   const duration = await page.evaluate(() => window.__trailer.duration);
   return { browser, page, duration };
 }
@@ -88,7 +97,7 @@ async function captureFrames(page, start, end, file) {
   const encoding = ffmpeg(["-f", "image2pipe", "-framerate", String(fps), "-c:v", "png", "-i", "-", ...ENCODE, file], (stdin) => (writer = stdin));
   for (let i = start; i < end; i++) {
     await page.evaluate((t) => window.__trailer.seek(t), (i * 1000) / fps);
-    const png = await page.screenshot({ type: "png" });
+    const png = await page.screenshot({ type: "png", omitBackground: alpha });
     if (!writer.write(png)) await new Promise((r) => writer.once("drain", r));
     if ((i - start) % fps === 0) process.stdout.write(`\r  ${Math.round(((i - start) / (end - start)) * 100)}%`);
   }
@@ -100,7 +109,7 @@ async function captureFrames(page, start, end, file) {
 /** 前回の映像のコマ [start, end) を、撮り直した区間 segment で差し替える */
 async function splice(segment, start, end) {
   console.log("撮り直した区間を差し替えています…");
-  const next = silent.replace(/\.video\.mp4$/, ".video.next.mp4");
+  const next = silent.replace(/\.video\.(mp4|mov)$/, ".video.next.$1");
   await ffmpeg([
     "-i", silent,
     "-i", segment,
@@ -125,12 +134,26 @@ async function mux(duration) {
     "-c:v", "copy",
     "-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
     "-ar", "48000",
-    "-c:a", "aac",
-    "-b:a", "192k",
+    ...(alpha ? ["-c:a", "pcm_s16le"] : ["-c:a", "aac", "-b:a", "192k"]),
     "-t", String(duration / 1000),
     out,
   ]);
   console.log(`書き出しました: ${out}`);
+  if (!alpha) return;
+  // アルファを読めない編集ソフト向けに、グリーンバックに重ねた MP4 も作る
+  const green = out.replace(/\.mov$/, "-greenback.mp4");
+  await ffmpeg([
+    "-i", out,
+    "-f", "lavfi", "-i", `color=c=0x00ff00:s=${viewWidth * 2}x${viewHeight * 2}:r=${fps}`,
+    "-filter_complex", "[1:v][0:v]overlay=shortest=1:format=auto[v]",
+    "-map", "[v]",
+    "-map", "0:a",
+    ...H264,
+    "-c:a", "aac",
+    "-b:a", "192k",
+    green,
+  ]);
+  console.log(`書き出しました: ${green}`);
 }
 
 // ---- 静止画だけ ----
@@ -141,7 +164,7 @@ if (values.stills) {
   for (const sec of values.stills.split(",").map(Number)) {
     await page.evaluate((t) => window.__trailer.seek(t), sec * 1000);
     const file = join(dir, `${sec}s.png`);
-    await page.screenshot({ path: file });
+    await page.screenshot({ path: file, omitBackground: alpha });
     console.log(file);
   }
   await browser.close();
@@ -163,7 +186,7 @@ if (values["audio-only"]) {
     console.error("--from は --to より前の秒にしてください");
     process.exit(1);
   }
-  const segment = silent.replace(/\.video\.mp4$/, ".segment.mp4");
+  const segment = silent.replace(/\.video\.(mp4|mov)$/, ".segment.$1");
   await captureFrames(page, start, end, segment);
   await splice(segment, start, end);
 } else {
