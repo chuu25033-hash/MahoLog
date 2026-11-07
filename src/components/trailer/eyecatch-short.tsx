@@ -1,16 +1,21 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { ease, ShortPlayer } from "./trailer";
 
-// YouTube（横長 16:9）のブロックの合間に差し込むアイキャッチ「星見の湖」。約5秒・「少女勉強中」。
+// YouTube（横長 16:9）のブロックの合間に差し込むアイキャッチ「星見の湖」。約5秒・「少女勉強中」（?text=rest で「少女休憩中」）。
 // 写真のような夜空を canvas に描く: ノイズで雲と暗黒帯を作った天の川、数万の微光星、色温度の違う明るい星、
 // 地平の大気光、陰影と雪をまとう山並みと灯のともる観測塔、そして星空を映す凪いだ湖。空は北の空を軸にごくわずかに巡る。
 // 時刻 t（ms）だけで画面が決まるように組み、video/capture.mjs --size 960x540 で撮る（フェードなし、頭から終わりまで絵が出ている）
 
 /** 素材の長さ（ms） */
 export const EYECATCH_MS = 5000;
-const TITLE = "少女勉強中";
+/** 載せる文字（?text=rest で休憩中にする） */
+const TITLES = {
+  study: { ja: "少女勉強中", en: "NOW STUDYING" },
+  rest: { ja: "少女休憩中", en: "NOW RESTING" },
+} as const;
+type TitleKey = keyof typeof TITLES;
 
 // ---- 決定的なノイズ ----
 
@@ -588,7 +593,7 @@ function Sky({ t }: { t: number }) {
 }
 
 /** 文字: 一字ずつ霞から結ぶ */
-function Title({ t }: { t: number }) {
+function Title({ t, title }: { t: number; title: TitleKey }) {
   const sub = ease(t, 900, 1700);
   return (
     <div className="absolute inset-x-0 flex flex-col items-center" style={{ top: "33%" }}>
@@ -596,7 +601,7 @@ function Title({ t }: { t: number }) {
         className="font-serif whitespace-nowrap"
         style={{ fontSize: "5.6cqw", letterSpacing: "0.42em", marginRight: "-0.42em", color: "#f4efe4", lineHeight: 1 }}
       >
-        {[...TITLE].map((ch, i) => {
+        {[...TITLES[title].ja].map((ch, i) => {
           const o = ease(t, 80 + i * 110, 880 + i * 110);
           return (
             <span
@@ -617,7 +622,7 @@ function Title({ t }: { t: number }) {
       <div className="flex items-center" style={{ marginTop: "2.4cqw", gap: "1.6cqw", opacity: sub, filter: `blur(${(1 - sub) * 0.3}cqw)` }}>
         <span style={{ height: 1, width: "7cqw", background: "linear-gradient(90deg, transparent, rgba(230,222,200,0.7))" }} />
         <p className="font-display whitespace-nowrap" style={{ fontSize: "1.3cqw", letterSpacing: "0.6em", marginRight: "-0.6em", color: "rgba(236,228,206,0.8)" }}>
-          NOW STUDYING
+          {TITLES[title].en}
         </p>
         <span style={{ height: 1, width: "7cqw", background: "linear-gradient(270deg, transparent, rgba(230,222,200,0.7))" }} />
       </div>
@@ -625,11 +630,11 @@ function Title({ t }: { t: number }) {
   );
 }
 
-function Frame({ t }: { t: number }) {
+function Frame({ t, title }: { t: number; title: TitleKey }) {
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ containerType: "size", background: "#010208" }}>
       <Sky t={t} />
-      <Title t={t} />
+      <Title t={t} title={title} />
     </div>
   );
 }
@@ -781,5 +786,10 @@ export function EyecatchShort() {
   useEffect(() => {
     void loadSamples(new OfflineAudioContext(1, 1, 44100));
   }, []);
-  return <ShortPlayer landscape duration={EYECATCH_MS} frame={(t) => <Frame t={t} />} play={playSoundtrack} />;
+  const title = useSyncExternalStore(
+    () => () => {},
+    (): TitleKey => (new URLSearchParams(location.search).get("text") === "rest" ? "rest" : "study"),
+    (): TitleKey => "study",
+  );
+  return <ShortPlayer landscape duration={EYECATCH_MS} frame={(t) => <Frame t={t} title={title} />} play={playSoundtrack} />;
 }
