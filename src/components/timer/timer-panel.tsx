@@ -932,11 +932,12 @@ export function TimerPanel({
 
       {/* 中央: 魔法陣 + タイマー */}
       <section className="relative col-span-8 flex min-h-0 flex-col items-center justify-center">
-        <BackToLibrary guard={locked} className="absolute top-0 left-0 z-20" />
-        <div className="absolute top-0 right-0 z-20 flex items-center gap-1.5">
+        {/* 案内の札は、見出しの代わりに書庫へ戻る札のすぐ右に置く */}
+        <div className="absolute top-0 left-0 z-20 flex items-center gap-1.5">
+          <BackToLibrary guard={locked} />
           {phase === "idle" && <GuideButton id="chant" />}
-          {viewToggle}
         </div>
+        <div className="absolute top-0 right-0 z-20">{viewToggle}</div>
         {expedition ? (
           <div className="absolute inset-x-0 top-10 bottom-0">{expedition}</div>
         ) : (

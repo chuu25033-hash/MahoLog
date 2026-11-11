@@ -53,9 +53,12 @@ export function PortraitTimer({
   return (
     <div className="flex h-full flex-col animate-in fade-in duration-700">
       <header className="flex shrink-0 items-center justify-between gap-3 px-4 pt-3">
-        <BackToLibrary guard={locked} />
+        {/* 案内の札は、書庫へ戻る札のすぐ右に置く */}
+        <div className="flex shrink-0 items-center gap-1.5">
+          <BackToLibrary guard={locked} />
+          {preparing && <GuideButton id="chant" />}
+        </div>
         <div className="flex min-w-0 items-center gap-1.5">
-          {preparing && <GuideButton id="chant" className="px-1.5 [&>span]:sr-only" />}
           {viewToggle}
           {preparing && (
             <button

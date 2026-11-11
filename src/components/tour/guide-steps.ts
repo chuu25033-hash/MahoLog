@@ -113,7 +113,7 @@ export const LIBRARY_STEPS: GuideStep[] = [
   {
     title: "準備は整いました",
     label: "READY TO OBSERVE",
-    body: "学びの時が来たら「詠唱を開始する」から。各画面にも案内があり、「案内」の札から見返せます。この案内は設定から。",
+    body: "学びの時が来たら「詠唱を開始する」から。各画面にも案内があり、見出しの隣の「案内」から見返せます。この案内は設定から。",
   },
 ];
 
@@ -184,7 +184,7 @@ export const CHANT_STEPS: GuideStep[] = [
   {
     title: "詠唱の支度は整いました",
     label: "READY TO CHANT",
-    body: `1日に刻める詠唱は${DAILY_LIMIT_MINUTES / 60}時間までです。案内は「案内」の札から見返せます。`,
+    body: `1日に刻める詠唱は${DAILY_LIMIT_MINUTES / 60}時間までです。案内は左上の「案内」から見返せます。`,
   },
 ];
 
@@ -227,7 +227,7 @@ export const TRACES_STEPS: GuideStep[] = [
   {
     title: "軌跡は続いていきます",
     label: "KEEP OBSERVING",
-    body: "詠唱を重ねるほど、夜空がにぎやかになります。案内は「案内」の札から見返せます。",
+    body: "詠唱を重ねるほど、夜空がにぎやかになります。案内は見出しの隣の「案内」から見返せます。",
   },
 ];
 
@@ -277,7 +277,7 @@ export const CODEX_STEPS: GuideStep[] = [
   {
     title: "解読を進めましょう",
     label: "KEEP DECIPHERING",
-    body: "長く詠唱するほど、稀な品が届きやすくなります。案内は「案内」の札から見返せます。",
+    body: "長く詠唱するほど、稀な品が届きやすくなります。案内は見出しの隣の「案内」から見返せます。",
   },
 ];
 
@@ -313,7 +313,7 @@ export const SETTINGS_STEPS: GuideStep[] = [
   {
     title: "書斎の扉はいつでも開いています",
     label: "ANYTIME",
-    body: "下の「はじまりの記録」から、プロローグや各画面の案内をもう一度見られます。",
+    body: "どの画面の案内も、見出しの隣の「案内」から見返せます。書庫の案内は、下の「はじまりの記録」から。",
   },
 ];
 
@@ -349,7 +349,7 @@ export const ZENITH_STEPS: GuideStep[] = [
   {
     title: "旅に終わりはありません",
     label: "ENDLESS ASCENT",
-    body: "案内は「案内」の札から見返せます。",
+    body: "案内は見出しの隣の「案内」から見返せます。",
   },
 ];
 

@@ -79,15 +79,18 @@ export function CollectionView() {
         <div className="flex min-w-0 items-center gap-4">
           <BackToLibrary />
           <div className="min-w-0">
-            <h1 className="flex flex-col text-xl leading-tight tracking-[0.25em] whitespace-nowrap short:text-base">
-              古代の秘術図鑑
-              <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">ARCANE CODEX</span>
-            </h1>
+            {/* 案内の札は、どの画面でも見出しのすぐ右に置く */}
+            <div className="flex items-center gap-3">
+              <h1 className="flex flex-col text-xl leading-tight tracking-[0.25em] whitespace-nowrap short:text-base">
+                古代の秘術図鑑
+                <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">ARCANE CODEX</span>
+              </h1>
+              <GuideButton id="codex" />
+            </div>
             <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">
               流れ星や星天の導きで授かった遺物を解読し、古代文書を復元し、錬成陣で神話の遺物を生み出します
             </p>
           </div>
-          <GuideButton id="codex" className="ml-auto self-start" />
         </div>
         <div data-tour="codex-rate" className="w-52 shrink-0 portrait:w-full">
           <p className="flex items-baseline justify-between text-[11px] tracking-[0.2em] whitespace-nowrap text-muted-foreground">

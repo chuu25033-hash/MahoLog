@@ -269,13 +269,16 @@ function StarMemory({
         <div className="flex min-w-0 items-center gap-4">
           <BackToLibrary />
           <div className="min-w-0">
-            <h1 className="flex flex-col text-xl leading-tight tracking-[0.25em] whitespace-nowrap short:text-base">
-              魔導の軌跡
-              <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">ARCANE TRACES</span>
-            </h1>
+            {/* 案内の札は、どの画面でも見出しのすぐ右に置く */}
+            <div className="flex items-center gap-3">
+              <h1 className="flex flex-col text-xl leading-tight tracking-[0.25em] whitespace-nowrap short:text-base">
+                魔導の軌跡
+                <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">ARCANE TRACES</span>
+              </h1>
+              <GuideButton id="traces" />
+            </div>
             <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">詠唱した夜は星となり、ひと月の学びが夜空に自分だけの星座を描きます</p>
           </div>
-          <GuideButton id="traces" className="ml-auto self-start" />
         </div>
         <div className="flex items-end gap-6 portrait:flex-col portrait:items-stretch portrait:gap-3">
           <MonthSwitcher month={month} onPrev={onPrev} onNext={onNext} />

@@ -72,12 +72,17 @@ export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClo
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[min(32rem,calc(100%-2rem))]! gap-4 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-5 ring-starlight/25 backdrop-blur-2xl">
-        {/* 案内をもう一度開く札は、閉じるボタンと向かい合う左上に置く */}
-        <GuideButton id="trials" className="absolute top-2 left-2 px-1.5 [&>span]:sr-only" />
         <DialogHeader className="items-center gap-1 text-center">
-          <DialogTitle className="text-lg tracking-[0.35em] whitespace-nowrap text-starlight-gradient">
-            <span className="-mr-[0.35em]">星の試練</span>
-          </DialogTitle>
+          {/* 案内の札は見出しのすぐ右に置き、見出しが中央からずれないよう、左にも同じ幅の見えない札を置いて釣り合わせる */}
+          <div className="flex items-center gap-3">
+            <span className="invisible" aria-hidden>
+              <GuideButton id="trials" />
+            </span>
+            <DialogTitle className="text-lg tracking-[0.35em] whitespace-nowrap text-starlight-gradient">
+              <span className="-mr-[0.35em]">星の試練</span>
+            </DialogTitle>
+            <GuideButton id="trials" />
+          </div>
           <p className="font-display text-[10px] tracking-[0.4em] whitespace-nowrap text-starlight/70">
             <span className="-mr-[0.4em]">— ORBITS OF TRIALS —</span>
           </p>

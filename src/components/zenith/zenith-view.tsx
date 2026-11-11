@@ -51,13 +51,16 @@ function Header({ guide = false }: { guide?: boolean }) {
     <header className="flex items-center gap-4">
       <BackToLibrary />
       <div className="min-w-0">
-        <h1 className="flex flex-col text-xl leading-tight tracking-[0.25em] whitespace-nowrap short:text-base">
-          星天の塔
-          <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">ASTRA ZENITH</span>
-        </h1>
+        {/* 案内の札は、どの画面でも見出しのすぐ右に置く */}
+        <div className="flex items-center gap-3">
+          <h1 className="flex flex-col text-xl leading-tight tracking-[0.25em] whitespace-nowrap short:text-base">
+            星天の塔
+            <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">ASTRA ZENITH</span>
+          </h1>
+          {guide && <GuideButton id="zenith" />}
+        </div>
         <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">{ZENITH_AREA.description}</p>
       </div>
-      {guide && <GuideButton id="zenith" className="ml-auto self-start" />}
     </header>
   );
 }

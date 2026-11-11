@@ -29,7 +29,7 @@ import { useIsAdmin } from "@/lib/admin";
 import { overrideCloud, startNewObserver } from "@/lib/cloud-sync";
 import { THEME_LABEL, unlockedThemes } from "@/lib/cycles";
 import { jstDateKey } from "@/lib/date";
-import { resetAllGuides } from "@/lib/onboarding";
+import { resetLibraryTour } from "@/lib/onboarding";
 import { soundManager } from "@/lib/sound/sound-manager";
 import {
   MAX_ACTIVE_SUBJECTS,
@@ -77,16 +77,19 @@ export function SettingsView({
       <header className="flex items-center gap-4">
         <BackToLibrary />
         <div className="min-w-0 flex-1">
-          <h1 className="flex flex-col text-xl leading-tight tracking-[0.25em] whitespace-nowrap short:text-base">
-            秘術探究者の書斎
-            <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">SETTINGS</span>
-          </h1>
+          {/* 案内の札は、どの画面でも見出しのすぐ右に置く */}
+          <div className="flex items-center gap-3">
+            <h1 className="flex flex-col text-xl leading-tight tracking-[0.25em] whitespace-nowrap short:text-base">
+              秘術探究者の書斎
+              <span className="font-display text-[9px] tracking-[0.3em] text-starlight/70">SETTINGS</span>
+            </h1>
+            <GuideButton id="settings" />
+          </div>
           <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">
             探究者の名と詠唱の作法を定め、これまでの探求の記録を守ります
             {!isDemo && "（ここでの設定はこの端末に保存されます）"}
           </p>
         </div>
-        <GuideButton id="settings" className="self-start" />
         {signOutAction && (
           <form action={signOutAction} className="shrink-0">
             <Button type="submit" variant="outline" size="sm">
@@ -379,7 +382,7 @@ function PrologueReplay() {
   const [playing, setPlaying] = useState(false);
 
   function replayTour() {
-    resetAllGuides();
+    resetLibraryTour();
     router.push("/dashboard?tour");
   }
 
@@ -390,7 +393,7 @@ function PrologueReplay() {
           <BookOpen /> プロローグ（創世の記録）を再生する
         </Button>
         <Button variant="outline" size="sm" className="h-auto w-full py-2 [word-break:auto-phrase]" onClick={replayTour}>
-          <Compass /> 書庫と各画面の案内をもう一度見る
+          <Compass /> 書庫の案内をもう一度見る
         </Button>
       </div>
       {playing && <Prologue onDone={() => setPlaying(false)} />}
