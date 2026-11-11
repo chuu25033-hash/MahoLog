@@ -1,275 +1,28 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { createPortal } from "react-dom";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowGlyph } from "@/components/arcane-icons";
-import { Button } from "@/components/ui/button";
-import { markLibraryTourDone, useLibraryTourDone } from "@/lib/onboarding";
 import { useStoredUserData } from "@/lib/user-store";
-import { usePortraitPhone } from "@/lib/use-portrait-phone";
-import { cn } from "@/lib/utils";
-
-type Step = {
-  /** 照らす要素（data-tour の値）。無ければ画面の中央で語る */
-  target?: string;
-  title: string;
-  label: string;
-  /** 世界観の言葉に馴染みのない人にも何をするところか伝わるよう、ふつうの言葉で言い換えた一言 */
-  plain?: string;
-  body: string;
-};
-
-/**
- * 書庫を巡る順。各ボタンが何をするところかを、一つずつ照らして語る。
- * 長いと読まれないので、頁は要のところだけに絞り、本文は一、二文に留める（細かな仕組みは各画面で語る）
- */
-const STEPS: Step[] = [
-  {
-    title: "魔術書庫へようこそ",
-    label: "WELCOME TO THE LIBRARY",
-    body: "ここが旅の拠点です。書庫の扉を少しだけ巡ってみましょう。",
-  },
-  {
-    target: "profile",
-    title: "探究者の記録",
-    plain: "プロフィール・レベル",
-    label: "SCHOLAR",
-    body: "学んだ時間が魔力（MP）になり、貯まるほど階級が上がります。",
-  },
-  {
-    target: "chant",
-    title: "詠唱を開始する",
-    plain: "勉強タイマーを始める",
-    label: "BEGIN THE CHANT",
-    body: "科目を選んで学ぶと、長さに応じて流れ星が降り、遺物が届きます。",
-  },
-  {
-    target: "stage",
-    title: "滞在するエリア",
-    plain: "ステージ選択",
-    label: "AREA",
-    body: "地ごとに魔力が増える属性が違います。魔力が貯まると奥地が開きます。",
-  },
-  {
-    target: "trials",
-    title: "星の試練",
-    plain: "ログインボーナス・デイリー／ウィークリーミッション",
-    label: "TRIALS",
-    body: "報酬を受け取れるときは、数字が灯ります。",
-  },
-  {
-    target: "history",
-    title: "魔導の軌跡",
-    plain: "月ごとの勉強カレンダー",
-    label: "CHRONICLE",
-    body: "学んだ日々が、月ごとの星図に描かれていきます。",
-  },
-  {
-    target: "radar",
-    title: "魔法陣",
-    plain: "科目ごとの勉強時間のグラフ",
-    label: "ARCANE CIRCLE",
-    body: "右上から画像にして共有できます。",
-  },
-  {
-    target: "codex",
-    title: "魔導図鑑",
-    plain: "アイテム図鑑・アイテムの合成",
-    label: "CODEX",
-    body: "手に入れた遺物や古代文書が収められていきます。",
-  },
-  {
-    title: "準備は整いました",
-    label: "READY TO OBSERVE",
-    body: "学びの時が来たら「詠唱を開始する」から。この案内は設定からいつでも見返せます。",
-  },
-];
-
-/** 照らす枠の余白（px） */
-const PAD = 8;
-/** 説明の札と照らす枠との間（px） */
-const GAP = 14;
-/** 説明の札を置くのに要る高さの目安（px）。これより狭ければ画面の下端に置く */
-const CARD_SPACE = 230;
-
-type Rect = { top: number; left: number; width: number; height: number };
+import { LIBRARY_STEPS } from "./guide-steps";
+import { PageGuide } from "./guide-tour";
 
 /**
  * 初めて書庫に入ったときの案内。各ボタンを順に照らし、何をするところかを語る。
  * いつでも飛ばせる。終えるか飛ばすと印を残し、二度目からは出さない（設定から見返せる）
  */
 export function LibraryTour() {
-  const done = useLibraryTourDone();
+  const router = useRouter();
   const data = useStoredUserData();
-  // 設定の「書庫の案内をもう一度見る」から来たか。画面が移った直後は window.location がまだ古いので、ルーターから読む
+  // 設定の「案内をもう一度見る」から来たか。画面が移った直後は window.location がまだ古いので、ルーターから読む
   const replay = useSearchParams().has("tour");
   // 既に詠唱を重ねている人には、改めて案内しない（設定から見返せる）
   const veteran = (data?.chantHistory.length ?? 0) > 0 && !replay;
-  if (done || !data || veteran) return null;
-  return <Tour replay={replay} />;
-}
-
-function Tour({ replay }: { replay: boolean }) {
-  const router = useRouter();
-  const [index, setIndex] = useState(0);
-  const [rect, setRect] = useState<Rect | null>(null);
-  const [viewport, setViewport] = useState({ width: 0, height: 0 });
-  const portrait = usePortraitPhone();
-  const nextRef = useRef<HTMLButtonElement>(null);
-  const step = STEPS[index];
-  const last = index === STEPS.length - 1;
-
-  function finish() {
-    markLibraryTourDone();
-    // 見返すために付けた印は消しておく
-    if (replay) router.replace("/dashboard", { scroll: false });
-  }
-
-  const next = () => (last ? finish() : setIndex((i) => i + 1));
-  const back = () => setIndex((i) => Math.max(0, i - 1));
-  // 飛ばすときも、締めくくりの頁（設定から見返せる旨）だけは見せる
-  const skip = () => setIndex(STEPS.length - 1);
-
-  // 照らす要素を画面に収め、動いたり大きさが変わったりしても枠が追いかけるよう毎フレーム測る
-  useEffect(() => {
-    const el = step.target ? document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`) : null;
-    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    let frame = 0;
-    let prev = "";
-    const measure = () => {
-      const r = el?.getBoundingClientRect();
-      const next = r && r.width > 0 ? { top: r.top - PAD, left: r.left - PAD, width: r.width + PAD * 2, height: r.height + PAD * 2 } : null;
-      const view = { width: window.innerWidth, height: window.innerHeight };
-      const key = JSON.stringify([next, view]);
-      if (key !== prev) {
-        prev = key;
-        setRect(next);
-        setViewport(view);
-      }
-      frame = requestAnimationFrame(measure);
-    };
-    frame = requestAnimationFrame(measure);
-    return () => cancelAnimationFrame(frame);
-  }, [step.target]);
-
-  useEffect(() => {
-    nextRef.current?.focus({ preventScroll: true });
-  }, [index]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (last) finish();
-        else skip();
-      }
-      else if (e.key === "ArrowRight") next();
-      else if (e.key === "ArrowLeft") back();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
-
-  return createPortal(
-    // 案内の間は背後に触れられないよう、画面全体を覆う
-    <div className="fixed inset-0 z-[80]" role="dialog" aria-modal aria-labelledby="library-tour-title">
-      {/* 照らす枠: 枠の外を暗く沈める。照らす相手が無い節は全体を暗くする */}
-      <div
-        className={cn(
-          "pointer-events-none absolute rounded-2xl transition-all duration-500 ease-out motion-reduce:transition-none",
-          rect ? "ring-1 ring-starlight/70 shadow-[0_0_0_9999px_rgba(3,5,11,0.72),0_0_24px_2px_rgba(226,201,116,0.35)]" : "shadow-[0_0_0_9999px_rgba(3,5,11,0.72)]",
-        )}
-        style={rect ?? { top: "50%", left: "50%", width: 0, height: 0 }}
-        aria-hidden
-      />
-      <TourCard
-        step={step}
-        index={index}
-        style={placeCard(rect, viewport, portrait)}
-        nextRef={nextRef}
-        onNext={next}
-        onBack={back}
-        onSkip={skip}
-      />
-    </div>,
-    document.body,
-  );
-}
-
-/** 説明の札の置き場所: 照らす枠の下に余白があれば下、無ければ上、どちらも狭ければ画面の下端 */
-function placeCard(rect: Rect | null, view: { width: number; height: number }, portrait: boolean): CSSProperties {
-  const width = portrait ? Math.min(view.width - 32, 400) : 360;
-  if (!rect) return { width, top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
-  const left = portrait
-    ? (view.width - width) / 2
-    : Math.min(Math.max(rect.left + rect.width / 2 - width / 2, 16), view.width - width - 16);
-  const below = view.height - (rect.top + rect.height);
-  if (below >= CARD_SPACE) return { width, left, top: rect.top + rect.height + GAP };
-  if (rect.top >= CARD_SPACE) return { width, left, bottom: view.height - rect.top + GAP };
-  return { width, left, bottom: 16 };
-}
-
-function TourCard({
-  step,
-  index,
-  style,
-  nextRef,
-  onNext,
-  onBack,
-  onSkip,
-}: {
-  step: Step;
-  index: number;
-  style: CSSProperties;
-  nextRef: React.RefObject<HTMLButtonElement | null>;
-  onNext: () => void;
-  onBack: () => void;
-  onSkip: () => void;
-}) {
-  const last = index === STEPS.length - 1;
   return (
-    <div
-      className="glass absolute flex flex-col gap-3 rounded-2xl bg-[rgba(9,13,24,0.94)]! p-4 backdrop-blur-xl transition-[top,bottom,left] duration-500 ease-out motion-reduce:transition-none"
-      style={style}
-    >
-      {/* 節が変わるたびに、札の中身だけを静かに差し替える */}
-      <div key={index} className="flex flex-col gap-2 animate-in fade-in duration-500">
-        <div className="flex items-start justify-between gap-3">
-          <h2 id="library-tour-title" className="flex flex-col text-base leading-tight tracking-[0.2em] whitespace-nowrap">
-            {step.title}
-            <span className="font-display text-[9px] tracking-[0.3em] text-starlight/60">{step.label}</span>
-          </h2>
-          <span className="shrink-0 font-display text-[11px] tracking-[0.2em] text-muted-foreground">
-            {index + 1} / {STEPS.length}
-          </span>
-        </div>
-        {step.plain && (
-          <p className="w-fit rounded-md border border-starlight/25 bg-starlight/[0.06] px-2 py-0.5 text-xs leading-relaxed tracking-wider text-starlight [word-break:auto-phrase]">
-            {step.plain}
-          </p>
-        )}
-        <p className="text-[13px] leading-relaxed tracking-wider text-foreground/85 [word-break:auto-phrase]">{step.body}</p>
-      </div>
-      <div className="flex items-center gap-2">
-        {!last && (
-          <button
-            type="button"
-            onClick={onSkip}
-            className="mr-auto text-xs tracking-[0.2em] text-muted-foreground underline-offset-4 transition-colors hover:text-starlight hover:underline"
-          >
-            スキップ
-          </button>
-        )}
-        {index > 0 && (
-          <Button variant="outline" size="sm" className={cn(last && "mr-auto")} onClick={onBack}>
-            戻る
-          </Button>
-        )}
-        <Button ref={nextRef} size="sm" className={cn(index === 0 && "ml-auto")} onClick={onNext}>
-          {last ? "はじめる" : index === 0 ? "巡りはじめる" : "次へ"}
-          {!last && <ArrowGlyph />}
-        </Button>
-      </div>
-    </div>
+    <PageGuide
+      id="library"
+      steps={LIBRARY_STEPS}
+      auto={!!data && !veteran}
+      // 見返すために付けた印は消しておく
+      onFinish={() => replay && router.replace("/dashboard", { scroll: false })}
+    />
   );
 }

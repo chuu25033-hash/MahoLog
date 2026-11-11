@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { BackToLibrary } from "@/components/back-to-library";
+import { GuideButton } from "@/components/tour/guide-tour";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ChantPhase } from "@/lib/chant-session";
 import type { Subject } from "@/lib/types";
@@ -54,10 +55,12 @@ export function PortraitTimer({
       <header className="flex shrink-0 items-center justify-between gap-3 px-4 pt-3">
         <BackToLibrary guard={locked} />
         <div className="flex min-w-0 items-center gap-1.5">
+          {preparing && <GuideButton id="chant" className="px-1.5 [&>span]:sr-only" />}
           {viewToggle}
           {preparing && (
             <button
               type="button"
+              data-tour="chant-prep"
               onClick={() => setSheetOpen(true)}
               aria-haspopup="dialog"
               className="flex min-w-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] py-1 pr-3 pl-2.5 text-[11px] tracking-[0.2em] whitespace-nowrap text-muted-foreground backdrop-blur transition-all duration-300 hover:border-starlight/40 hover:text-starlight"

@@ -3,6 +3,8 @@
 import { useId, useMemo, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight, Moon, Sparkles, Star } from "lucide-react";
 import { BackToLibrary } from "@/components/back-to-library";
+import { TRACES_STEPS } from "@/components/tour/guide-steps";
+import { GuideButton, PageGuide } from "@/components/tour/guide-tour";
 import { ItemArt } from "@/components/item-art";
 import { PageLoading } from "@/components/page-loading";
 import { demoSubjects } from "@/lib/demo";
@@ -223,7 +225,7 @@ function MonthSwitcher({ month, onPrev, onNext }: { month: Date; onPrev?: () => 
   const button =
     "grid size-8 place-items-center rounded-full text-starlight transition-colors hover:bg-white/[0.06] disabled:pointer-events-none disabled:opacity-25";
   return (
-    <nav aria-label="表示する月" className="flex shrink-0 items-center gap-1 portrait:justify-center">
+    <nav data-tour="traces-month" aria-label="表示する月" className="flex shrink-0 items-center gap-1 portrait:justify-center">
       <button type="button" onClick={onPrev} disabled={!onPrev} aria-label="前の月" className={button}>
         <ChevronLeft className="size-4" strokeWidth={1.25} />
       </button>
@@ -273,6 +275,7 @@ function StarMemory({
             </h1>
             <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">詠唱した夜は星となり、ひと月の学びが夜空に自分だけの星座を描きます</p>
           </div>
+          <GuideButton id="traces" className="ml-auto self-start" />
         </div>
         <div className="flex items-end gap-6 portrait:flex-col portrait:items-stretch portrait:gap-3">
           <MonthSwitcher month={month} onPrev={onPrev} onNext={onNext} />
@@ -295,7 +298,7 @@ function StarMemory({
 
       {/* 星図盤と詳細パネルを黄金比（1.618 : 1）で分け、パネルは星図盤の中心の高さに揃える */}
       <div className="grid min-h-0 flex-1 grid-cols-[1.618fr_1fr] gap-4 portrait:flex-none portrait:grid-cols-1 lg:gap-8">
-        <section className="relative flex min-h-80 short:min-h-0 items-center justify-center [container-type:size] portrait:aspect-square portrait:min-h-0">
+        <section data-tour="traces-chart" className="relative flex min-h-80 short:min-h-0 items-center justify-center [container-type:size] portrait:aspect-square portrait:min-h-0">
           <div
             aria-hidden
             className="pointer-events-none absolute top-1/2 left-1/2 size-[min(100cqw,100cqh)] -translate-1/2 rounded-full"
@@ -311,6 +314,7 @@ function StarMemory({
           </div>
         </aside>
       </div>
+      <PageGuide id="traces" steps={TRACES_STEPS} />
     </div>
   );
 }
@@ -624,7 +628,7 @@ function NightDetail({ night, subjects }: { night: ObservedNight; subjects: Subj
   const attribute = night.minutes > 0 ? ATTRIBUTES[dominantAttribute(night)] : null;
 
   return (
-    <article key={night.date.getTime()} className="glass flex flex-col gap-3 rounded-2xl p-4 animate-in fade-in duration-500">
+    <article key={night.date.getTime()} data-tour="traces-night" className="glass flex flex-col gap-3 rounded-2xl p-4 animate-in fade-in duration-500">
       <header className="flex flex-wrap items-baseline justify-between gap-x-2">
         <h2 className="text-base tracking-[0.2em] whitespace-nowrap">{dateLabel.format(night.date)}</h2>
         <span className="font-display text-[10px] tracking-[0.25em] whitespace-nowrap text-starlight/70">
@@ -731,7 +735,7 @@ function ConstellationList({
   completed: boolean[];
 }) {
   return (
-    <section className="glass rounded-2xl p-4">
+    <section data-tour="traces-constellations" className="glass rounded-2xl p-4">
       <div className="mb-2 flex items-end justify-between gap-2">
         <h2 className="flex flex-col text-sm leading-tight tracking-[0.2em] whitespace-nowrap">
           描かれた星座

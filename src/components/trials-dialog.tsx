@@ -15,6 +15,8 @@ import { TASKS, type TaskDef, type TaskScope, type TaskState } from "@/lib/tasks
 import type { Subject } from "@/lib/types";
 import { userActions, useUserData, type TaskClaim, type UserData } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
+import { TRIALS_STEPS } from "@/components/tour/guide-steps";
+import { GuideButton, InlineGuide } from "@/components/tour/guide-tour";
 
 const SCOPES: { key: TaskScope; label: string; sub: string; reset: string }[] = [
   { key: "daily", label: "日課の儀式", sub: "デイリー", reset: "毎日 午前0時に巡り直します" },
@@ -70,6 +72,8 @@ export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClo
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[calc(100dvh-1rem)] max-w-[min(32rem,calc(100%-2rem))]! gap-4 overflow-y-auto scrollbar-none rounded-2xl border border-white/10 bg-white/[0.04] p-5 ring-starlight/25 backdrop-blur-2xl">
+        {/* 案内をもう一度開く札は、閉じるボタンと向かい合う左上に置く */}
+        <GuideButton id="trials" className="absolute top-2 left-2 px-1.5 [&>span]:sr-only" />
         <DialogHeader className="items-center gap-1 text-center">
           <DialogTitle className="text-lg tracking-[0.35em] whitespace-nowrap text-starlight-gradient">
             <span className="-mr-[0.35em]">星の試練</span>
@@ -89,6 +93,8 @@ export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClo
             </span>
           </DialogDescription>
         </DialogHeader>
+
+        <InlineGuide id="trials" steps={TRIALS_STEPS} />
 
         <div role="tablist" aria-label="試練の種類" className="grid grid-cols-2 gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1">
           {SCOPES.map((s) => {

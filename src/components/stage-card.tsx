@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Map, MapPin } from "lucide-react";
 import { MpBar } from "@/components/mp-bar";
 import { StageMap } from "@/components/stage-map";
+import { AREAS_STEPS } from "@/components/tour/guide-steps";
+import { GuideButton, InlineGuide } from "@/components/tour/guide-tour";
 import { StageScene } from "@/components/stage-scene";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -96,9 +98,13 @@ export function StageCard({ totalMp, className, ...rest }: { totalMp: number; cl
           initialFocus={() => document.querySelector<HTMLElement>("[data-current-area]")}
           className="flex h-[calc(100dvh-1rem)] max-h-[44rem] max-w-[min(48rem,calc(100%-2rem))]! flex-col gap-3 rounded-2xl p-4 ring-starlight/25 backdrop-blur-xl">
           <DialogHeader>
-            <DialogTitle className="tracking-[0.3em]">エリア選択</DialogTitle>
+            <div className="flex items-center gap-2 pr-8">
+              <DialogTitle className="tracking-[0.3em]">エリア選択</DialogTitle>
+              <GuideButton id="areas" />
+            </div>
             <DialogDescription>ノードをタップすると詳細が開きます。歩みは原点から上へと続いていきます。</DialogDescription>
           </DialogHeader>
+          <InlineGuide id="areas" steps={AREAS_STEPS} className="shrink-0" />
           <StageMap totalMp={progressMp} currentArea={mapArea} />
         </DialogContent>
       </Dialog>

@@ -8,6 +8,8 @@ import { Bell, BookOpen, Check, Compass, FlaskConical, Download, Feather, Footpr
 import { ArrowGlyph } from "@/components/arcane-icons";
 import { ObserverIdField } from "@/components/observer/observer-id";
 import { BackToLibrary } from "@/components/back-to-library";
+import { SETTINGS_STEPS } from "@/components/tour/guide-steps";
+import { GuideButton, PageGuide } from "@/components/tour/guide-tour";
 import { CustomMinutesEditor } from "@/components/custom-minutes-editor";
 import { PageLoading } from "@/components/page-loading";
 import { Prologue } from "@/components/prologue/prologue";
@@ -27,7 +29,7 @@ import { useIsAdmin } from "@/lib/admin";
 import { overrideCloud, startNewObserver } from "@/lib/cloud-sync";
 import { THEME_LABEL, unlockedThemes } from "@/lib/cycles";
 import { jstDateKey } from "@/lib/date";
-import { resetLibraryTour } from "@/lib/onboarding";
+import { resetAllGuides } from "@/lib/onboarding";
 import { soundManager } from "@/lib/sound/sound-manager";
 import {
   MAX_ACTIVE_SUBJECTS,
@@ -84,6 +86,7 @@ export function SettingsView({
             {!isDemo && "（ここでの設定はこの端末に保存されます）"}
           </p>
         </div>
+        <GuideButton id="settings" className="self-start" />
         {signOutAction && (
           <form action={signOutAction} className="shrink-0">
             <Button type="submit" variant="outline" size="sm">
@@ -95,7 +98,7 @@ export function SettingsView({
 
       {/* 縦持ちでは3枚を縦に積み、枠ごとではなく画面全体をスクロールする */}
       <div className="grid min-h-0 flex-1 grid-cols-3 gap-3 portrait:flex-none portrait:grid-cols-1 lg:gap-4">
-        <Panel icon={UserRound} title="探究者と演出" label="SCHOLAR">
+        <Panel icon={UserRound} title="探究者と演出" label="SCHOLAR" tour="settings-scholar">
           <Field label="探究者名" hint={`${userProfile.username.length} / ${USERNAME_MAX}`}>
             <input
               value={userProfile.username}
@@ -192,7 +195,7 @@ export function SettingsView({
           <PrologueReplay />
         </Panel>
 
-        <Panel icon={Hexagon} title="詠唱の領域" label="DOMAINS">
+        <Panel icon={Hexagon} title="詠唱の領域" label="DOMAINS" tour="settings-domains">
           <CustomSubjectNamesField subjects={baseSubjects} names={userProfile.customSubjectNames} />
 
           <ActiveSubjectsField subjects={subjects} activeKeys={axes.map((a) => a.key)} />
@@ -224,7 +227,7 @@ export function SettingsView({
           </Field>
         </Panel>
 
-        <Panel icon={ScrollText} title="音と記録" label="SOUND & ARCHIVE">
+        <Panel icon={ScrollText} title="音と記録" label="SOUND & ARCHIVE" tour="settings-sound">
           <Field label="音の響き" hint="滞在する地の環境音と、操作の効果音">
             <div className="flex flex-col gap-2">
               <ToggleRow
@@ -263,6 +266,7 @@ export function SettingsView({
           <DataControls />
         </Panel>
       </div>
+      <PageGuide id="settings" steps={SETTINGS_STEPS} />
     </div>
   );
 }
@@ -375,7 +379,7 @@ function PrologueReplay() {
   const [playing, setPlaying] = useState(false);
 
   function replayTour() {
-    resetLibraryTour();
+    resetAllGuides();
     router.push("/dashboard?tour");
   }
 
@@ -386,7 +390,7 @@ function PrologueReplay() {
           <BookOpen /> プロローグ（創世の記録）を再生する
         </Button>
         <Button variant="outline" size="sm" className="h-auto w-full py-2 [word-break:auto-phrase]" onClick={replayTour}>
-          <Compass /> 書庫の案内をもう一度見る
+          <Compass /> 書庫と各画面の案内をもう一度見る
         </Button>
       </div>
       {playing && <Prologue onDone={() => setPlaying(false)} />}
@@ -398,16 +402,19 @@ function Panel({
   icon: Icon,
   title,
   label,
+  tour,
   children,
 }: {
   icon: typeof UserRound;
   title: string;
   label: string;
+  /** 案内で照らすときの目印 */
+  tour?: string;
   children: ReactNode;
 }) {
   return (
     // 枠線（glass の ::before）が中身と一緒に流れないよう、スクロールは内側の領域だけで行う
-    <section className="glass flex min-h-0 flex-col overflow-hidden rounded-2xl">
+    <section data-tour={tour} className="glass flex min-h-0 flex-col overflow-hidden rounded-2xl">
       <h2 className="mx-4 mt-4 flex shrink-0 items-center gap-2 border-b border-white/10 pb-3 text-sm tracking-[0.25em] whitespace-nowrap short:mx-3 short:mt-3 short:pb-2 lg:mx-5 lg:mt-5">
         <Icon className="size-4 shrink-0 text-starlight" strokeWidth={1.25} />
         <span className="flex flex-col leading-tight">

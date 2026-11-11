@@ -55,6 +55,8 @@ import {
 import type { StudyMode, Subject, SubjectTotal } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { usePortraitPhone } from "@/lib/use-portrait-phone";
+import { CHANT_STEPS } from "@/components/tour/guide-steps";
+import { GuideButton, PageGuide } from "@/components/tour/guide-tour";
 import { ComboGuide, ComboIndicator, MeteorSign } from "./combo-indicator";
 import { PortraitTimer } from "./portrait-timer";
 import { ResultDialog, type StudyResult } from "./result-dialog";
@@ -118,6 +120,8 @@ export function TimerPanel({
   // 画面を閉じる前に詠唱していたなら、その続きから始める
   const [restored] = useState(() => restoreSession(subjects));
   const resumed = restored?.session;
+  // 案内を初めて出すのは、詠唱していない状態でこの画面を開いたときだけ
+  const [guideAuto] = useState(() => !resumed);
   const [mode, setMode] = useState<StudyMode>(resumed?.mode ?? "pomodoro");
   const [focusMin, setFocusMin] = useState<number>(resumed?.focusMin ?? initialFocusMin);
   const [breakMin, setBreakMin] = useState<number>(resumed?.breakMin ?? 5);
@@ -505,7 +509,7 @@ export function TimerPanel({
   }
 
   const modeToggle = (
-    <div className="grid grid-cols-2 gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm">
+    <div data-tour="chant-mode" className="grid grid-cols-2 gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-sm">
       {(
         [
           { key: "pomodoro", label: "律動の詠唱", icon: Hourglass },
@@ -531,7 +535,7 @@ export function TimerPanel({
   );
 
   const subjectSection = (
-    <div>
+    <div data-tour="chant-subject">
       <p className="mb-1.5 text-xs tracking-[0.2em] text-muted-foreground">属性（科目 <ArrowGlyph /> 詳細）</p>
       <SubjectPicker
         subjects={subjects}
@@ -556,7 +560,7 @@ export function TimerPanel({
 
   const durationRows = (
     <>
-      <div className="space-y-1.5">
+      <div data-tour="chant-length" className="space-y-1.5">
         {mode === "pomodoro" && (
           <OptionRow
             label="詠唱時間"
@@ -609,7 +613,7 @@ export function TimerPanel({
   );
 
   const areaBox = (
-    <div className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-2.5 text-xs tracking-wider">
+    <div data-tour="chant-area" className="space-y-1.5 rounded-xl border border-white/10 bg-white/[0.02] p-2.5 text-xs tracking-wider">
       <p className="flex items-center gap-1.5 text-muted-foreground">
         <MapPin className="size-3.5 text-aqua/80" strokeWidth={1.25} />
         滞在中 <span className="font-display text-[10px] text-starlight/80">{area.zenith ? "ASTRA ZENITH" : `AREA ${area.id}`}</span>
@@ -703,7 +707,7 @@ export function TimerPanel({
   // 魔法陣の中央に重ねる、状態・時刻・属性・操作
   const clockFace = (
     // 幅は魔法陣の枠いっぱいに取り、科目札の幅をその割合で決められるようにする
-    <div className="relative z-10 flex w-full flex-col items-center gap-2 text-center">
+    <div data-tour="chant-clock" className="relative z-10 flex w-full flex-col items-center gap-2 text-center">
       <p className="text-xs tracking-[0.35em] text-aqua/70">{statusLabel}</p>
       <p
         className="font-display text-5xl font-normal text-[#e8fbfd] text-glow-aqua short:text-4xl lg:text-7xl"
@@ -811,7 +815,7 @@ export function TimerPanel({
 
   // 魔法陣と探索の景色を切り替える札。詠唱の途中でも切り替えられる（時計には触れない）
   const viewToggle = (
-    <div className="flex shrink-0 gap-0.5 rounded-full border border-white/10 bg-white/[0.03] p-0.5 backdrop-blur" role="group" aria-label="詠唱の間に映す景色">
+    <div data-tour="chant-view" className="flex shrink-0 gap-0.5 rounded-full border border-white/10 bg-white/[0.03] p-0.5 backdrop-blur" role="group" aria-label="詠唱の間に映す景色">
       {(
         [
           { on: false, label: "魔法陣", icon: Orbit },
@@ -885,6 +889,8 @@ export function TimerPanel({
       </Dialog>
 
       {resultDialog}
+      {/* 初めて詠唱の間に入ったときの案内。続きから再開した詠唱の上には出さない */}
+      <PageGuide id="chant" steps={CHANT_STEPS} auto={guideAuto} />
     </>
   );
 
@@ -927,7 +933,10 @@ export function TimerPanel({
       {/* 中央: 魔法陣 + タイマー */}
       <section className="relative col-span-8 flex min-h-0 flex-col items-center justify-center">
         <BackToLibrary guard={locked} className="absolute top-0 left-0 z-20" />
-        <div className="absolute top-0 right-0 z-20">{viewToggle}</div>
+        <div className="absolute top-0 right-0 z-20 flex items-center gap-1.5">
+          {phase === "idle" && <GuideButton id="chant" />}
+          {viewToggle}
+        </div>
         {expedition ? (
           <div className="absolute inset-x-0 top-10 bottom-0">{expedition}</div>
         ) : (

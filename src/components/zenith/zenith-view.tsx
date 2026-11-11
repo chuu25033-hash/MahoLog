@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowDownToLine, Lock, Orbit, Wand2 } from "lucide-react";
 import { BackToLibrary } from "@/components/back-to-library";
+import { ZENITH_STEPS } from "@/components/tour/guide-steps";
+import { GuideButton, PageGuide } from "@/components/tour/guide-tour";
 import { EndingPanel } from "@/components/cycle/ascension-panels";
 import { CycleRings } from "@/components/cycle/cycle-rings";
 import { HiddenArt, ItemArt } from "@/components/item-art";
@@ -43,7 +45,8 @@ export function ZenithView({ totalMp: serverTotalMp, isDemo }: { totalMp: number
   return <Zenith data={data} totalMp={totalMp} />;
 }
 
-function Header() {
+/** guide: 塔が開いていれば、案内をもう一度開くボタンを添える */
+function Header({ guide = false }: { guide?: boolean }) {
   return (
     <header className="flex items-center gap-4">
       <BackToLibrary />
@@ -54,6 +57,7 @@ function Header() {
         </h1>
         <p className="text-xs tracking-wider text-muted-foreground [word-break:auto-phrase] short:hidden">{ZENITH_AREA.description}</p>
       </div>
+      {guide && <GuideButton id="zenith" className="ml-auto self-start" />}
     </header>
   );
 }
@@ -95,9 +99,9 @@ function Zenith({ data, totalMp }: { data: UserData; totalMp: number }) {
       {/* 昇った階層の分だけ濃くなる星天 */}
       <ZenithSky floor={floor} className="pointer-events-none fixed inset-0 -z-[5] overflow-hidden" />
       <div className="scroll-area scrollbar-none flex h-full flex-col gap-4 short:gap-2 p-3 animate-in fade-in duration-700 portrait:px-4 portrait:pb-8 lg:p-5">
-        <Header />
+        <Header guide />
         <div className="grid min-h-0 flex-1 grid-cols-12 gap-3 portrait:flex-none portrait:grid-cols-1 lg:gap-4">
-          <Card className="col-span-5 min-h-0 items-center gap-3 px-4 text-center portrait:col-span-1">
+          <Card data-tour="zenith-floor" className="col-span-5 min-h-0 items-center gap-3 px-4 text-center portrait:col-span-1">
             <p className="font-display text-[10px] tracking-[0.4em] text-starlight/70">CURRENT FLOOR</p>
             <TowerDiagram floor={floor} ratio={ratio} className="min-h-0 w-full max-w-56 flex-1 portrait:h-72 portrait:flex-none" />
             <p className="flex items-baseline gap-2 whitespace-nowrap">
@@ -133,7 +137,7 @@ function Zenith({ data, totalMp }: { data: UserData; totalMp: number }) {
           </Card>
 
           <section className="col-span-7 flex min-h-0 flex-col gap-3 portrait:col-span-1">
-            <Card size="sm" className="min-h-0 flex-1 gap-2 px-3">
+            <Card data-tour="zenith-milestones" size="sm" className="min-h-0 flex-1 gap-2 px-3">
               <h2 className="flex flex-col text-sm leading-tight tracking-[0.2em] whitespace-nowrap">
                 節目の階層
                 <span className="font-display text-[9px] tracking-[0.25em] text-starlight/60">MILESTONES</span>
@@ -153,6 +157,7 @@ function Zenith({ data, totalMp }: { data: UserData; totalMp: number }) {
           </section>
         </div>
       </div>
+      <PageGuide id="zenith" steps={ZENITH_STEPS} />
     </>
   );
 }
@@ -204,7 +209,7 @@ function CycleRite({ data, totalMp }: { data: UserData; totalMp: number }) {
   const cleared = isCycleCleared(data, totalMp);
   const progress = cycleMp(data, totalMp);
   return (
-    <Card size="sm" className="shrink-0 gap-2 px-3">
+    <Card data-tour="zenith-cycle" size="sm" className="shrink-0 gap-2 px-3">
       <div className="flex items-center gap-3">
         <div className="relative size-14 shrink-0">
           <CycleRings laps={data.cycle.count} className="absolute inset-[12%]" />

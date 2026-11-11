@@ -3,6 +3,8 @@
 import { useState, type CSSProperties } from "react";
 import { Check, Crown, Paintbrush, Sparkles } from "lucide-react";
 import { BackToLibrary } from "@/components/back-to-library";
+import { CODEX_STEPS } from "@/components/tour/guide-steps";
+import { GuideButton, PageGuide } from "@/components/tour/guide-tour";
 import { CraftPanel } from "@/components/codex/craft-panel";
 import { MemoriesPanel } from "@/components/codex/memories-panel";
 import { HiddenArt, ItemArt } from "@/components/item-art";
@@ -85,8 +87,9 @@ export function CollectionView() {
               流れ星や星天の導きで授かった遺物を解読し、古代文書を復元し、錬成陣で神話の遺物を生み出します
             </p>
           </div>
+          <GuideButton id="codex" className="ml-auto self-start" />
         </div>
-        <div className="w-52 shrink-0 portrait:w-full">
+        <div data-tour="codex-rate" className="w-52 shrink-0 portrait:w-full">
           <p className="flex items-baseline justify-between text-[11px] tracking-[0.2em] whitespace-nowrap text-muted-foreground">
             秘術解読率
             <span>
@@ -102,7 +105,7 @@ export function CollectionView() {
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
-        <div role="tablist" aria-label="分類" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs portrait:grid portrait:w-full portrait:grid-cols-4 portrait:rounded-2xl">
+        <div data-tour="codex-filter" role="tablist" aria-label="分類" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs portrait:grid portrait:w-full portrait:grid-cols-4 portrait:rounded-2xl">
           {FILTERS.map((f) => {
             const items = codex.filter((i) => f === "すべて" || i.type === f);
             const active = f === filter;
@@ -127,7 +130,7 @@ export function CollectionView() {
             );
           })}
         </div>
-        <div role="tablist" aria-label="古代文書と錬成" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs portrait:grid portrait:w-full portrait:grid-cols-2 portrait:rounded-2xl">
+        <div data-tour="codex-tabs" role="tablist" aria-label="古代文書と錬成" className="flex w-fit gap-1 rounded-full border border-white/10 bg-white/[0.03] p-1 text-xs portrait:grid portrait:w-full portrait:grid-cols-2 portrait:rounded-2xl">
           {(
             [
               { key: "星脈の記憶", count: `${restoredCount(data)}/${DOCUMENTS.length}` },
@@ -160,7 +163,7 @@ export function CollectionView() {
         const items = visible.filter((i) => i.rarity === rarity);
         if (items.length === 0) return null;
         return (
-          <section key={rarity} className="glass rounded-2xl p-3 lg:p-4">
+          <section key={rarity} data-tour="codex-items" className="glass rounded-2xl p-3 lg:p-4">
             <h2 className="mb-3 flex items-baseline gap-2 text-sm tracking-[0.2em] whitespace-nowrap">
               <span className={cn("font-display text-[11px]", rarity === "S" || rarity === "SS" ? "text-starlight text-glow-gold" : "text-starlight/80")}>RARE {rarity}</span>
               {RARITY_LABEL[rarity]}
@@ -182,6 +185,7 @@ export function CollectionView() {
       })}
 
       {selected && <DecipherDialog item={selected} data={data} onClose={() => setSelected(null)} />}
+      <PageGuide id="codex" steps={CODEX_STEPS} />
     </div>
   );
 }
