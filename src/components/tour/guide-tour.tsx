@@ -88,7 +88,7 @@ export function GuideButton({ id, className }: { id: GuideId; className?: string
       onClick={() => openGuide(id)}
       aria-label="この画面の案内"
       className={cn(
-        "flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-white/[0.03] py-1 pr-2.5 pl-2 text-[11px] tracking-[0.2em] whitespace-nowrap text-muted-foreground backdrop-blur transition-all duration-300 hover:border-starlight/40 hover:text-starlight",
+        "flex shrink-0 items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] py-1 pr-3.5 pl-2.5 max-[400px]:px-1.5 text-[11px] tracking-[0.2em] whitespace-nowrap text-muted-foreground backdrop-blur transition-all duration-300 hover:border-starlight/40 hover:text-starlight",
         className,
       )}
     >
