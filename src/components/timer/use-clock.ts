@@ -75,7 +75,7 @@ export function notifyFinish(chime = true, { alert = false } = {}) {
   try {
     navigator.vibrate?.(FINISH_VIBRATION);
   } catch {}
-  // alert: 音声を切っていても鳴らす（律動の詠唱の満了）
+  // alert: 音声を切っていても鳴らす（律動の詠唱の満了・静息の明け）
   if (alert) soundManager.playAlert("chantComplete");
   else soundManager.playSe("chantComplete");
 }

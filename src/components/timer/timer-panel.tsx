@@ -405,7 +405,7 @@ export function TimerPanel({
     if (phase !== "break" || !running) return;
     const id = setTimeout(() => {
       const { chime } = getUserData().settings;
-      notifyFinish(chime);
+      notifyFinish(chime, { alert: true });
       reset();
       setPhase("idle");
       const notice = restEndNotice(getUserData().combo);
