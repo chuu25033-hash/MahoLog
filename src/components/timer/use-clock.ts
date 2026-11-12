@@ -66,15 +66,9 @@ export function useClock(initial?: ClockSnapshot) {
   return { elapsedMs, running, snapshot: state, start, startAt, pause, reset, read };
 }
 
-/** 終わりを報せる振動。手に持っていなくても気づけるよう、長めに3度ふるわせる（振動に対応した Android の端末だけ） */
-const FINISH_VIBRATION = [500, 200, 500, 200, 800];
-
-/** 終了通知（魔力集束のチャイム + 振動）。設定で完了の報せを切っていれば鳴らさない */
+/** 終了通知（魔力集束のチャイム）。設定で完了の報せを切っていれば鳴らさない */
 export function notifyFinish(chime = true, { alert = false } = {}) {
   if (!chime) return;
-  try {
-    navigator.vibrate?.(FINISH_VIBRATION);
-  } catch {}
   // alert: 音声を切っていても鳴らす（律動の詠唱の満了・静息の明け）
   if (alert) soundManager.playAlert("chantComplete");
   else soundManager.playSe("chantComplete");
@@ -92,12 +86,12 @@ export function requestRestNoticePermission() {
 
 /**
  * 端末の通知を出す。詠唱の間を見ていないとき（裏に回っているとき）だけ出す。
- * Android の Chrome はページから直接通知を出せないので service worker から出し、通知と一緒に振動させる
+ * Android の Chrome はページから直接通知を出せないので service worker から出す
  */
 function showSystemNotification(title: string, body: string, tag: string) {
   try {
     if (typeof Notification === "undefined" || Notification.permission !== "granted" || !document.hidden) return;
-    const options = { body, tag, icon: "/icon.svg", vibrate: FINISH_VIBRATION, requireInteraction: false } as NotificationOptions;
+    const options = { body, tag, icon: "/icon.svg", requireInteraction: false } as NotificationOptions;
     const direct = () => {
       try {
         new Notification(title, options);

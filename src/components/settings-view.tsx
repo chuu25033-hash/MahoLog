@@ -188,7 +188,7 @@ export function SettingsView({
               <ToggleRow
                 icon={Bell}
                 label="詠唱完了の報せ"
-                description="詠唱や静息を終えたとき、静かなベルの音と振動で知らせます"
+                description="詠唱や静息を終えたとき、静かなベルの音で知らせます"
                 checked={settings.chime}
                 onChange={(chime) => userActions.updateSettings({ chime })}
               />

@@ -117,7 +117,7 @@ export type UserSettings = {
   liteMode: boolean;
   /** 詠唱の間に、魔法陣の代わりに探索の景色（魔法使いの少女が滞在中のエリアを歩む）を映す */
   expeditionMode: boolean;
-  /** 詠唱完了時のベル音・振動 */
+  /** 詠唱完了時のベル音 */
   chime: boolean;
   /** 音声全般（環境音・効果音）の ON / OFF */
   sound: boolean;
