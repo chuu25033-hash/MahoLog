@@ -236,7 +236,7 @@ export function SettingsView({
               <ToggleRow
                 icon={Volume2}
                 label="音声"
-                description="すべての環境音と効果音を鳴らします。切ると完了の報せも振動だけになります"
+                description="すべての環境音と効果音を鳴らします。切っても、律動の詠唱の終わりだけはベルで知らせます"
                 checked={settings.sound}
                 onChange={(sound) => userActions.updateSettings({ sound })}
               />

@@ -17,6 +17,8 @@ const DUCK_CUTOFF = 3600;
 const AMBIENCE_LEVEL = 0.45;
 /** 結果の演出（魔力の蓄積・吸入・記憶の解放）の音量。環境音を覆わないよう、効果音の音量のこの割合で鳴らす */
 const CUE_LEVEL = 0.5;
+/** 音声を切っていても鳴らす報せ（律動の詠唱の満了）の音量。音量の設定に左右されず、この大きさで鳴らす */
+const ALERT_LEVEL = 0.6;
 /** 他の効果音を鳴らした直後のタップ音は重ねない */
 const TAP_SUPPRESS_MS = 120;
 /** タップ音を鳴らす要素 */
@@ -31,6 +33,8 @@ type Bus = {
   se: GainNode;
   /** 演出の効果音を控えめに鳴らす経路（cue → se） */
   cue: GainNode;
+  /** 音声の ON / OFF・音量に関わらず鳴らす報せの経路（alert → リミッター） */
+  alert: GainNode;
   duck: GainNode;
   duckFilter: BiquadFilterNode;
 };
@@ -142,6 +146,20 @@ class SoundManager {
     if (bus) this.play(key, bus.se);
   }
 
+  /**
+   * 報せの効果音: 音声を切っていても・効果音の音量が 0 でも鳴らす（律動の詠唱の満了を聞き逃さないように）。
+   * 音声が有効なら、ふだんの効果音と同じ経路で鳴らす
+   */
+  playAlert(key: SeKey) {
+    if (this.enabled && this.volumes.se > 0) return this.playSe(key);
+    const bus = this.ensureBus();
+    if (!bus) return;
+    this.lastCueAt = performance.now();
+    const run = () => this.playBuffer(key, bus, bus.alert);
+    if (bus.ctx.state === "running") run();
+    else void bus.ctx.resume().then(run, () => undefined);
+  }
+
   /** 結果: 授かった魔力が数え上がる */
   playMannaCharge() {
     this.playCue("mannaCharge");
@@ -175,6 +193,11 @@ class SoundManager {
     if (!this.enabled || this.volumes.se <= 0) return;
     const bus = this.bus;
     if (!bus) return;
+    this.playBuffer(key, bus, out);
+  }
+
+  /** 登録した音声ファイルで鳴らし、無ければ生成音で代える */
+  private playBuffer(key: SeKey, bus: Bus, out: AudioNode) {
     const file = SOUND_FILES.se[key];
     if (!file) {
       synthSe(bus.ctx, key, out);
@@ -282,6 +305,9 @@ class SoundManager {
       const cue = ctx.createGain();
       cue.gain.value = CUE_LEVEL;
       cue.connect(se);
+      const alert = ctx.createGain();
+      alert.gain.value = ALERT_LEVEL;
+      alert.connect(limiter);
       const duck = ctx.createGain();
       const duckFilter = ctx.createBiquadFilter();
       duckFilter.type = "lowpass";
@@ -302,7 +328,7 @@ class SoundManager {
         } else void this.keepAlive();
       });
       if (ctx.state === "running") this.unlocked = true;
-      this.bus = { ctx, master, bgm, se, cue, duck, duckFilter };
+      this.bus = { ctx, master, bgm, se, cue, alert, duck, duckFilter };
       this.applyVolumes(true);
       this.preloadSe();
       return this.bus;

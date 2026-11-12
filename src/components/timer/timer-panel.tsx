@@ -390,7 +390,7 @@ export function TimerPanel({
       // 裏に回っていたり画面を閉じていたりして遅れて気づいても、満了した時刻で区切る
       const endedAt = Date.now() - Math.max(0, read() - targetMs);
       const { chime } = getUserData().settings;
-      notifyFinish(chime);
+      notifyFinish(chime, { alert: true });
       showChantEndNotification(chime);
       reset();
       // 詠唱を刻み、静息に入るのを待つ（静息は「静息に入る」で始める）

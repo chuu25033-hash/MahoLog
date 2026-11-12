@@ -70,12 +70,14 @@ export function useClock(initial?: ClockSnapshot) {
 const FINISH_VIBRATION = [500, 200, 500, 200, 800];
 
 /** 終了通知（魔力集束のチャイム + 振動）。設定で完了の報せを切っていれば鳴らさない */
-export function notifyFinish(chime = true) {
+export function notifyFinish(chime = true, { alert = false } = {}) {
   if (!chime) return;
   try {
     navigator.vibrate?.(FINISH_VIBRATION);
   } catch {}
-  soundManager.playSe("chantComplete");
+  // alert: 音声を切っていても鳴らす（律動の詠唱の満了）
+  if (alert) soundManager.playAlert("chantComplete");
+  else soundManager.playSe("chantComplete");
 }
 
 /** 端末の通知を出してよいか、詠唱を始めるとき（ユーザーの操作の中）に一度だけ尋ねる。通知を出す service worker もここで置く */
