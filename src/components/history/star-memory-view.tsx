@@ -1,20 +1,23 @@
 "use client";
 
 import { useId, useMemo, useState, type CSSProperties } from "react";
-import { ChevronLeft, ChevronRight, Moon, Sparkles, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Moon, PenLine, Sparkles, Star } from "lucide-react";
 import { BackToLibrary } from "@/components/back-to-library";
+import { ChantSubjectDialog } from "@/components/chant-subject-dialog";
 import { TRACES_STEPS } from "@/components/tour/guide-steps";
 import { GuideButton, PageGuide } from "@/components/tour/guide-tour";
 import { ItemArt } from "@/components/item-art";
 import { PageLoading } from "@/components/page-loading";
 import { demoSubjects } from "@/lib/demo";
 import { formatMinutes } from "@/lib/game";
-import { startOfJstMonth } from "@/lib/date";
+import { startOfJstDay, startOfJstMonth } from "@/lib/date";
 import { addMonths, firstChantMonth, observedNightsFrom, weekSizes, type ObservedNight } from "@/lib/star-memory";
 import { withCustomNames } from "@/lib/subjects";
 import type { Subject } from "@/lib/types";
-import { totalChantMinutes, useStoredUserData } from "@/lib/user-store";
+import { editableChantIds, totalChantMinutes, useStoredUserData, type ChantRecord } from "@/lib/user-store";
 import { cn } from "@/lib/utils";
+
+const timeLabel = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit" });
 
 /** 拡大縮小しても 1px を保つ光の線 */
 const hairline = { vectorEffect: "non-scaling-stroke", fill: "none", strokeWidth: 1 } as const;
@@ -213,6 +216,11 @@ export function StarMemoryView() {
       month={month}
       nights={nights}
       allMinutes={totalChantMinutes(stored)}
+      editable={(() => {
+        // 直近の詠唱は、ここからも科目を付け替えられる
+        const ids = editableChantIds(stored);
+        return history.filter((r) => ids.has(r.id));
+      })()}
       subjects={withCustomNames(demoSubjects, stored.userProfile.customSubjectNames)}
       onPrev={month > first ? () => setMonth(addMonths(month, -1)) : undefined}
       onNext={month < thisMonth ? () => setMonth(addMonths(month, 1)) : undefined}
@@ -244,6 +252,7 @@ function StarMemory({
   month,
   nights,
   allMinutes,
+  editable,
   subjects,
   onPrev,
   onNext,
@@ -251,6 +260,8 @@ function StarMemory({
   month: Date;
   nights: ObservedNight[];
   allMinutes: number;
+  /** 科目を付け替えられる直近の詠唱 */
+  editable: ChantRecord[];
   /** カスタム科目は設定で付けた名前で表す */
   subjects: Subject[];
   onPrev?: () => void;
@@ -258,7 +269,10 @@ function StarMemory({
 }) {
   const sizes = weekSizes(month);
   const observed = nights.filter((n) => n.minutes > 0);
-  const [selected, setSelected] = useState<ObservedNight>(observed.at(-1) ?? nights.find((n) => n.today) ?? nights[0]);
+  // 選んだ夜は日付で覚える。科目を付け替えると夜を組み立て直すので、夜そのものを持つと古いままになる
+  const [selectedAt, setSelectedAt] = useState(() => (observed.at(-1) ?? nights.find((n) => n.today) ?? nights[0]).date.getTime());
+  const selected = nights.find((n) => n.date.getTime() === selectedAt) ?? nights[0];
+  const nightEditable = editable.filter((r) => startOfJstDay(new Date(r.date)).getTime() === selected.date.getTime());
 
   const completed = sizes.map((size, w) => nights.filter((n) => n.week === w && n.minutes > 0).length === size);
   const totalMinutes = observed.reduce((acc, n) => acc + n.minutes, 0);
@@ -307,12 +321,12 @@ function StarMemory({
             className="pointer-events-none absolute top-1/2 left-1/2 size-[min(100cqw,100cqh)] -translate-1/2 rounded-full"
             style={{ background: "radial-gradient(closest-side, rgba(226,201,116,0.08), rgba(127,232,220,0.03) 70%, transparent)" }}
           />
-          <CelestialChart sizes={sizes} nights={nights} completed={completed} selected={selected} onSelect={setSelected} />
+          <CelestialChart sizes={sizes} nights={nights} completed={completed} selected={selected} onSelect={(n) => setSelectedAt(n.date.getTime())} />
         </section>
 
         <aside className="flex min-h-0 scroll-area scrollbar-none flex-col">
           <div className="my-auto flex flex-col gap-3">
-            <NightDetail night={selected} subjects={subjects} />
+            <NightDetail night={selected} subjects={subjects} editable={nightEditable} />
             <ConstellationList month={month} sizes={sizes} nights={nights} completed={completed} />
           </div>
         </aside>
@@ -624,7 +638,9 @@ function CelestialChart({
   );
 }
 
-function NightDetail({ night, subjects }: { night: ObservedNight; subjects: Subject[] }) {
+function NightDetail({ night, subjects, editable }: { night: ObservedNight; subjects: Subject[]; editable: ChantRecord[] }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editing = editable.find((r) => r.id === editingId);
   const totals = new Map<string, number>();
   night.sessions.forEach((s) => totals.set(s.subjectId, (totals.get(s.subjectId) ?? 0) + s.minutes));
   const breakdown = [...totals.entries()].sort((a, b) => b[1] - a[1]);
@@ -699,6 +715,39 @@ function NightDetail({ night, subjects }: { night: ObservedNight; subjects: Subj
               })}
             </ul>
           </section>
+
+          {editable.length > 0 && (
+            <section>
+              <h3 className="mb-1.5 text-xs tracking-[0.2em] whitespace-nowrap text-muted-foreground">科目の付け替え</h3>
+              <ul className="flex flex-col text-xs">
+                {[...editable]
+                  .sort((a, b) => a.date.localeCompare(b.date))
+                  .map((r) => {
+                    const subject = subjects.find((s) => s.id === r.subjectId);
+                    return (
+                      <li key={r.id} className="border-b border-white/[0.06] last:border-0">
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(r.id)}
+                          aria-label={`${timeLabel.format(new Date(r.date))}の詠唱の科目を付け替える`}
+                          className="group flex w-full items-center gap-2 py-1.5 text-left transition-colors duration-300 hover:text-starlight"
+                        >
+                          <span className="font-display text-[11px] whitespace-nowrap text-muted-foreground">{timeLabel.format(new Date(r.date))}</span>
+                          <span className="size-1.5 shrink-0 rounded-full" style={{ background: subject?.color, boxShadow: `0 0 6px ${subject?.color}` }} />
+                          <span className="min-w-0 tracking-wider">
+                            {subject?.name ?? "—"}
+                            {r.subSubject && <span className="text-muted-foreground"> · {r.subSubject}</span>}
+                          </span>
+                          <PenLine className="size-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-starlight/80" strokeWidth={1.25} aria-hidden />
+                          <span className="ml-auto whitespace-nowrap text-muted-foreground">{formatMinutes(r.minutes)}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+              </ul>
+              {editing && <ChantSubjectDialog record={editing} subjects={subjects} onClose={() => setEditingId(null)} />}
+            </section>
+          )}
 
           <section>
             <h3 className="mb-1.5 text-xs tracking-[0.2em] whitespace-nowrap text-muted-foreground">流れ星が遺した品</h3>
