@@ -235,7 +235,9 @@ export function TimerPanel({
           t.subjectId === subject.id && (!t.subSubject || t.subSubject === subSubject) ? { ...t, minutes: t.minutes + res.savedMinutes } : t,
         );
         // 獲得MP = 勉強時間 × エリアの属性ブースト × 秘宝の加護 × 触媒 × 周天の刻印
-        // TODO: Supabase 接続時はボーナス分の MP も DB に保存する（現状はローカル表示のみ）
+        // 端末の記録で動くとき（本番）は、補正込みの MP を端末の記録に刻み、クラウド同期で預ける。
+        // メール認証モード（NEXT_PUBLIC_AUTH_MODE=email）だけは DB に勉強時間の分数しか足さず、補正分は画面の表示のみ。
+        // 所持品や触媒が DB に無くサーバーで補正を確かめられないため、このモードを使う予定ができるまで直さない
         // 加護は手元にある秘宝・神話遺物・復元した文書だけが授ける（錬成に捧げた秘宝は外れる）
         const owned = (id: string) => hasItem(getUserData(), id);
         const areaBoost = areaMultiplier(area, ruleNameOf(subject));
