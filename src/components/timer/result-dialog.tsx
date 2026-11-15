@@ -183,7 +183,7 @@ export function ResultDialog({ result, subjects, onClose }: { result: StudyResul
 
   const beforeMp = result.beforeMp;
   const afterMp = result.afterMp + claimedMp;
-  const { beforeLevel, afterLevel, unlocked, steps: growth } = growthOf(beforeMp, afterMp, result.cycleStartMp);
+  const { beforeLevel, afterLevel, unlocked, steps: growth } = growthOf(beforeMp, afterMp, result.cycleStartMp, claimedMp);
   const ascended = result.climb !== null && result.climb.afterFloor > result.climb.beforeFloor;
 
   // 塔の階層は領域の解放の後、周天の終幕の前に挟む

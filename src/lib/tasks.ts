@@ -30,9 +30,11 @@ export const COUNTED_CHANT_MIN_MINUTES = 15;
 /** 多領域の調律で調律する領域の数の上限。科目が多いほど重くならないよう、これより多い科目はどれで調律してもよい */
 export const ATTUNE_DOMAIN_LIMIT = 5;
 
+// 魔力の報酬は、短い詠唱で試練だけを満たしても詠唱より大きくならない量にとどめる（試練の魔力はエリアの解放にも数えない）。
+// 毎日の訪れは開くだけで受け取れる励み、週の試練は週を通して積み重ねた人への報酬なので、日課の集束より厚い
 export const TASKS: TaskDef[] = [
-  { id: "d-visit", scope: "daily", title: "毎日の訪れ", description: "星天の導きを受け取り、今宵の探求に備える", unit: "回", reward: { kind: "mp", mp: 20 } },
-  { id: "d-focus", scope: "daily", title: "秘術の集束", description: "合計25分以上の詠唱を完了する", unit: "分", reward: { kind: "mp", mp: 50 } },
+  { id: "d-visit", scope: "daily", title: "毎日の訪れ", description: "星天の導きを受け取り、今宵の探求に備える", unit: "回", reward: { kind: "mp", mp: 15 } },
+  { id: "d-focus", scope: "daily", title: "秘術の集束", description: "合計25分以上の詠唱を完了する", unit: "分", reward: { kind: "mp", mp: 10 } },
   {
     id: "d-domain",
     scope: "daily",
@@ -41,7 +43,7 @@ export const TASKS: TaskDef[] = [
     unit: "回",
     reward: { kind: "catalyst", rare: false },
   },
-  { id: "w-total", scope: "weekly", title: "週間の積鑽", description: "週間合計120分以上の詠唱を達成する", unit: "分", reward: { kind: "mp", mp: 200 } },
+  { id: "w-total", scope: "weekly", title: "週間の積鑽", description: "週間合計120分以上の詠唱を達成する", unit: "分", reward: { kind: "mp", mp: 100 } },
   {
     id: "w-all",
     scope: "weekly",
@@ -50,7 +52,7 @@ export const TASKS: TaskDef[] = [
     unit: "領域",
     reward: { kind: "catalyst", rare: true },
   },
-  { id: "w-days", scope: "weekly", title: "継続の印", description: `週のうち4日以上、1日合計${COUNTED_CHANT_MIN_MINUTES}分以上の詠唱を行う`, unit: "日", reward: { kind: "mp", mp: 150 } },
+  { id: "w-days", scope: "weekly", title: "継続の印", description: `週のうち4日以上、1日合計${COUNTED_CHANT_MIN_MINUTES}分以上の詠唱を行う`, unit: "日", reward: { kind: "mp", mp: 60 } },
 ];
 
 export type TaskContext = {

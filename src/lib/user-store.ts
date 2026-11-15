@@ -34,6 +34,7 @@ import { mockObservedNights } from "./star-memory";
 import { activeSubjectsOf, parseAxisKey } from "./subjects";
 import { comboOnFinish, comboOnRest, comboOnStart, initialCombo, type ComboState } from "./combo";
 import { ACHIEVEMENT_TITLES, EARLY_ACCESS_OPEN, checkUnlockedTitles, findTitle, type Tally, type Title, type UserStats, type UserTitleState } from "./titles";
+import { isEmailAuthMode } from "./supabase/config";
 import { TASKS, drawCatalyst, measureTask, periodKey, type TaskBoard, type TaskScope } from "./tasks";
 import { generateWorldlineCode } from "./worldlines";
 import type { Profile, StudyLog, StudyMode, Subject } from "./types";
@@ -143,7 +144,10 @@ export type UserData = {
   tasks: Record<TaskScope, TaskBoard>;
   /** 結びし世界線（デモモード用。Supabase 接続時は DB に持つ）: 自分の世界線IDと、結んだ相手の世界線ID */
   worldlines: { code: string; bonds: { code: string; boundAt: string }[] };
-  /** 周天: 何周目か と、その周を始めた時点の累積MP（エリアの解放はここからの MP で測る） */
+  /**
+   * 周天: 何周目か と、その周を始めた時点の累積MP（エリアの解放はここからの MP で測る）。
+   * startMp には、この周で星の試練から受け取った魔力も足していく（試練の魔力でエリアが開かないように）
+   */
   cycle: { count: number; startMp: number };
   /** 星天の塔: 塔で詠唱した累積時間（分） */
   zenith: { minutes: number };
@@ -262,7 +266,7 @@ function withProgress(data: UserData, totalMp: number): UserData {
   };
 }
 
-/** この周天での累積MP（エリア・ステージの解放に使う） */
+/** この周天での累積MP（エリア・ステージの解放に使う）。星の試練で受け取った魔力は含まない */
 export function cycleMp(data: UserData, totalMp: number) {
   return Math.max(0, totalMp - data.cycle.startMp);
 }
@@ -818,7 +822,11 @@ export const userActions = {
         [def.scope]: { ...tasks[def.scope], items: { ...tasks[def.scope].items, [taskId]: { ...task, isClaimed: true } } },
       };
       const inventory = claim.item ? { ...s.inventory, [claim.item.id]: (s.inventory[claim.item.id] ?? 0) + 1 } : s.inventory;
-      return withProgress({ ...s, tasks: claimed, inventory }, s.userProfile.totalMp + claim.mp);
+      // 試練の魔力は探求度・階級には数えるが、エリアの解放（この周天の MP）には数えない。
+      // 周の始まりの MP を同じだけ進めて、この周天での MP が変わらないようにする。
+      // メール認証モードは累積MP を DB の勉強時間で測り、試練の魔力がもともと入らないので進めない
+      const cycle = isEmailAuthMode ? s.cycle : { ...s.cycle, startMp: s.cycle.startMp + claim.mp };
+      return withProgress({ ...s, tasks: claimed, inventory, cycle }, s.userProfile.totalMp + claim.mp);
     });
     return claim;
   },

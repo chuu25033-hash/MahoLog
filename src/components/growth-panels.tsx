@@ -17,13 +17,16 @@ import { cn } from "@/lib/utils";
 
 export type GrowthStep = "level" | "rank" | "unlock" | "ending";
 
-/** MP が beforeMp から afterMp へ増えたときに起きた成長。エリアの解放と周天の制覇は、この周天での MP（cycleStartMp から）で測る */
-export function growthOf(beforeMp: number, afterMp: number, cycleStartMp: number) {
+/**
+ * MP が beforeMp から afterMp へ増えたときに起きた成長。エリアの解放と周天の制覇は、この周天での MP（cycleStartMp から）で測る。
+ * trialMp は増えた MP のうち星の試練で受け取った分で、探求度・階級には数えるが、エリアの解放には数えない
+ */
+export function growthOf(beforeMp: number, afterMp: number, cycleStartMp: number, trialMp = 0) {
   const beforeLevel = calcLevel(beforeMp);
   const afterLevel = calcLevel(afterMp);
   const rankUp = rankOf(afterLevel).numeral !== rankOf(beforeLevel).numeral;
   const beforeCycleMp = beforeMp - cycleStartMp;
-  const afterCycleMp = afterMp - cycleStartMp;
+  const afterCycleMp = afterMp - cycleStartMp - trialMp;
   const unlocked = AREAS.filter((a) => isAreaUnlocked(a, afterCycleMp) && !isAreaUnlocked(a, beforeCycleMp));
   const cleared = beforeCycleMp < CLEAR_MP && afterCycleMp >= CLEAR_MP;
   const steps: GrowthStep[] = [
@@ -66,9 +69,21 @@ export function StepDots({ count, index }: { count: number; index: number }) {
  * 星の試練などで詠唱の外から MP を得て成長したとき、結果ダイアログと同じパネルで告げる。
  * 起きた成長（探求度・階級・領域・周天の制覇）だけを「次へ」で1枚ずつ見せる
  */
-export function GrowthDialog({ beforeMp, afterMp, cycleStartMp, onClose }: { beforeMp: number; afterMp: number; cycleStartMp: number; onClose: () => void }) {
+export function GrowthDialog({
+  beforeMp,
+  afterMp,
+  cycleStartMp,
+  trialMp,
+  onClose,
+}: {
+  beforeMp: number;
+  afterMp: number;
+  cycleStartMp: number;
+  trialMp: number;
+  onClose: () => void;
+}) {
   // 開いた時点の成長を固定する（ending から次の周天へ進むと MP の基準が変わるため）
-  const [growth] = useState(() => growthOf(beforeMp, afterMp, cycleStartMp));
+  const [growth] = useState(() => growthOf(beforeMp, afterMp, cycleStartMp, trialMp));
   const [index, setIndex] = useState(0);
   const { steps } = growth;
   const step = steps[Math.min(index, steps.length - 1)];

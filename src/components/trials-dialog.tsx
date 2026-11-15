@@ -47,7 +47,7 @@ export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClo
   }, [subjects]);
   const [scope, setScope] = useState<TaskScope>("daily");
   const [burst, setBurst] = useState<{ taskId: string; claim: TaskClaim; key: number } | null>(null);
-  const [growth, setGrowth] = useState<{ beforeMp: number; afterMp: number; cycleStartMp: number } | null>(null);
+  const [growth, setGrowth] = useState<{ beforeMp: number; afterMp: number; cycleStartMp: number; trialMp: number } | null>(null);
   const growthTimer = useRef<number | undefined>(undefined);
   const totalMp = data.userProfile.totalMp;
   const rank = rankOf(calcLevel(totalMp));
@@ -59,11 +59,12 @@ export function TrialsDialog({ subjects, onClose }: { subjects: Subject[]; onClo
     if (!result) return;
     soundManager.playSe("reward");
     setBurst((prev) => ({ taskId: def.id, claim: result, key: (prev?.key ?? 0) + 1 }));
-    // 受け取った MP で探求度・階級・領域が進んだら、報酬の光が収まってから結果ダイアログと同じパネルで告げる
+    // 受け取った MP で探求度・階級が進んだら、報酬の光が収まってから結果ダイアログと同じパネルで告げる（試練の魔力でエリアは開かない）
     const afterMp = beforeMp + result.mp;
-    if (growthOf(beforeMp, afterMp, data.cycle.startMp).steps.length > 0) {
+    const next = { beforeMp, afterMp, cycleStartMp: data.cycle.startMp, trialMp: result.mp };
+    if (growthOf(next.beforeMp, next.afterMp, next.cycleStartMp, next.trialMp).steps.length > 0) {
       window.clearTimeout(growthTimer.current);
-      growthTimer.current = window.setTimeout(() => setGrowth({ beforeMp, afterMp, cycleStartMp: data.cycle.startMp }), GROWTH_DELAY_MS);
+      growthTimer.current = window.setTimeout(() => setGrowth(next), GROWTH_DELAY_MS);
     }
   }
 

@@ -175,7 +175,9 @@ export function TimerPanel({
   const checkpointRef = useRef(0);
 
   const data = useUserData();
-  const area = resolveArea(data.userProfile.currentStageId, cycleMp(data, totalMp), isZenithOpen(data, totalMp));
+  // 端末の記録で動くときは、保存データの累積MP を使う（結果ダイアログで受け取った試練の魔力も入り、周の始まりの MP とずれない）
+  const currentMp = isDemo ? data.userProfile.totalMp : totalMp;
+  const area = resolveArea(data.userProfile.currentStageId, cycleMp(data, currentMp), isZenithOpen(data, currentMp));
   const skin = activeSkin(data);
   const catalyst = armedCatalyst(data);
   const portrait = usePortraitPhone();
@@ -218,7 +220,7 @@ export function TimerPanel({
               weekTotals.find((t) => t.subjectId === s.id) ?? { key: s.id, subjectId: s.id, subSubject: null, name: s.name, color: s.color, minutes: 0 },
           );
       startSaving(async () => {
-        const res = await saveStudyLog({ subjectId: subject.id, minutes, mode, demoTotalMp: totalMp });
+        const res = await saveStudyLog({ subjectId: subject.id, minutes, mode, demoTotalMp: currentMp });
         if (!res.ok) {
           setMessage(res.error);
           return;
@@ -329,7 +331,7 @@ export function TimerPanel({
         });
       });
     },
-    [area, axes, breakMin, isDemo, mode, subject, subSubject, subjects, totalMp, weekTotals],
+    [area, axes, breakMin, currentMp, isDemo, mode, subject, subSubject, subjects, weekTotals],
   );
 
   /** 「静息に入る」: 押した時から、決めた長さの静息を数え下ろす */
@@ -688,7 +690,7 @@ export function TimerPanel({
       <p className="flex items-baseline justify-between gap-2">
         累積魔力
         <span className="font-display text-sm text-starlight text-glow-gold">
-          {totalMp.toLocaleString()} <span className="text-[10px]">MP</span>
+          {currentMp.toLocaleString()} <span className="text-[10px]">MP</span>
         </span>
       </p>
     </div>
@@ -863,7 +865,7 @@ export function TimerPanel({
             <MpBar ratio={intensity} />
           </div>
           <span className="font-display text-sm whitespace-nowrap text-starlight text-glow-gold">
-            {totalMp.toLocaleString()} <span className="text-[10px]">MP</span>
+            {currentMp.toLocaleString()} <span className="text-[10px]">MP</span>
           </span>
         </div>
       </div>
