@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BookMarked, CalendarDays, Crown, Moon, Orbit, Settings, Sparkles, Sun, Swords, Wand2 } from "lucide-react";
+import { BookMarked, CalendarDays, Crown, Moon, Orbit, PenLine, Settings, Sparkles, Sun, Swords, Wand2 } from "lucide-react";
 import { AreaAmbience } from "@/components/area-ambience";
 import { ExpeditionStage } from "@/components/expedition/expedition-stage";
 import { resolveArea } from "@/lib/areas";
 import { expeditionSceneOf } from "@/lib/expedition";
+import { ChantSubjectDialog } from "@/components/chant-subject-dialog";
 import { BoundWorldlinesDialog } from "@/components/bound-worldlines-dialog";
 import { WORLDLINES_OPEN } from "@/lib/worldline-store";
 import { CycleRings } from "@/components/cycle/cycle-rings";
@@ -32,7 +33,7 @@ import { sessionElapsedMs, useChantSession, type ChantSession } from "@/lib/chan
 import { radarAxesOf, withCustomNames } from "@/lib/subjects";
 import { usePortraitPhone } from "@/lib/use-portrait-phone";
 import type { Subject } from "@/lib/types";
-import { cycleMp, equippedTitle, isZenithOpen, localProfile, localStudyLogs, useStoredUserData, userActions, useUserData } from "@/lib/user-store";
+import { cycleMp, editableChantIds, equippedTitle, isZenithOpen, localProfile, localStudyLogs, useStoredUserData, userActions, useUserData } from "@/lib/user-store";
 import { GLYPHS, type Glyph } from "@/lib/glyphs";
 import { cn } from "@/lib/utils";
 
@@ -64,7 +65,7 @@ export function DashboardView({ summary, subjects: baseSubjects, isDemo }: { sum
       };
   return (
     <>
-      <Dashboard {...base} radar={radar} subjects={subjects} />
+      <Dashboard {...base} radar={radar} subjects={subjects} editable={isDemo} />
       {/* 最初の詠唱を終えて書庫に戻ったとき、復元キーをまだ控えていなければ保存を促す。
           守る記録ができる前に鍵の話をして、覗きに来た人を引き留めないよう、初めての来訪では促さない */}
       <KeyBackupReminder />
@@ -74,8 +75,12 @@ export function DashboardView({ summary, subjects: baseSubjects, isDemo }: { sum
   );
 }
 
-function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSummary & { subjects: Subject[] }) {
+function Dashboard({ profile, totals, radar, recentLogs, subjects, editable }: DashboardSummary & { subjects: Subject[]; editable: boolean }) {
   const data = useUserData();
+  // 端末の詠唱履歴で動くときは、直近の詠唱の科目を付け替えられる
+  const editableIds = editable ? editableChantIds(data) : new Set<string>();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editing = editingId ? data.chantHistory.find((r) => r.id === editingId) : undefined;
   const level = levelProgress(profile.total_study_time);
   const rank = rankOf(level.level);
   const title = equippedTitle(data);
@@ -225,16 +230,31 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
       ) : (
         <ul className="flex flex-col text-xs">
           {recentLogs.slice(0, limit).map((log) => (
-            <li key={log.id} className="flex items-center gap-2 border-b border-white/[0.06] py-1.5 last:border-0">
-              <span
-                className="size-1.5 shrink-0 rounded-full"
-                style={{ background: log.subject?.color, boxShadow: `0 0 6px ${log.subject?.color}` }}
-              />
-              <span className="min-w-0 tracking-wider">{log.subject?.name ?? "—"}</span>
-              <span className="hidden text-[11px] whitespace-nowrap text-muted-foreground lg:inline">{log.manual ? "書き留め" : MODE_LABEL[log.mode]}</span>
-              <span className="ml-auto font-display whitespace-nowrap text-aqua">
-                +{log.duration_minutes} <span className="text-[10px]">MP</span>
-              </span>
+            <li key={log.id} className="border-b border-white/[0.06] last:border-0">
+              {(() => {
+                const canEdit = editableIds.has(log.id);
+                const Row = canEdit ? "button" : "div";
+                return (
+                  <Row
+                    {...(canEdit && { type: "button" as const, onClick: () => setEditingId(log.id), "aria-label": `${log.subject?.name ?? "この詠唱"}の科目を付け替える` })}
+                    className={cn(
+                      "flex w-full items-center gap-2 py-1.5 text-left",
+                      canEdit && "group transition-colors duration-300 hover:text-starlight",
+                    )}
+                  >
+                    <span
+                      className="size-1.5 shrink-0 rounded-full"
+                      style={{ background: log.subject?.color, boxShadow: `0 0 6px ${log.subject?.color}` }}
+                    />
+                    <span className="min-w-0 tracking-wider">{log.subject?.name ?? "—"}</span>
+                    {canEdit && <PenLine className="size-3 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-starlight/80" strokeWidth={1.25} aria-hidden />}
+                    <span className="hidden text-[11px] whitespace-nowrap text-muted-foreground lg:inline">{log.manual ? "書き留め" : MODE_LABEL[log.mode]}</span>
+                    <span className="ml-auto font-display whitespace-nowrap text-aqua">
+                      +{log.duration_minutes} <span className="text-[10px]">MP</span>
+                    </span>
+                  </Row>
+                );
+              })()}
             </li>
           ))}
         </ul>
@@ -242,6 +262,7 @@ function Dashboard({ profile, totals, radar, recentLogs, subjects }: DashboardSu
       <Link href="/history" className="-mt-1 self-end text-[10px] tracking-[0.2em] text-muted-foreground transition-colors hover:text-starlight">
         魔導の軌跡で見る <ArrowGlyph />
       </Link>
+      {editing && <ChantSubjectDialog record={editing} subjects={subjects} onClose={() => setEditingId(null)} />}
     </Card>
   );
 

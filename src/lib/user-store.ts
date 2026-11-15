@@ -547,6 +547,15 @@ export function localStudyLogs(data: UserData): StudyLog[] {
   }));
 }
 
+/** 科目を付け替えられる、新しい方からの詠唱の数。選び忘れに気づくのはたいてい直後なので、試練を付け替えで埋められないよう数回に絞る */
+export const EDITABLE_CHANT_COUNT = 3;
+
+/** 科目を付け替えられる詠唱（新しい方から EDITABLE_CHANT_COUNT 回）の ID */
+export function editableChantIds(data: UserData): Set<string> {
+  const recent = [...data.chantHistory].sort((a, b) => b.date.localeCompare(a.date)).slice(0, EDITABLE_CHANT_COUNT);
+  return new Set(recent.map((r) => r.id));
+}
+
 /** 通算の詠唱時間（分）。書き留めた詠唱も含める */
 export function totalChantMinutes(data: UserData) {
   return data.chantHistory.reduce((acc, r) => acc + r.minutes, 0);
@@ -689,6 +698,17 @@ export const userActions = {
         s.userProfile.totalMp + record.mp,
       ),
     );
+  },
+
+  /**
+   * 直近の詠唱の科目を付け替える。試練の進捗は付け替えた科目で測り直す（受け取った報酬は取り消さない）。
+   * 授かった魔力は詠唱したときのまま（エリアの科目の加護も測り直さない）。付け替えられなければ false
+   */
+  changeChantSubject(id: string, subjectId: string, subSubject: string | null, subjects: Pick<Subject, "id" | "name">[], now = new Date()): boolean {
+    if (!editableChantIds(load()).has(id)) return false;
+    update((s) => ({ ...s, chantHistory: s.chantHistory.map((r) => (r.id === id ? { ...r, subjectId, subSubject } : r)) }));
+    userActions.syncTasks(subjects, now);
+    return true;
   },
 
   /** 星天の導きを受け取る: 前日から続いていれば連続日数を加算、途切れていれば1日目から */
