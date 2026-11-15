@@ -108,7 +108,7 @@ export const LIBRARY_STEPS: GuideStep[] = [
     title: "詠唱の記憶",
     plain: "最近の勉強記録",
     label: "OBSERVATIONAL MEMORY",
-    body: "近ごろの詠唱と、得た魔力が並びます。",
+    body: "近ごろの詠唱と、得た魔力が並びます。科目を選び忘れたときは、最近の詠唱に触れると選び直せます。",
   },
   {
     title: "準備は整いました",
@@ -208,7 +208,7 @@ export const TRACES_STEPS: GuideStep[] = [
     title: "その夜の記録",
     plain: "日ごとの詳細",
     label: "THE NIGHT",
-    body: "その日に学んだ科目と時間、流れ星が遺した品を確かめられます。",
+    body: "その日に学んだ科目と時間、流れ星が遺した品を確かめられます。最近の詠唱なら、ここからも科目を選び直せます。",
   },
   {
     target: "traces-constellations",

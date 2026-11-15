@@ -42,7 +42,8 @@ export function ChantSubjectDialog({ record, subjects, onClose }: { record: Chan
             <span className="-mr-[0.4em]">— REATTUNE —</span>
           </p>
           <DialogDescription className="mt-1 text-[11px] tracking-wider [word-break:auto-phrase]">
-            {dateLabel.format(new Date(record.date))}の{formatMinutes(record.minutes)}の詠唱。直近{EDITABLE_CHANT_COUNT}回の詠唱は、科目を選び直せます。試練の進み具合も選び直した科目で数え直し、授かった魔力はそのままです
+            {dateLabel.format(new Date(record.date))}の{formatMinutes(record.minutes)}の詠唱。直近{EDITABLE_CHANT_COUNT}回の詠唱は、科目を選び直せます。
+            {record.manual ? "書き留めた記録なので、試練にはこれまでどおり数えません" : "試練の進み具合も選び直した科目で数え直します"}。授かった魔力はそのままです
           </DialogDescription>
         </DialogHeader>
 
